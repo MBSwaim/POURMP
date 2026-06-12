@@ -1,0 +1,81 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { EVENT_STATUSES } from '@/lib/constants'
+import { StatusBadge } from './StatusBadge'
+import { formatCurrency } from '@/lib/calculations'
+import { toast } from 'sonner'
+import type { EventWithClient } from '@/lib/db'
+
+interface Props {
+  initialEvents: EventWithClient[]
+}
+
+export function KanbanBoard({ initialEvents }: Props) {
+  const router = useRouter()
+  const [events, setEvents] = useState(initialEvents)
+  const [dragging, setDragging] = useState<number | null>(null)
+
+  const byStatus = (status: string) => events.filter((e) => e.status === status)
+
+  async function drop(status: string) {
+    if (dragging === null) return
+    const event = events.find((e) => e.id === dragging)
+    if (!event || event.status === status) { setDragging(null); return }
+
+    setEvents((prev) => prev.map((e) => e.id === dragging ? { ...e, status } : e))
+    setDragging(null)
+
+    try {
+      await fetch(`/api/events/${dragging}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: { status } }),
+      })
+      toast.success(`Moved to ${status}`)
+      router.refresh()
+    } catch {
+      toast.error('Failed to update status')
+    }
+  }
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {EVENT_STATUSES.map((status) => (
+        <div
+          key={status}
+          className="flex-shrink-0 w-52 rounded-xl bg-white/5 border border-white/10 p-2"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => drop(status)}
+        >
+          <div className="flex items-center justify-between mb-2 px-1">
+            <StatusBadge status={status} />
+            <span className="text-xs text-gray-400">{byStatus(status).length}</span>
+          </div>
+          <div className="space-y-2 min-h-[60px]">
+            {byStatus(status).map((ev) => (
+              <div
+                key={ev.id}
+                draggable
+                onDragStart={() => setDragging(ev.id)}
+                onClick={() => router.push(`/events/${ev.id}`)}
+                className="cursor-pointer rounded-lg bg-[#1F3348] border border-white/10 p-2.5 hover:border-[#C8973A]/40 transition-colors select-none"
+              >
+                <p className="text-sm font-medium truncate">{ev.event_name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {ev.first_name} {ev.last_name}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">{ev.event_date}</p>
+                {ev.guest_count > 0 && ev.price_per_guest > 0 && (
+                  <p className="text-xs text-[#C8973A] mt-1">
+                    {formatCurrency(ev.guest_count * ev.price_per_guest)}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
