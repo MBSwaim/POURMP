@@ -51,12 +51,17 @@ export function calcAllItems(items: MenuItem[], guestCount: number, bufferPct = 
   return items
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((item) => {
-      const qty = calcItemQty(item, guests)
-      const display =
-        typeof qty === 'string'
-          ? qty
-          : `${qty} ${item.unit_name ?? ''}`
-      return { ...item, total_qty: qty, display }
+      let qty = calcItemQty(item, guests)
+      let unitName = item.unit_name ?? ''
+
+      // 2 × 1/2 Chafer = 1 × 200 Pan
+      if (typeof qty === 'number' && unitName === '1/2 Chafer' && qty >= 2) {
+        qty = Math.ceil(qty / 2)
+        unitName = '200 Pan'
+      }
+
+      const display = typeof qty === 'string' ? qty : `${qty} ${unitName}`
+      return { ...item, total_qty: qty, unit_name: unitName, display }
     })
 }
 

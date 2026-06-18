@@ -1,18 +1,26 @@
+import { getAllPackages, getSettings } from '@/lib/db'
+import { GENERAL_INFO, CANCELLATION_POLICY, MPBC_CONTACT } from '@/lib/constants'
+import { SettingsClient } from './SettingsClient'
+
+export const dynamic = 'force-dynamic'
+
 export default function SettingsPage() {
+  const packages = getAllPackages()
+  const stored   = getSettings()
+
+  const settings = {
+    general_info:        stored.general_info        ?? GENERAL_INFO,
+    cancellation_policy: stored.cancellation_policy ?? CANCELLATION_POLICY,
+    contact:             stored.contact             ?? MPBC_CONTACT,
+  }
+
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-6 space-y-4">
-        <p className="text-gray-400">Settings coming soon. Planned features:</p>
-        <ul className="text-gray-300 space-y-2 text-sm list-disc pl-5">
-          <li>Cancellation policy text editor</li>
-          <li>Package management (add / edit / archive)</li>
-          <li>Logo upload for proposals</li>
-          <li>Default buffer percentage</li>
-          <li>Tax rate configuration</li>
-          <li>Contact info for PDF footer</li>
-        </ul>
+    <div className="p-6 max-w-3xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <p className="text-gray-400 text-sm mt-1">Manage proposal content, packages, and business info.</p>
       </div>
+      <SettingsClient initialSettings={settings} initialPackages={packages} />
     </div>
   )
 }

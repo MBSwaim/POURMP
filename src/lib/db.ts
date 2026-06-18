@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
-import { seedDatabase } from './seed'
+import { seedDatabase, seedHistoricalEvents } from './seed'
 import { DEPOSIT_PCT, FINAL_PCT, DEPOSIT_DAYS_BEFORE } from './constants'
 import { subDays, format, parseISO } from 'date-fns'
 
@@ -21,6 +21,7 @@ function getDb(): Database.Database {
     global.__mpbc_db.pragma('foreign_keys = ON')
     initSchema(global.__mpbc_db)
     seedDatabase(global.__mpbc_db)
+    seedHistoricalEvents(global.__mpbc_db)
   }
   return global.__mpbc_db
 }
@@ -64,7 +65,9 @@ function initSchema(db: Database.Database) {
       drink_tickets INTEGER,
       tab_details TEXT,
       staffing_notes TEXT,
-      contract_signed INTEGER DEFAULT 0
+      contract_signed INTEGER DEFAULT 0,
+      date_flexible INTEGER DEFAULT 0,
+      setup_notes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS payments (
@@ -115,7 +118,63 @@ function initSchema(db: Database.Database) {
       note TEXT,
       created_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS blocked_dates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      reason TEXT NOT NULL DEFAULT 'Holiday',
+      notes TEXT,
+      created_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      event_date TEXT,
+      event_type TEXT,
+      guest_count INTEGER,
+      message TEXT,
+      status TEXT DEFAULT 'New',
+      created_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS reservations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      party_size INTEGER,
+      reservation_date TEXT NOT NULL,
+      reservation_time TEXT NOT NULL,
+      notes TEXT,
+      status TEXT DEFAULT 'Confirmed',
+      created_at TEXT
+    );
   `)
+
+  // Migrate: add columns added after initial schema (safe to re-run)
+  const migrations = [
+    `ALTER TABLE event_details ADD COLUMN date_flexible INTEGER DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN setup_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN bar_tab_type TEXT DEFAULT ''`,
+    `ALTER TABLE events ADD COLUMN production_close_time TEXT`,
+    `ALTER TABLE events ADD COLUMN event_duration_mins INTEGER DEFAULT 180`,
+    `ALTER TABLE events ADD COLUMN decorate_time TEXT`,
+    `ALTER TABLE event_details ADD COLUMN service_fee REAL DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN gratuity_pct REAL DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN tax_pct REAL DEFAULT 0.0825`,
+    `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+    // 2026 menu corrections
+    `DELETE FROM menu_items WHERE package_id = 'fried_chicken' AND item_name = 'Asian Chopped Salad'`,
+    `UPDATE menu_items SET item_name = 'Thai Slaw' WHERE package_id = 'sliders_buffet' AND item_name = 'Cole Slaw'`,
+    `UPDATE menu_items SET item_name = 'Cheese Board' WHERE package_id = 'snack_buffet' AND item_name = 'Cheese Platter'`,
+  ]
+  for (const sql of migrations) {
+    try { db.exec(sql) } catch { /* column already exists */ }
+  }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -137,7 +196,10 @@ export interface Event {
   event_date: string
   event_time: string
   setup_time: string
-  teardown_time: string
+  teardown_time: string       // repurposed as event_end_time
+  production_close_time: string
+  decorate_time: string
+  event_duration_mins: number
   status: string
   space: string
   client_id: number
@@ -158,6 +220,12 @@ export interface EventDetails {
   tab_details: string
   staffing_notes: string
   contract_signed: number
+  date_flexible: number
+  setup_notes: string
+  bar_tab_type: string
+  service_fee: number
+  gratuity_pct: number
+  tax_pct: number
 }
 
 export interface Payment {
@@ -250,8 +318,9 @@ export function updateClient(id: number, data: Partial<Omit<Client, 'id'>>) {
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 
-export function getEvents(): EventWithClient[] {
+export function getEvents(year?: number): EventWithClient[] {
   refreshOverduePayments()
+  const yearClause = year ? `WHERE strftime('%Y', e.event_date) = '${year}'` : ''
   return getDb().prepare(`
     SELECT e.*,
       c.first_name, c.last_name, c.email, c.company,
@@ -265,6 +334,7 @@ export function getEvents(): EventWithClient[] {
     LEFT JOIN packages p ON p.id = ed.package_id
     LEFT JOIN payments dep ON dep.event_id = e.id AND dep.payment_type = 'deposit'
     LEFT JOIN payments fin ON fin.event_id = e.id AND fin.payment_type = 'final'
+    ${yearClause}
     ORDER BY e.event_date DESC
   `).all() as EventWithClient[]
 }
@@ -296,6 +366,9 @@ export function createEvent(data: {
   event_time: string
   setup_time: string
   teardown_time: string
+  production_close_time?: string
+  decorate_time?: string
+  event_duration_mins?: number
   status: string
   space: string
   client_id: number
@@ -303,13 +376,15 @@ export function createEvent(data: {
   const now = new Date().toISOString()
   const result = getDb()
     .prepare(
-      `INSERT INTO events (event_name, event_date, event_time, setup_time, teardown_time, status, space, client_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (event_name, event_date, event_time, setup_time, teardown_time, production_close_time, decorate_time, event_duration_mins, status, space, client_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       data.event_name, data.event_date, data.event_time,
-      data.setup_time, data.teardown_time, data.status,
-      data.space, data.client_id, now, now
+      data.setup_time, data.teardown_time,
+      data.production_close_time ?? '', data.decorate_time ?? '',
+      data.event_duration_mins ?? 180,
+      data.status, data.space, data.client_id, now, now
     )
   return result.lastInsertRowid as number
 }
@@ -506,6 +581,7 @@ export function getDashboardStats() {
 }
 
 export function getKanbanEvents() {
+  const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
   return getDb().prepare(`
     SELECT e.*, c.first_name, c.last_name, ed.guest_count, ed.package_id,
            p.name as package_name, p.price_per_guest
@@ -513,8 +589,176 @@ export function getKanbanEvents() {
     LEFT JOIN clients c ON c.id = e.client_id
     LEFT JOIN event_details ed ON ed.event_id = e.id
     LEFT JOIN packages p ON p.id = ed.package_id
+    WHERE e.status NOT IN ('Tentative','Confirmed','Closed')
+       OR strftime('%Y-%m', e.event_date) = ?
     ORDER BY e.event_date ASC
-  `).all() as EventWithClient[]
+  `).all(currentMonth) as EventWithClient[]
+}
+
+export function getArchivedEvents(year?: number) {
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const yearFilter = year ? `AND strftime('%Y', e.event_date) = '${year}'` : ''
+  return getDb().prepare(`
+    SELECT e.*, c.first_name, c.last_name, ed.guest_count, ed.package_id,
+           p.name as package_name, p.price_per_guest
+    FROM events e
+    LEFT JOIN clients c ON c.id = e.client_id
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    LEFT JOIN packages p ON p.id = ed.package_id
+    WHERE e.status = 'Closed'
+      AND strftime('%Y-%m', e.event_date) < ?
+      ${yearFilter}
+    ORDER BY e.event_date DESC
+  `).all(currentMonth) as EventWithClient[]
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface YOYMonthData {
+  month: number
+  event_count: number
+  invoiced: number
+  collected: number
+}
+
+export function getYearMonthly(year: number): YOYMonthData[] {
+  return getDb().prepare(`
+    SELECT
+      CAST(strftime('%m', e.event_date) AS INTEGER) as month,
+      COUNT(DISTINCT e.id) as event_count,
+      COALESCE(SUM(p.amount_due), 0) as invoiced,
+      COALESCE(SUM(p.amount_paid), 0) as collected
+    FROM events e
+    LEFT JOIN payments p ON p.event_id = e.id
+    WHERE strftime('%Y', e.event_date) = ?
+    GROUP BY month
+    ORDER BY month
+  `).all(String(year)) as YOYMonthData[]
+}
+
+export function getYearTotals(year: number) {
+  return getDb().prepare(`
+    SELECT
+      COUNT(DISTINCT e.id) as event_count,
+      COALESCE(SUM(p.amount_due), 0) as invoiced,
+      COALESCE(SUM(p.amount_paid), 0) as collected
+    FROM events e
+    LEFT JOIN payments p ON p.event_id = e.id
+    WHERE strftime('%Y', e.event_date) = ?
+  `).get(String(year)) as { event_count: number; invoiced: number; collected: number }
+}
+
+// ─── Blocked Dates ────────────────────────────────────────────────────────────
+
+export interface BlockedDate {
+  id: number
+  date: string
+  reason: string
+  notes: string
+  created_at: string
+}
+
+export { BLOCK_REASONS } from './constants'
+export type { BlockReason } from './constants'
+
+export function getBlockedDates(year?: number, month?: number): BlockedDate[] {
+  if (year && month) {
+    const prefix = `${year}-${String(month).padStart(2, '0')}`
+    return getDb()
+      .prepare(`SELECT * FROM blocked_dates WHERE date LIKE ? ORDER BY date`)
+      .all(`${prefix}-%`) as BlockedDate[]
+  }
+  return getDb().prepare('SELECT * FROM blocked_dates ORDER BY date').all() as BlockedDate[]
+}
+
+export function isDateBlocked(date: string): BlockedDate | undefined {
+  return getDb().prepare('SELECT * FROM blocked_dates WHERE date = ?').get(date) as BlockedDate | undefined
+}
+
+export function blockDates(dates: string[], reason: string, notes?: string): void {
+  const stmt = getDb().prepare(
+    `INSERT OR IGNORE INTO blocked_dates (date, reason, notes, created_at) VALUES (?, ?, ?, ?)`
+  )
+  const now = new Date().toISOString()
+  const tx = getDb().transaction(() => {
+    for (const date of dates) stmt.run(date, reason, notes ?? '', now)
+  })
+  tx()
+}
+
+export function unblockDate(id: number): void {
+  getDb().prepare('DELETE FROM blocked_dates WHERE id = ?').run(id)
+}
+
+export function unblockDates(dates: string[]): void {
+  const stmt = getDb().prepare('DELETE FROM blocked_dates WHERE date = ?')
+  const tx = getDb().transaction(() => { for (const d of dates) stmt.run(d) })
+  tx()
+}
+
+// ─── Reservations ─────────────────────────────────────────────────────────────
+
+export interface Reservation {
+  id: number
+  client_name: string
+  phone: string
+  email: string
+  party_size: number
+  reservation_date: string
+  reservation_time: string
+  notes: string
+  status: string
+  created_at: string
+}
+
+export { RESERVATION_STATUSES } from './constants'
+
+export function getReservations(date?: string): Reservation[] {
+  if (date) {
+    return getDb()
+      .prepare('SELECT * FROM reservations WHERE reservation_date = ? ORDER BY reservation_time')
+      .all(date) as Reservation[]
+  }
+  return getDb()
+    .prepare('SELECT * FROM reservations ORDER BY reservation_date DESC, reservation_time')
+    .all() as Reservation[]
+}
+
+export function getUpcomingReservations(limit = 20): Reservation[] {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return getDb()
+    .prepare(`SELECT * FROM reservations WHERE reservation_date >= ? ORDER BY reservation_date, reservation_time LIMIT ?`)
+    .all(today, limit) as Reservation[]
+}
+
+export function createReservation(data: Omit<Reservation, 'id' | 'created_at'>): number {
+  const result = getDb()
+    .prepare(
+      `INSERT INTO reservations (client_name, phone, email, party_size, reservation_date, reservation_time, notes, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      data.client_name, data.phone, data.email, data.party_size,
+      data.reservation_date, data.reservation_time, data.notes,
+      data.status || 'Confirmed', new Date().toISOString()
+    )
+  return result.lastInsertRowid as number
+}
+
+export function updateReservation(id: number, data: Partial<Omit<Reservation, 'id' | 'created_at'>>) {
+  const fields = Object.keys(data).map((k) => `${k} = ?`).join(', ')
+  getDb().prepare(`UPDATE reservations SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
+}
+
+export function deleteReservation(id: number) {
+  getDb().prepare('DELETE FROM reservations WHERE id = ?').run(id)
+}
+
+export function getAvailableYears(): number[] {
+  const rows = getDb()
+    .prepare(`SELECT DISTINCT CAST(strftime('%Y', event_date) AS INTEGER) as y FROM events WHERE event_date IS NOT NULL ORDER BY y DESC`)
+    .all() as { y: number }[]
+  return rows.map((r) => r.y)
 }
 
 export function getCalendarEvents(year: number, month: number) {
@@ -529,3 +773,80 @@ export function getCalendarEvents(year: number, month: number) {
     ORDER BY e.event_date
   `).all(start, end)
 }
+
+// ─── Leads ────────────────────────────────────────────────────────────────────
+
+export interface Lead {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  event_date: string
+  event_type: string
+  guest_count: number
+  message: string
+  status: string
+  created_at: string
+}
+
+export function getLeads(status?: string): Lead[] {
+  if (status) {
+    return getDb().prepare(`SELECT * FROM leads WHERE status = ? ORDER BY created_at DESC`).all(status) as Lead[]
+  }
+  return getDb().prepare(`SELECT * FROM leads ORDER BY created_at DESC`).all() as Lead[]
+}
+
+export function getNewLeads(): Lead[] {
+  return getDb().prepare(`SELECT * FROM leads WHERE status = 'New' ORDER BY created_at DESC`).all() as Lead[]
+}
+
+export function createLead(data: Omit<Lead, 'id' | 'created_at' | 'status'>): number {
+  const now = new Date().toISOString()
+  const result = getDb().prepare(`
+    INSERT INTO leads (first_name, last_name, email, phone, event_date, event_type, guest_count, message, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'New', ?)
+  `).run(data.first_name, data.last_name, data.email, data.phone, data.event_date, data.event_type, data.guest_count, data.message, now)
+  return result.lastInsertRowid as number
+}
+
+export function updateLeadStatus(id: number, status: string) {
+  getDb().prepare(`UPDATE leads SET status = ? WHERE id = ?`).run(status, id)
+}
+
+export function deleteLead(id: number) {
+  getDb().prepare(`DELETE FROM leads WHERE id = ?`).run(id)
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+export function getSetting(key: string, defaultValue: string): string {
+  const row = getDb().prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as { value: string } | undefined
+  return row?.value ?? defaultValue
+}
+
+export function setSetting(key: string, value: string): void {
+  getDb().prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(key, value)
+}
+
+export function getSettings(): Record<string, string> {
+  const rows = getDb().prepare(`SELECT key, value FROM settings`).all() as { key: string; value: string }[]
+  return Object.fromEntries(rows.map(r => [r.key, r.value]))
+}
+
+// ─── Package management ───────────────────────────────────────────────────────
+
+export function getAllPackages(): Package[] {
+  return getDb().prepare(`SELECT * FROM packages ORDER BY active DESC, name`).all() as Package[]
+}
+
+export function createPackage(data: { id: string; name: string; price_per_guest: number; description: string }): void {
+  getDb().prepare(`INSERT INTO packages (id, name, price_per_guest, description, active) VALUES (?, ?, ?, ?, 1)`)
+    .run(data.id, data.name, data.price_per_guest, data.description)
+}
+
+export function updatePackage(id: string, data: Partial<{ name: string; price_per_guest: number; description: string; active: number }>): void {
+  const fields = Object.keys(data).map(k => `${k} = ?`).join(', ')
+  getDb().prepare(`UPDATE packages SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
+}
+

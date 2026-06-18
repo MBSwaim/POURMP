@@ -8,37 +8,53 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CateringCalculator } from '@/components/CateringCalculator'
-import { EVENT_STATUSES } from '@/lib/constants'
+import Link from 'next/link'
+import { EVENT_STATUSES, BUSINESS_HOURS } from '@/lib/constants'
+import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
 import type { Package, Client } from '@/lib/db'
+
+interface Prefill {
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  event_date?: string
+  guest_count?: string
+  lead_id?: string
+}
 
 interface Props {
   packages: Package[]
   clients: Client[]
+  prefill?: Prefill
 }
 
-export function NewEventForm({ packages, clients }: Props) {
+export function NewEventForm({ packages, clients, prefill }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [useExistingClient, setUseExistingClient] = useState(false)
 
   const [form, setForm] = useState({
     event_name: '',
-    event_date: '',
+    event_date: prefill?.event_date ?? '',
     event_time: '',
     setup_time: '',
     teardown_time: '',
+    production_close_time: '',
+    decorate_time: '',
+    event_duration_mins: '180',
     status: 'New',
     space: '',
     // client
     client_id: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
+    first_name: prefill?.first_name ?? '',
+    last_name: prefill?.last_name ?? '',
+    email: prefill?.email ?? '',
+    phone: prefill?.phone ?? '',
     company: '',
     referral_source: '',
     // details
-    guest_count: '',
+    guest_count: prefill?.guest_count ?? '',
     package_id: '',
     buffer_pct: '0',
     food_notes: '',
@@ -46,16 +62,50 @@ export function NewEventForm({ packages, clients }: Props) {
     bar_tab_limit: '',
     drink_tickets: '',
     tab_details: '',
+    bar_tab_type: '',
     staffing_notes: '',
     contract_signed: false,
+    date_flexible: false,
+    setup_notes: '',
   })
 
   const set = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
+
+  const hours = form.event_date
+    ? BUSINESS_HOURS[new Date(form.event_date + 'T12:00:00').getDay()]
+    : null
+
+  // Auto-computed times from event start + duration
+  const autoTimes = form.event_time
+    ? computeEventTimes(form.event_time, Number(form.event_duration_mins))
+    : null
+
+  // Sync auto times into form whenever event_time or duration changes
+  function handleTimeOrDuration(key: string, value: string) {
+    const time = key === 'event_time' ? value : form.event_time
+    const dur  = key === 'event_duration_mins' ? Number(value) : Number(form.event_duration_mins)
+    if (time) {
+      const t = computeEventTimes(time, dur)
+      setForm(f => ({ ...f, [key]: value, setup_time: t.setupTime, teardown_time: t.eventEnd, production_close_time: t.productionClose, decorate_time: t.decorateTime }))
+    } else {
+      set(key, value)
+    }
+  }
 
   const selectedPkg = packages.find((p) => p.id === form.package_id)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (hours && form.event_time) {
+      if (form.event_time < hours.minStart) {
+        toast.error(`Events can't start before ${hours.minStart} on this day (opens at ${hours.open}, 1-hour buffer required)`)
+        return
+      }
+      if (form.event_time > hours.close) {
+        toast.error(`Events must end by ${hours.close} on this day`)
+        return
+      }
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/events', {
@@ -68,10 +118,18 @@ export function NewEventForm({ packages, clients }: Props) {
           buffer_pct: Number(form.buffer_pct) / 100,
           bar_tab_limit: Number(form.bar_tab_limit),
           drink_tickets: Number(form.drink_tickets),
+          event_duration_mins: Number(form.event_duration_mins),
         }),
       })
       if (!res.ok) throw new Error(await res.text())
       const { id } = await res.json()
+      if (prefill?.lead_id) {
+        await fetch(`/api/leads/${prefill.lead_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Converted' }),
+        })
+      }
       toast.success('Event created!')
       router.push(`/events/${id}`)
     } catch {
@@ -86,8 +144,8 @@ export function NewEventForm({ packages, clients }: Props) {
       {/* Section 1 — Event Info */}
       <Section title="Event Information">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Event Name" required>
-            <Input value={form.event_name} onChange={(e) => set('event_name', e.target.value)} required />
+          <Field label="Event Name / Occasion" required>
+            <Input value={form.event_name} onChange={(e) => set('event_name', e.target.value)} required placeholder="e.g. Birthday Party, Corporate Lunch" />
           </Field>
           <Field label="Status">
             <select
@@ -99,17 +157,75 @@ export function NewEventForm({ packages, clients }: Props) {
             </select>
           </Field>
           <Field label="Event Date" required>
-            <Input type="date" value={form.event_date} onChange={(e) => set('event_date', e.target.value)} required />
+            <Input
+              type="date"
+              value={form.event_date}
+              min={(() => { const d = new Date(); d.setDate(d.getDate() + 21); return d.toISOString().split('T')[0] })()}
+              onChange={(e) => set('event_date', e.target.value)}
+              required
+            />
+            {form.event_date && (() => {
+              const today = new Date(); today.setHours(0,0,0,0)
+              const picked = new Date(form.event_date + 'T00:00:00')
+              const diff = Math.floor((picked.getTime() - today.getTime()) / 86400000)
+              return diff < 21 ? (
+                <p className="text-red-400 text-xs mt-1">
+                  Events must be booked at least 21 days in advance. Please select a date on or after{' '}
+                  {(() => { const d = new Date(); d.setDate(d.getDate() + 21); return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })()}.
+                </p>
+              ) : null
+            })()}
+            <div className="flex items-center gap-2 mt-2">
+              <Checkbox
+                id="date_flexible"
+                checked={form.date_flexible as boolean}
+                onCheckedChange={(v) => set('date_flexible', Boolean(v))}
+              />
+              <Label htmlFor="date_flexible" className="text-xs text-gray-400 cursor-pointer">My date is flexible</Label>
+            </div>
           </Field>
-          <Field label="Event Time">
-            <Input type="time" value={form.event_time} onChange={(e) => set('event_time', e.target.value)} />
+          <Field label={hours ? `Event Start Time (${to12Hour(hours.minStart)} – ${to12Hour(hours.close)})` : 'Event Start Time'} required>
+            <Input
+              type="time"
+              value={form.event_time}
+              min={hours?.minStart}
+              max={hours?.close}
+              onChange={(e) => handleTimeOrDuration('event_time', e.target.value)}
+            />
+            {hours && form.event_time && form.event_time < hours.minStart && (
+              <p className="text-xs text-red-400 mt-1">Must start after {to12Hour(hours.minStart)} (opens {to12Hour(hours.open)}, 1-hr buffer)</p>
+            )}
           </Field>
-          <Field label="Setup Time">
-            <Input type="time" value={form.setup_time} onChange={(e) => set('setup_time', e.target.value)} />
+
+          <Field label="Event Duration">
+            <div className="flex gap-2">
+              {[['180', '3 Hours'], ['240', '4 Hours']].map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => handleTimeOrDuration('event_duration_mins', val)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    form.event_duration_mins === val
+                      ? 'bg-[#C8973A]/20 border-[#C8973A]/60 text-[#C8973A]'
+                      : 'bg-white/5 border-white/20 text-gray-400 hover:border-white/40 hover:text-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </Field>
-          <Field label="Teardown Time">
-            <Input type="time" value={form.teardown_time} onChange={(e) => set('teardown_time', e.target.value)} />
-          </Field>
+
+          {/* Auto-computed times — shown when event_time is set */}
+          {form.event_time && autoTimes && (
+            <div className="col-span-2 grid grid-cols-3 gap-3">
+              <AutoTimeCard label="Production Space Closes" time={autoTimes.productionClose} note="2 hrs before start" />
+              <AutoTimeCard label="Setup Begins" time={autoTimes.setupTime} note="1.5 hrs before start" />
+              <AutoTimeCard label="Decorating / Customer Access" time={autoTimes.decorateTime} note="1 hr before start" />
+              <AutoTimeCard label="Event Ends" time={autoTimes.eventEnd} note={`${Number(form.event_duration_mins) / 60} hrs after start`} />
+            </div>
+          )}
+
           <Field label="Space / Room" className="col-span-2">
             <Input value={form.space} onChange={(e) => set('space', e.target.value)} placeholder="e.g. Taproom, Patio, Full Venue" />
           </Field>
@@ -147,11 +263,11 @@ export function NewEventForm({ packages, clients }: Props) {
             <Field label="Last Name" required>
               <Input value={form.last_name} onChange={(e) => set('last_name', e.target.value)} required={!useExistingClient} />
             </Field>
-            <Field label="Email">
-              <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+            <Field label="Email" required>
+              <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required={!useExistingClient} />
             </Field>
-            <Field label="Phone">
-              <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+            <Field label="Phone" required>
+              <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} required={!useExistingClient} />
             </Field>
             <Field label="Company">
               <Input value={form.company} onChange={(e) => set('company', e.target.value)} />
@@ -178,13 +294,26 @@ export function NewEventForm({ packages, clients }: Props) {
               ))}
             </select>
           </Field>
-          <Field label="Guest Count">
+          <Field label="Guest Count" required>
             <Input
-              type="number" min="0"
+              type="number" min="1"
               value={form.guest_count}
               onChange={(e) => set('guest_count', e.target.value)}
+              required
             />
           </Field>
+          {Number(form.guest_count) > 0 && Number(form.guest_count) < 20 && (
+            <div className="col-span-2 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              <span className="text-lg leading-none mt-0.5">💡</span>
+              <span>
+                For parties under 20 guests, a{' '}
+                <Link href="/reservations" className="underline underline-offset-2 hover:text-amber-100 font-medium">
+                  table reservation
+                </Link>
+                {' '}may be a better fit than a private event booking.
+              </span>
+            </div>
+          )}
           <Field label="Buffer %">
             <Input
               type="number" min="0" max="100"
@@ -193,11 +322,13 @@ export function NewEventForm({ packages, clients }: Props) {
               placeholder="0"
             />
           </Field>
-          <Field label="Food Notes" className="col-span-2">
-            <Textarea value={form.food_notes} onChange={(e) => set('food_notes', e.target.value)} rows={2} />
-          </Field>
-          <Field label="Dietary Restrictions" className="col-span-2">
-            <Textarea value={form.dietary_restrictions} onChange={(e) => set('dietary_restrictions', e.target.value)} rows={2} />
+          <Field label="Food Notes (Special Requests, Dietary Restrictions)" className="col-span-2">
+            <Textarea
+              value={form.food_notes}
+              onChange={(e) => set('food_notes', e.target.value)}
+              rows={3}
+              placeholder="Allergies, dietary restrictions, special requests…"
+            />
           </Field>
         </div>
         {form.package_id && Number(form.guest_count) > 0 && (
@@ -215,24 +346,64 @@ export function NewEventForm({ packages, clients }: Props) {
 
       {/* Section 4 — Bar */}
       <Section title="Bar & Beverage">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Bar Tab Limit ($)">
-            <Input type="number" min="0" step="0.01" value={form.bar_tab_limit} onChange={(e) => set('bar_tab_limit', e.target.value)} />
+        <div className="space-y-4">
+          <Field label="Bar Tab Type">
+            <select
+              value={form.bar_tab_type}
+              onChange={(e) => set('bar_tab_type', e.target.value)}
+              className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+            >
+              <option value="">— no bar tab —</option>
+              <option value="Pre-Paid Drink Ticket(s)">BAR TAB | Pre-Paid Drink Ticket(s)</option>
+              <option value="By Consumption">BAR TAB | By Consumption</option>
+              <option value="Individual Tabs">BAR TAB | Individual Tabs</option>
+            </select>
           </Field>
-          <Field label="Drink Tickets (#)">
-            <Input type="number" min="0" value={form.drink_tickets} onChange={(e) => set('drink_tickets', e.target.value)} />
-          </Field>
-          <Field label="Tab Details" className="col-span-2">
-            <Textarea value={form.tab_details} onChange={(e) => set('tab_details', e.target.value)} rows={2} />
-          </Field>
+
+          {form.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && (
+            <BarTabInfo>
+              Includes all beer selections on tap, wine, rosé, sparkling brut, beer- and wine-based cocktails, coffee, and non-alcoholic beverage options.            </BarTabInfo>
+          )}
+          {form.bar_tab_type === 'By Consumption' && (
+            <BarTabInfo>
+              All event beverages are to be rung to the event tab and charged according to actual consumption.
+            </BarTabInfo>
+          )}
+          {form.bar_tab_type === 'Individual Tabs' && (
+            <BarTabInfo>
+              Guests will open individual tabs directly at the bar for drink selections only.
+            </BarTabInfo>
+          )}
+
+          {form.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Number of Drink Tickets">
+                <Input type="number" min="0" value={form.drink_tickets} onChange={(e) => set('drink_tickets', e.target.value)} />
+              </Field>
+            </div>
+          )}
+
+          {form.bar_tab_type && (
+            <Field label="Additional Bar Notes">
+              <Textarea value={form.tab_details} onChange={(e) => set('tab_details', e.target.value)} rows={2} placeholder="Any additional notes for bar staff…" />
+            </Field>
+          )}
         </div>
       </Section>
 
       {/* Section 5 — Operations */}
       <Section title="Operations">
         <div className="space-y-4">
+          <Field label="Setup Details (Decorations, etc.)">
+            <Textarea
+              value={form.setup_notes}
+              onChange={(e) => set('setup_notes', e.target.value)}
+              rows={2}
+              placeholder="Decorations, room setup, A/V needs, special arrangements…"
+            />
+          </Field>
           <Field label="Staffing Notes">
-            <Textarea value={form.staffing_notes} onChange={(e) => set('staffing_notes', e.target.value)} rows={2} />
+            <Textarea value={form.staffing_notes} onChange={(e) => set('staffing_notes', e.target.value)} rows={2} placeholder="Staff count, bartenders, servers, coordinator notes…" />
           </Field>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -260,7 +431,25 @@ export function NewEventForm({ packages, clients }: Props) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-5 space-y-4">
-      <h2 className="text-base font-semibold text-[#C8973A]">{title}</h2>
+      <h2 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{title}</h2>
+      {children}
+    </div>
+  )
+}
+
+function AutoTimeCard({ label, time, note }: { label: string; time: string; note: string }) {
+  return (
+    <div className="rounded-lg bg-[#0f1e2d]/60 border border-white/10 px-3 py-2.5 text-center">
+      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+      <p className="text-base font-semibold text-[#C8973A]">{to12Hour(time)}</p>
+      <p className="text-[10px] text-gray-600 mt-0.5">{note}</p>
+    </div>
+  )
+}
+
+function BarTabInfo({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-[#C8973A]/30 bg-[#C8973A]/5 px-4 py-3 text-gray-300 leading-relaxed font-crimson text-base italic">
       {children}
     </div>
   )

@@ -33,6 +33,31 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: var(--font-josefin), ui-sans-serif, system-ui;
+    letter-spacing: 0.01em;
+  }
+
+  /* Josefin Sans for all headings — uppercase + tracked like the brand guide */
+  h1, h2 {
+    font-family: var(--font-josefin), ui-sans-serif, system-ui;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  h3, h4, h5, h6 {
+    font-family: var(--font-josefin), ui-sans-serif, system-ui;
+    letter-spacing: 0.04em;
+  }
+
+  /* Crimson Text for longer descriptive copy */
+  p.description, .body-serif, .bar-tab-info p {
+    font-family: var(--font-crimson), ui-serif, Georgia;
+    font-size: 1.05rem;
+    line-height: 1.75;
+  }
+
+  label, button, select, input, textarea, th, td {
+    font-family: var(--font-josefin), ui-sans-serif, system-ui;
   }
 }
 
@@ -40,4 +65,16 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Make date/time picker icons visible on dark backgrounds */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.6;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }

@@ -5,7 +5,8 @@ import {
 } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
 import { calcAllItems, formatCurrency } from '@/lib/calculations'
-import { DEPOSIT_PCT, FINAL_PCT } from '@/lib/constants'
+import { to12Hour } from '@/lib/timeUtils'
+import { DEPOSIT_PCT, FINAL_PCT, DRINK_TICKET_PRICE } from '@/lib/constants'
 import { format } from 'date-fns'
 import type { Event, Client, EventDetails, Payment, AddOn, MenuItem, Package } from '@/lib/db'
 
@@ -15,6 +16,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#1F3348', letterSpacing: 1 },
   subtitle: { fontSize: 11, color: '#C8973A', marginTop: 2 },
   sectionTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#1F3348', marginTop: 16, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: '#e5e5e5', paddingBottom: 3 },
+  sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: '#e5e5e5', paddingBottom: 3 },
   row: { flexDirection: 'row', marginBottom: 4 },
   label: { width: 140, color: '#666', fontSize: 9 },
   value: { flex: 1 },
@@ -51,7 +53,16 @@ function ProposalDocument({ data }: { data: ProposalData }) {
   const calculated = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
   const foodSubtotal = guestCount * (pkg?.price_per_guest ?? 0)
   const addOnsTotal = addOns.reduce((s, a) => s + a.qty * a.price_each, 0)
-  const total = foodSubtotal + addOnsTotal
+  const drinkTicketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
+  const drinkTicketTotal = drinkTicketQty * DRINK_TICKET_PRICE
+  const taxableBase = foodSubtotal + addOnsTotal
+  const taxPct = details?.tax_pct ?? 0.0825
+  const taxAmt = taxableBase * taxPct
+  const gratuityBase = foodSubtotal + addOnsTotal + drinkTicketTotal
+  const gratuityPct = details?.gratuity_pct ?? 0
+  const gratuityAmt = gratuityBase * gratuityPct
+  const serviceFee = details?.service_fee ?? 0
+  const total = gratuityBase + taxAmt + gratuityAmt + serviceFee
   const deposit = payments.find((p) => p.payment_type === 'deposit')
   const final = payments.find((p) => p.payment_type === 'final')
 
@@ -69,14 +80,18 @@ function ProposalDocument({ data }: { data: ProposalData }) {
         <View style={styles.row}><Text style={styles.label}>Event Name</Text><Text style={styles.value}>{event.event_name}</Text></View>
         <View style={styles.row}><Text style={styles.label}>Client</Text><Text style={styles.value}>{client?.first_name} {client?.last_name}{client?.company ? ` · ${client.company}` : ''}</Text></View>
         <View style={styles.row}><Text style={styles.label}>Date</Text><Text style={styles.value}>{event.event_date}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Time</Text><Text style={styles.value}>{event.event_time}{event.setup_time ? ` (Setup: ${event.setup_time})` : ''}</Text></View>
+        <View style={styles.row}><Text style={styles.label}>Event Time</Text><Text style={styles.value}>{to12Hour(event.event_time)}{event.teardown_time ? ` – ${to12Hour(event.teardown_time)}` : ''}</Text></View>
+        {event.setup_time ? <View style={styles.row}><Text style={styles.label}>Setup Begins</Text><Text style={styles.value}>{to12Hour(event.setup_time)}</Text></View> : null}
         <View style={styles.row}><Text style={styles.label}>Location / Space</Text><Text style={styles.value}>{event.space || '—'}</Text></View>
         <View style={styles.row}><Text style={styles.label}>Guest Count</Text><Text style={styles.value}>{guestCount}</Text></View>
 
         {/* Package */}
+        <View style={styles.sectionTitleRow}>
+          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#1F3348' }}>CATERING PACKAGE</Text>
+          <Text style={{ fontSize: 8, color: '#555', fontStyle: 'italic' }}>Taproom menu food orders are not permitted during private events.</Text>
+        </View>
         {pkg && (
           <>
-            <Text style={styles.sectionTitle}>CATERING PACKAGE</Text>
             <View style={styles.row}><Text style={styles.label}>Package</Text><Text style={[styles.value, styles.bold]}>{pkg.name}</Text></View>
             <View style={styles.row}><Text style={styles.label}>Price Per Guest</Text><Text style={styles.value}>{formatCurrency(pkg.price_per_guest)}</Text></View>
 
@@ -98,12 +113,15 @@ function ProposalDocument({ data }: { data: ProposalData }) {
         )}
 
         {/* Bar */}
-        {(details?.drink_tickets || details?.bar_tab_limit || details?.tab_details) && (
+        {(details?.bar_tab_type || details?.drink_tickets) && (
           <>
             <Text style={styles.sectionTitle}>BAR & BEVERAGE</Text>
+            {details.bar_tab_type ? <View style={styles.row}><Text style={styles.label}>Bar Tab Type</Text><Text style={[styles.value, styles.bold]}>BAR TAB | {details.bar_tab_type}</Text></View> : null}
             {details.drink_tickets ? <View style={styles.row}><Text style={styles.label}>Drink Tickets</Text><Text style={styles.value}>{details.drink_tickets}</Text></View> : null}
-            {details.bar_tab_limit ? <View style={styles.row}><Text style={styles.label}>Bar Tab Limit</Text><Text style={styles.value}>{formatCurrency(details.bar_tab_limit)}</Text></View> : null}
-            {details.tab_details ? <View style={styles.row}><Text style={styles.label}>Details</Text><Text style={styles.value}>{details.tab_details}</Text></View> : null}
+            <View style={{ marginTop: 8, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: '#e5e5e5' }}>
+              <Text style={[styles.policy, styles.bold]}>Drink Ticket & Responsible Service Notice</Text>
+              <Text style={styles.policy}>In accordance with responsible alcohol service practices and T.A.B.C. regulations, Manhattan Project Beer Company reserves the right to limit or refuse alcohol service at its discretion. Our team's priority is the safety and enjoyment of all guests.</Text>
+            </View>
           </>
         )}
 
@@ -119,12 +137,34 @@ function ProposalDocument({ data }: { data: ProposalData }) {
             <Text style={styles.col3}>{formatCurrency(foodSubtotal)}</Text>
           </View>
         )}
+        {drinkTicketQty > 0 && (
+          <View style={styles.tableRow}>
+            <Text style={styles.col1}>Pre-Paid Drink Tickets ({drinkTicketQty} × {formatCurrency(DRINK_TICKET_PRICE)})</Text>
+            <Text style={styles.col3}>{formatCurrency(drinkTicketTotal)}</Text>
+          </View>
+        )}
         {addOns.map((a) => (
           <View key={a.id} style={styles.tableRow}>
             <Text style={styles.col1}>{a.item_name} ({a.qty} {a.unit})</Text>
             <Text style={styles.col3}>{formatCurrency(a.qty * a.price_each)}</Text>
           </View>
         ))}
+        <View style={styles.tableRow}>
+          <Text style={styles.col1}>Sales Tax ({(taxPct * 100).toFixed(2)}%)</Text>
+          <Text style={styles.col3}>{formatCurrency(taxAmt)}</Text>
+        </View>
+        {serviceFee > 0 && (
+          <View style={styles.tableRow}>
+            <Text style={styles.col1}>Service Fee</Text>
+            <Text style={styles.col3}>{formatCurrency(serviceFee)}</Text>
+          </View>
+        )}
+        {gratuityAmt > 0 && (
+          <View style={styles.tableRow}>
+            <Text style={styles.col1}>Gratuity ({(gratuityPct * 100).toFixed(0)}%)</Text>
+            <Text style={styles.col3}>{formatCurrency(gratuityAmt)}</Text>
+          </View>
+        )}
         <View style={styles.totalRow}>
           <Text style={[styles.col1, styles.bold]}>Total</Text>
           <Text style={[styles.col3, styles.bold]}>{formatCurrency(total)}</Text>

@@ -15,6 +15,12 @@ const config: Config = {
         navy: '#1F3348',
         gold: '#C8973A',
       },
+      fontFamily: {
+        sans:    ['var(--font-josefin)', 'ui-sans-serif', 'system-ui'],
+        serif:   ['var(--font-crimson)', 'ui-serif', 'Georgia'],
+        josefin: ['var(--font-josefin)', 'ui-sans-serif'],
+        crimson: ['var(--font-crimson)', 'ui-serif'],
+      },
     },
   },
   plugins: [],
