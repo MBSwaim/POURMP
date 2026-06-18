@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, effectiveGuests, formatCurrency } from '@/lib/calculations'
+import { calcAllItems, effectiveGuests, formatCurrency, calcFloorPlan } from '@/lib/calculations'
 import { to12Hour } from '@/lib/timeUtils'
 import { DRINK_TICKET_PRICE } from '@/lib/constants'
 import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient } from '@/lib/db'
@@ -332,6 +332,57 @@ function BEODocument({ data }: { data: FullData }) {
           </div>
         </div>
       )}
+
+      {/* Floor Plan & Setup */}
+      {(() => {
+        const rec = calcFloorPlan(guestCount)
+        const tvOn = !!(details?.big_screen_tv)
+        const hasNotes = !!(details?.floor_plan_notes)
+        return (
+          <div>
+            <SectionHeader>Floor Plan &amp; Setup</SectionHeader>
+            <div className="space-y-2">
+              <div className="flex items-center gap-4 flex-wrap">
+                <Row label="Layout" value={rec.layoutType} alert={rec.isOverCapacity} />
+              </div>
+              {!rec.isOverCapacity && rec.tablesNeeded !== null && (
+                <div className="flex gap-6 text-sm pl-0">
+                  <span className="text-gray-400 print:text-gray-500 w-28 shrink-0">Tables / High-Tops</span>
+                  <span className="text-white print:text-black font-medium">
+                    {rec.tablesNeeded} × 6-ft table{rec.tablesNeeded !== 1 ? 's' : ''}
+                    {(rec.highTopCount ?? 0) > 0 ? ` + ${rec.highTopCount} high-top${rec.highTopCount !== 1 ? 's' : ''}` : ''}
+                    {rec.seatedCapacity ? ` (seats ${rec.seatedCapacity})` : ''}
+                  </span>
+                </div>
+              )}
+              {rec.warning && (
+                <div className={`rounded-lg px-3 py-1.5 text-sm print:rounded-none print:px-0 print:border-l-4 print:pl-3
+                  ${rec.warningLevel === 'danger'  ? 'bg-red-900/20 border border-red-500/30 text-red-300 print:border-red-600 print:text-red-700' :
+                    rec.warningLevel === 'caution' ? 'bg-yellow-900/20 border border-yellow-500/30 text-yellow-300 print:border-yellow-600 print:text-yellow-800' :
+                    'bg-blue-900/20 border border-blue-500/30 text-blue-300 print:border-blue-600 print:text-blue-800'}`}>
+                  {rec.warning}
+                </div>
+              )}
+              <div className="pt-1">
+                <p className="text-xs text-gray-500 print:text-gray-400 uppercase tracking-wide font-semibold mb-1">Setup Checklist</p>
+                <ul className="text-sm space-y-0.5 text-gray-300 print:text-gray-700">
+                  <li>• Cover all tables with black tablecloths (check BEO for exemptions)</li>
+                  <li>• Garage Door: open only if weather 65°–75°; one warning for chain misuse, then close</li>
+                  <li>• Place black velvet ropes at all marked positions</li>
+                  <li>• Dim lights; music on Source 2 at minimum volume 90</li>
+                  <li className={tvOn ? 'font-semibold text-white print:text-black' : 'text-gray-500 print:text-gray-400'}>
+                    • Big Screen TV: {tvOn ? 'YES — include in setup' : 'No'}
+                  </li>
+                  <li>• Post-event: start linens in washing machine immediately</li>
+                </ul>
+              </div>
+              {hasNotes && (
+                <NoteBlock label="Floor Plan Notes" value={details!.floor_plan_notes} />
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Special Instructions */}
       {(details?.dietary_restrictions || details?.food_notes || details?.setup_notes || details?.staffing_notes) && (

@@ -72,3 +72,114 @@ export function formatCurrency(amount: number): string {
 export function calcFoodSubtotal(guestCount: number, pricePerGuest: number): number {
   return guestCount * pricePerGuest
 }
+
+export interface FloorPlanRec {
+  layoutType: string
+  tablesNeeded: number | null
+  highTopCount: number | null
+  seatedCapacity: number | null
+  highTopsRecommended: boolean
+  warning: string | null
+  warningLevel: 'info' | 'caution' | 'danger' | null
+  staffNotes: string
+  isOverCapacity: boolean
+}
+
+export function calcFloorPlan(guestCount: number): FloorPlanRec {
+  if (!guestCount || guestCount <= 0) {
+    return {
+      layoutType: '—',
+      tablesNeeded: null,
+      highTopCount: null,
+      seatedCapacity: null,
+      highTopsRecommended: false,
+      warning: null,
+      warningLevel: null,
+      staffNotes: 'Set guest count to generate a floor plan recommendation.',
+      isOverCapacity: false,
+    }
+  }
+
+  if (guestCount > 75) {
+    return {
+      layoutType: 'Not a Fit',
+      tablesNeeded: null,
+      highTopCount: null,
+      seatedCapacity: null,
+      highTopsRecommended: false,
+      warning: 'OVER CAPACITY — exceeds 75-guest maximum. Do not confirm without owner approval.',
+      warningLevel: 'danger',
+      staffNotes: 'Do not set up. Escalate to owner immediately.',
+      isOverCapacity: true,
+    }
+  }
+
+  if (guestCount >= 66) {
+    return {
+      layoutType: 'Cocktail / Limited Seating',
+      tablesNeeded: 5,
+      highTopCount: 4,
+      seatedCapacity: 30,
+      highTopsRecommended: true,
+      warning: 'High-capacity event — cocktail style only. Limited seating for accessibility.',
+      warningLevel: 'caution',
+      staffNotes: 'Keep ~5 rectangular tables for accessibility seating only. All 4 high-tops in standard positions as primary surfaces. Maximize standing room along perimeter. Velvet ropes required at all marked positions.',
+      isOverCapacity: false,
+    }
+  }
+
+  if (guestCount >= 51) {
+    return {
+      layoutType: 'Mixed Seating — Tables + High-Tops + Standing',
+      tablesNeeded: 6,
+      highTopCount: 4,
+      seatedCapacity: 52,
+      highTopsRecommended: true,
+      warning: 'Near capacity — confirm final guest count at least 72 hours before event.',
+      warningLevel: 'caution',
+      staffNotes: 'Full standard layout: all 6 rectangular tables + all 4 high-tops. Remaining guests use standing room. Place velvet ropes at all marked positions. Confirm final count 72 hrs prior.',
+      isOverCapacity: false,
+    }
+  }
+
+  if (guestCount >= 37) {
+    return {
+      layoutType: 'Standard Layout — Tables + High-Tops',
+      tablesNeeded: 6,
+      highTopCount: 4,
+      seatedCapacity: 52,
+      highTopsRecommended: true,
+      warning: null,
+      warningLevel: null,
+      staffNotes: 'Full standard layout: all 6 rectangular tables + all 4 high-tops in standard positions. Black tablecloths on all tables. Velvet ropes at marked positions.',
+      isOverCapacity: false,
+    }
+  }
+
+  if (guestCount >= 30) {
+    return {
+      layoutType: 'Fully Seated — Rectangular Tables Only',
+      tablesNeeded: 6,
+      highTopCount: 0,
+      seatedCapacity: 36,
+      highTopsRecommended: false,
+      warning: null,
+      warningLevel: null,
+      staffNotes: 'All 6 rectangular tables with black tablecloths. Remove or push high-tops to perimeter — fully seated configuration.',
+      isOverCapacity: false,
+    }
+  }
+
+  const tables = Math.ceil(guestCount / 6)
+  return {
+    layoutType: 'Partial / Flexible Setup',
+    tablesNeeded: tables,
+    highTopCount: 0,
+    seatedCapacity: tables * 6,
+    highTopsRecommended: false,
+    warning: 'Small group — confirm whether event has exclusive use of the production space.',
+    warningLevel: 'info',
+    staffNotes: `Use ${tables} rectangular table${tables !== 1 ? 's' : ''}. Remove unused tables to open space. Confirm exclusive use with owner before setup.`,
+    isOverCapacity: false,
+  }
+}

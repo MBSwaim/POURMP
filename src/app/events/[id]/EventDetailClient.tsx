@@ -15,7 +15,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { formatCurrency } from '@/lib/calculations'
+import { formatCurrency, calcFloorPlan } from '@/lib/calculations'
 import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem } from '@/lib/db'
 
@@ -44,7 +44,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'catering'|'payments'|'notes'>('overview')
+  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'payments'|'notes'>('overview')
   const [editingConfirmed, setEditingConfirmed] = useState(false)
 
   const { event, client, details, payments, addOns, notes } = data
@@ -58,6 +58,8 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     tax_pct: String(Math.round((details?.tax_pct ?? 0.0825) * 10000) / 100),
   })
   const [feesSaving, setFeesSaving] = useState(false)
+  const [floorPlanNotes, setFloorPlanNotes] = useState(details?.floor_plan_notes ?? '')
+  const [floorNotesSaving, setFloorNotesSaving] = useState(false)
 
   useEffect(() => {
     setFeeForm({
@@ -65,6 +67,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
       gratuity_pct: data.details?.gratuity_pct ? String(Math.round(data.details.gratuity_pct * 100)) : '',
       tax_pct: String(Math.round((data.details?.tax_pct ?? 0.0825) * 10000) / 100),
     })
+    setFloorPlanNotes(data.details?.floor_plan_notes ?? '')
   }, [data])
 
   const isConfirmed = event.status === 'Confirmed'
@@ -215,6 +218,23 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     }
   }
 
+  async function saveFloorPlanNotes() {
+    setFloorNotesSaving(true)
+    try {
+      await fetch(`/api/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ details: { floor_plan_notes: floorPlanNotes } }),
+      })
+      toast.success('Floor plan notes saved')
+      await reload()
+    } catch {
+      toast.error('Failed to save')
+    } finally {
+      setFloorNotesSaving(false)
+    }
+  }
+
   const selectedPkg = packages.find((p) => p.id === details?.package_id) ?? data.pkg
 
   return (
@@ -271,17 +291,17 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-white/10 mb-5">
-          {(['overview','catering','payments','notes'] as const).map((id) => (
+          {(['overview','catering','floorplan','payments','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors rounded-t-lg -mb-px border-b-2 ${
+              className={`px-4 py-2.5 text-sm font-medium transition-colors rounded-t-lg -mb-px border-b-2 ${
                 tab === id
                   ? 'text-[#C8973A] border-[#C8973A] bg-[#1F3348]/60'
                   : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
               }`}
             >
-              {id.charAt(0).toUpperCase() + id.slice(1)}
+              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', payments: 'Payments', notes: 'Notes' }[id]}
             </button>
           ))}
         </div>
@@ -536,6 +556,137 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
           </InfoCard>
         )}
 
+        {/* Floor Plan Tab */}
+        {tab === 'floorplan' && (() => {
+          const rec = calcFloorPlan(details?.guest_count ?? 0)
+          const tvOn = !!(details?.big_screen_tv)
+          return (
+            <div className="space-y-4">
+
+              {/* Recommendation Card */}
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Recommended Layout</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <p className="text-white font-semibold text-base">{rec.layoutType}</p>
+                    {rec.warningLevel && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        rec.warningLevel === 'danger'  ? 'bg-red-600/20 text-red-400' :
+                        rec.warningLevel === 'caution' ? 'bg-yellow-600/20 text-yellow-400' :
+                        'bg-blue-600/20 text-blue-400'
+                      }`}>
+                        {rec.warningLevel === 'danger' ? 'OVER CAPACITY' : rec.warningLevel === 'caution' ? 'CAUTION' : 'NOTE'}
+                      </span>
+                    )}
+                  </div>
+
+                  {!rec.isOverCapacity && rec.tablesNeeded !== null && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-white">{rec.tablesNeeded}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">6-ft Tables</p>
+                      </div>
+                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-white">{rec.highTopCount ?? 0}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">High-Tops</p>
+                      </div>
+                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-white">{rec.seatedCapacity ?? '—'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Seated Cap.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {rec.warning && (
+                    <div className={`rounded-lg px-3 py-2 text-sm ${
+                      rec.warningLevel === 'danger'  ? 'bg-red-900/20 border border-red-500/30 text-red-300' :
+                      rec.warningLevel === 'caution' ? 'bg-yellow-900/20 border border-yellow-500/30 text-yellow-300' :
+                      'bg-blue-900/20 border border-blue-500/30 text-blue-300'
+                    }`}>
+                      {rec.warning}
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1">Staff Setup Notes</p>
+                    <p className="text-sm text-gray-300 leading-relaxed">{rec.staffNotes}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Setup Checklist */}
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Standard Setup Checklist</h3>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Cover all tables with black tablecloths <span className="text-gray-500">(check BEO — some events exempt)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Garage Door: open only if weather is 65°–75°. One warning if children play with chain or use as entry/exit, then close.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Place black velvet ropes at each marked position for guest safety
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Dim lights for guests during the event
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Music on <strong className="text-white">Source 2</strong>, turned up to at least <strong className="text-white">90</strong>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className={`mt-0.5 shrink-0 font-bold ${tvOn ? 'text-green-400' : 'text-gray-500'}`}>•</span>
+                    <span className="flex items-center gap-2 flex-wrap">
+                      Big Screen TV
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tvOn}
+                          onChange={e => saveField('details', 'big_screen_tv', e.target.checked ? 1 : 0)}
+                          className="accent-[#C8973A] w-4 h-4"
+                        />
+                        <span className={`text-xs font-semibold ${tvOn ? 'text-green-400' : 'text-gray-500'}`}>
+                          {tvOn ? 'Included in setup' : 'Not included'}
+                        </span>
+                      </label>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Post-event: start linens in washing machine immediately
+                  </li>
+                </ul>
+              </div>
+
+              {/* Final Floor Plan Notes */}
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Final Floor Plan Notes</h3>
+                <p className="text-xs text-gray-500 mb-2">Override the recommendation or document the agreed setup for staff.</p>
+                <Textarea
+                  value={floorPlanNotes}
+                  onChange={e => setFloorPlanNotes(e.target.value)}
+                  rows={4}
+                  placeholder="e.g. Client requested all tables along south wall, high-tops near bar…"
+                  className="text-sm resize-none mb-2"
+                />
+                <Button
+                  size="sm"
+                  onClick={saveFloorPlanNotes}
+                  disabled={floorNotesSaving}
+                  className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white"
+                >
+                  {floorNotesSaving ? 'Saving…' : 'Save Notes'}
+                </Button>
+              </div>
+
+            </div>
+          )
+        })()}
+
         {/* Payments Tab */}
         {tab === 'payments' && (
           <PaymentPanel
@@ -600,9 +751,9 @@ function EditableRow({ label, value, type = 'text', display, locked, onSave }: {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value)
 
-  function commit() {
+  function commitWith(v: string) {
     setEditing(false)
-    if (val !== value) onSave(val)
+    if (v !== value) onSave(v)
   }
 
   const shown = display ?? value
@@ -615,8 +766,8 @@ function EditableRow({ label, value, type = 'text', display, locked, onSave }: {
           type={type}
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => e.key === 'Enter' && commit()}
+          onBlur={(e) => commitWith(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && commitWith((e.target as HTMLInputElement).value)}
           autoFocus
           className="h-6 text-right text-sm bg-transparent border-0 border-b border-[#C8973A] rounded-none px-0 w-40"
         />

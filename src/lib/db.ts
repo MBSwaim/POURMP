@@ -171,6 +171,9 @@ function initSchema(db: Database.Database) {
     `DELETE FROM menu_items WHERE package_id = 'fried_chicken' AND item_name = 'Asian Chopped Salad'`,
     `UPDATE menu_items SET item_name = 'Thai Slaw' WHERE package_id = 'sliders_buffet' AND item_name = 'Cole Slaw'`,
     `UPDATE menu_items SET item_name = 'Cheese Board' WHERE package_id = 'snack_buffet' AND item_name = 'Cheese Platter'`,
+    // Floor plan fields
+    `ALTER TABLE event_details ADD COLUMN floor_plan_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN big_screen_tv INTEGER DEFAULT 0`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -226,6 +229,8 @@ export interface EventDetails {
   service_fee: number
   gratuity_pct: number
   tax_pct: number
+  floor_plan_notes: string
+  big_screen_tv: number
 }
 
 export interface Payment {
