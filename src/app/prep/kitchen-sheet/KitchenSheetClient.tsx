@@ -15,6 +15,7 @@ interface FullData {
   addOns: AddOn[]
   pkg: Package | null
   menuItems: MenuItem[]
+  packages?: EventPackageWithItems[]
 }
 
 export function KitchenSheetClient({ events, initialEventId = '' }: { events: EventWithClient[], initialEventId?: string }) {
@@ -97,8 +98,11 @@ function PrepSheet({ data }: { data: FullData }) {
   const guestCount = details?.guest_count ?? 0
   const bufferPct = details?.buffer_pct ?? 0
   const effGuests = effectiveGuests(guestCount, bufferPct)
+  const allPackages = data.packages && data.packages.length > 0
+    ? data.packages
+    : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prepItems = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
+  const prepItems = allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : [])
   const ticketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
@@ -157,7 +161,7 @@ function PrepSheet({ data }: { data: FullData }) {
           label="Event Time"
           value={[to12Hour(event.event_time), to12Hour(event.teardown_time)].filter(Boolean).join(' – ')}
         />
-        <MetaRow label="Package" value={pkg?.name ?? '—'} />
+        <MetaRow label="Package" value={allPackages.length > 0 ? allPackages.map(ep => ep.pkg?.name ?? ep.package_id).join(', ') : '—'} />
         {event.setup_time && <MetaRow label="Setup Begins" value={to12Hour(event.setup_time)} />}
         <MetaRow
           label="Guests"

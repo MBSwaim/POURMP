@@ -33,6 +33,7 @@ interface FullData {
   notes: EventNote[]
   pkg: Package | null
   menuItems: MenuItem[]
+  packages: EventPackageWithItems[]
 }
 
 interface Props {
@@ -46,6 +47,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
   const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'notes'>('overview')
   const [editingConfirmed, setEditingConfirmed] = useState(false)
+  const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
   const { event, client, details, payments, addOns, notes } = data
 
@@ -66,6 +68,36 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     const res = await fetch(`/api/events/${event.id}`)
     const d = await res.json()
     setData(d)
+    if (d.packages) setEventPackages(d.packages)
+  }
+
+  async function addPackage() {
+    const res = await fetch('/api/event-packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: event.id, package_id: '', guest_count: 0, buffer_pct: 0 }),
+    })
+    const { id } = await res.json()
+    setEventPackages(prev => [...prev, { id, event_id: event.id, package_id: '', guest_count: 0, buffer_pct: 0, sort_order: prev.length, pkg: null, menuItems: [] }])
+  }
+
+  async function removePackage(id: number) {
+    await fetch('/api/event-packages', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setEventPackages(prev => prev.filter(ep => ep.id !== id))
+  }
+
+  async function updatePackage(id: number, patchData: { package_id?: string; guest_count?: number; buffer_pct?: number }) {
+    await fetch('/api/event-packages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...patchData }),
+    })
+    const fresh = await fetch(`/api/events/${event.id}`).then(r => r.json())
+    if (fresh.packages) setEventPackages(fresh.packages)
   }
 
   async function saveStatus(status: string) {

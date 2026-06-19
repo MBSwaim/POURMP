@@ -15,6 +15,7 @@ interface FullData {
   addOns: AddOn[]
   pkg: Package | null
   menuItems: MenuItem[]
+  packages?: EventPackageWithItems[]
 }
 
 export function BEOClient({ events, initialEventId = '' }: { events: EventWithClient[], initialEventId?: string }) {
@@ -95,8 +96,11 @@ function BEODocument({ data }: { data: FullData }) {
   const guestCount = details?.guest_count ?? 0
   const bufferPct  = details?.buffer_pct ?? 0
   const effGuests  = effectiveGuests(guestCount, bufferPct)
+  const allPackages = data.packages && data.packages.length > 0
+    ? data.packages
+    : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cateringItems = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
+  const cateringItems = allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : [])
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
     try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
