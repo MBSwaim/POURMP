@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { calcAllItems, effectiveGuests, formatCurrency, calcFloorPlan } from '@/lib/calculations'
 import { to12Hour } from '@/lib/timeUtils'
 import { DRINK_TICKET_PRICE } from '@/lib/constants'
-import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient } from '@/lib/db'
+import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
 
 interface FullData {
   event: Event
@@ -14,6 +14,7 @@ interface FullData {
   addOns: AddOn[]
   pkg: Package | null
   menuItems: MenuItem[]
+  packages?: EventPackageWithItems[]
 }
 
 export function BEOClient({ events }: { events: EventWithClient[] }) {
@@ -81,8 +82,11 @@ function BEODocument({ data }: { data: FullData }) {
   const guestCount = details?.guest_count ?? 0
   const bufferPct  = details?.buffer_pct ?? 0
   const effGuests  = effectiveGuests(guestCount, bufferPct)
+  const allPackages = data.packages && data.packages.length > 0
+    ? data.packages
+    : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cateringItems = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
+  const cateringItems = allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : [])
 
   // Financials — same logic as PaymentPanel
   const foodSub      = guestCount * (pkg?.price_per_guest ?? 0)
@@ -151,7 +155,7 @@ function BEODocument({ data }: { data: FullData }) {
           <div className="space-y-1">
             <Row label="Date" value={`${dayOfWeek}, ${formattedDate}`} />
             <Row label="Space" value={event.space || '—'} />
-            <Row label="Package" value={pkg?.name ?? '—'} />
+            <Row label="Package" value={allPackages.length > 0 ? allPackages.map(ep => ep.pkg?.name ?? ep.package_id).join(', ') : '—'} />
             <Row
               label="Guests"
               value={

@@ -174,10 +174,30 @@ function initSchema(db: Database.Database) {
     // Floor plan fields
     `ALTER TABLE event_details ADD COLUMN floor_plan_notes TEXT DEFAULT ''`,
     `ALTER TABLE event_details ADD COLUMN big_screen_tv INTEGER DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN selected_sauces TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN serve_style_json TEXT DEFAULT '{}'`,
+    `ALTER TABLE event_details ADD COLUMN beo_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN kitchen_notes TEXT DEFAULT ''`,
+    `CREATE TABLE IF NOT EXISTS event_setup_checklist (event_id INTEGER NOT NULL, item_key TEXT NOT NULL, checked INTEGER DEFAULT 0, checked_at TEXT, PRIMARY KEY (event_id, item_key))`,
+    `CREATE TABLE IF NOT EXISTS event_packages (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, package_id TEXT NOT NULL, guest_count INTEGER DEFAULT 0, buffer_pct REAL DEFAULT 0, sort_order INTEGER DEFAULT 0)`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
   }
+
+  // One-time migration: copy single package from event_details → event_packages
+  try {
+    const eventsWithPkg = db.prepare(`
+      SELECT ed.event_id, ed.package_id, ed.guest_count, ed.buffer_pct
+      FROM event_details ed
+      WHERE ed.package_id IS NOT NULL AND ed.package_id != ''
+        AND NOT EXISTS (SELECT 1 FROM event_packages ep WHERE ep.event_id = ed.event_id)
+    `).all() as { event_id: number; package_id: string; guest_count: number; buffer_pct: number }[]
+    for (const row of eventsWithPkg) {
+      db.prepare(`INSERT INTO event_packages (event_id, package_id, guest_count, buffer_pct, sort_order) VALUES (?, ?, ?, ?, 0)`)
+        .run(row.event_id, row.package_id, row.guest_count ?? 0, row.buffer_pct ?? 0)
+    }
+  } catch { /* table may not exist yet on very first run */ }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -231,6 +251,30 @@ export interface EventDetails {
   tax_pct: number
   floor_plan_notes: string
   big_screen_tv: number
+  selected_sauces: string
+  serve_style_json: string
+  beo_notes: string
+  kitchen_notes: string
+}
+
+export interface EventPackage {
+  id: number
+  event_id: number
+  package_id: string
+  guest_count: number
+  buffer_pct: number
+  sort_order: number
+}
+
+export interface EventPackageWithItems {
+  id: number
+  event_id: number
+  package_id: string
+  guest_count: number
+  buffer_pct: number
+  sort_order: number
+  pkg: Package | null
+  menuItems: MenuItem[]
 }
 
 export interface Payment {
@@ -348,6 +392,34 @@ export function getEvent(id: number): Event | undefined {
   return getDb().prepare('SELECT * FROM events WHERE id = ?').get(id) as Event | undefined
 }
 
+export function getEventPackages(eventId: number): EventPackageWithItems[] {
+  const rows = getDb().prepare(
+    `SELECT * FROM event_packages WHERE event_id = ? ORDER BY sort_order ASC, id ASC`
+  ).all(eventId) as EventPackage[]
+  return rows.map(row => ({
+    ...row,
+    pkg: getPackage(row.package_id),
+    menuItems: getMenuItems(row.package_id),
+  }))
+}
+
+export function addEventPackage(eventId: number, packageId: string, guestCount: number, bufferPct: number): number {
+  const maxOrder = (getDb().prepare(`SELECT MAX(sort_order) as m FROM event_packages WHERE event_id = ?`).get(eventId) as { m: number | null }).m ?? -1
+  const result = getDb().prepare(
+    `INSERT INTO event_packages (event_id, package_id, guest_count, buffer_pct, sort_order) VALUES (?, ?, ?, ?, ?)`
+  ).run(eventId, packageId, guestCount, bufferPct, maxOrder + 1)
+  return result.lastInsertRowid as number
+}
+
+export function updateEventPackage(id: number, data: Partial<{ package_id: string; guest_count: number; buffer_pct: number }>) {
+  const fields = Object.keys(data).map(k => `${k} = ?`).join(', ')
+  getDb().prepare(`UPDATE event_packages SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
+}
+
+export function removeEventPackage(id: number) {
+  getDb().prepare(`DELETE FROM event_packages WHERE id = ?`).run(id)
+}
+
 export function getEventFull(id: number) {
   const event = getDb().prepare('SELECT * FROM events WHERE id = ?').get(id) as Event | undefined
   if (!event) return null
@@ -356,13 +428,11 @@ export function getEventFull(id: number) {
   const payments = getPayments(id)
   const addOns = getAddOns(id)
   const notes = getEventNotes(id)
-  let pkg: Package | null = null
-  let menuItems: MenuItem[] = []
-  if (details?.package_id) {
-    pkg = getPackage(details.package_id)
-    menuItems = getMenuItems(details.package_id)
-  }
-  return { event, client, details, payments, addOns, notes, pkg, menuItems }
+  const packages = getEventPackages(id)
+  // backward compat: first package = primary
+  const pkg = packages[0]?.pkg ?? null
+  const menuItems = packages[0]?.menuItems ?? []
+  return { event, client, details, payments, addOns, notes, pkg, menuItems, packages }
 }
 
 export function createEvent(data: {

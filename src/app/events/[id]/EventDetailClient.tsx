@@ -17,7 +17,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
 }
 import { formatCurrency, calcFloorPlan } from '@/lib/calculations'
 import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
-import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem } from '@/lib/db'
+import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems } from '@/lib/db'
 
 const ProposalDownloadButton = dynamic(
   () => import('@/components/ProposalPDF').then((m) => m.ProposalDownloadButton),
@@ -33,6 +33,7 @@ interface FullData {
   notes: EventNote[]
   pkg: Package | null
   menuItems: MenuItem[]
+  packages: EventPackageWithItems[]
 }
 
 interface Props {
@@ -46,6 +47,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
   const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'payments'|'notes'>('overview')
   const [editingConfirmed, setEditingConfirmed] = useState(false)
+  const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
   const { event, client, details, payments, addOns, notes } = data
 
@@ -77,6 +79,36 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     const res = await fetch(`/api/events/${event.id}`)
     const d = await res.json()
     setData(d)
+    if (d.packages) setEventPackages(d.packages)
+  }
+
+  async function addPackage() {
+    const res = await fetch('/api/event-packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: event.id, package_id: '', guest_count: 0, buffer_pct: 0 }),
+    })
+    const { id } = await res.json()
+    setEventPackages(prev => [...prev, { id, event_id: event.id, package_id: '', guest_count: 0, buffer_pct: 0, sort_order: prev.length, pkg: null, menuItems: [] }])
+  }
+
+  async function removePackage(id: number) {
+    await fetch('/api/event-packages', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setEventPackages(prev => prev.filter(ep => ep.id !== id))
+  }
+
+  async function updatePackage(id: number, patchData: { package_id?: string; guest_count?: number; buffer_pct?: number }) {
+    await fetch('/api/event-packages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...patchData }),
+    })
+    const fresh = await fetch(`/api/events/${event.id}`).then(r => r.json())
+    if (fresh.packages) setEventPackages(fresh.packages)
   }
 
   async function saveStatus(status: string) {
@@ -546,14 +578,82 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
 
         {/* Catering Tab */}
         {tab === 'catering' && (
-          <InfoCard title="Catering Calculator">
-            <CateringCalculator
-              packageId={details?.package_id ?? null}
-              guestCount={details?.guest_count ?? 0}
-              bufferPct={details?.buffer_pct ?? 0}
-              pricePerGuest={selectedPkg?.price_per_guest ?? 0}
-            />
-          </InfoCard>
+          <div className="space-y-4">
+            {/* Packages */}
+            <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Catering Packages</h3>
+                <button
+                  onClick={addPackage}
+                  className="text-xs px-2.5 py-1 rounded-md bg-[#C8973A]/20 text-[#C8973A] hover:bg-[#C8973A]/30 transition-colors font-medium"
+                >
+                  + Add Package
+                </button>
+              </div>
+              {eventPackages.length === 0 && (
+                <p className="text-sm text-gray-500 italic">No packages added. Click &quot;+ Add Package&quot; to begin.</p>
+              )}
+              <div className="space-y-6">
+                {eventPackages.map((ep, idx) => (
+                  <div key={ep.id} className={`${idx > 0 ? 'border-t border-white/10 pt-6' : ''}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Package {idx + 1}</p>
+                      <button
+                        onClick={() => removePackage(ep.id)}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                      {/* Package selector */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Package</label>
+                        <select
+                          defaultValue={ep.package_id}
+                          onBlur={e => updatePackage(ep.id, { package_id: e.target.value })}
+                          className="bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        >
+                          <option value="">— none —</option>
+                          {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      {/* Guest count */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Guests</label>
+                        <input
+                          type="number"
+                          defaultValue={ep.guest_count || ''}
+                          onBlur={e => updatePackage(ep.id, { guest_count: Number(e.target.value) || 0 })}
+                          placeholder="0"
+                          className="w-20 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        />
+                      </div>
+                      {/* Buffer pct */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Buffer %</label>
+                        <input
+                          type="number"
+                          defaultValue={ep.buffer_pct ? Math.round(ep.buffer_pct * 100) : ''}
+                          onBlur={e => updatePackage(ep.id, { buffer_pct: (Number(e.target.value) || 0) / 100 })}
+                          placeholder="0"
+                          className="w-16 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        />
+                      </div>
+                    </div>
+                    {ep.pkg && ep.guest_count > 0 && (
+                      <CateringCalculator
+                        packageId={ep.package_id}
+                        guestCount={ep.guest_count}
+                        bufferPct={ep.buffer_pct}
+                        pricePerGuest={ep.pkg.price_per_guest ?? 0}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Floor Plan Tab */}
