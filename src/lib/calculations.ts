@@ -72,6 +72,24 @@ export function calcAllItems(items: MenuItem[], guestCount: number, bufferPct = 
     })
 }
 
+export function mergeCalculatedItems(items: CalculatedItem[]): CalculatedItem[] {
+  const map = new Map<string, CalculatedItem>()
+  for (const item of items) {
+    const existing = map.get(item.item_name)
+    if (!existing) {
+      map.set(item.item_name, { ...item })
+    } else {
+      // Both numeric — sum them
+      if (typeof existing.total_qty === 'number' && typeof item.total_qty === 'number') {
+        existing.total_qty += item.total_qty
+        existing.display = `${existing.total_qty} ${existing.unit_name ?? ''}`.trim()
+      }
+      // If either is a string quantity ("as needed" etc.) keep existing as-is
+    }
+  }
+  return Array.from(map.values())
+}
+
 export interface SauceRule {
   trigger: string
   sauces: string[]
@@ -110,29 +128,105 @@ export interface ServingwareRule {
   trigger: string
   utensil: string
   vessel: string
+  vesselLabel: string  // display label for plain-text catering summary
   altNote?: string
 }
 
 export const SERVINGWARE_RULES: ServingwareRule[] = [
-  { trigger: 'Cheese Platter',           utensil: 'Tongs',         vessel: '1 per board' },
-  { trigger: 'Hummus',                   utensil: 'Serving Spoon', vessel: '1 per bowl' },
-  { trigger: 'French Fries',             utensil: 'Tongs',         vessel: '1 per chafing dish' },
-  { trigger: 'Chips',                    utensil: 'Tongs',         vessel: '1 per bowl' },
-  { trigger: 'Salsa',                    utensil: 'Small Ladle',   vessel: '1 per bowl' },
-  { trigger: 'Queso',                    utensil: 'Small Ladle',   vessel: '1 per bowl' },
-  { trigger: 'Pork Arepa',               utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Green Tomato Arepa',       utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Black Bean Arepa',         utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Jasmine Rice',             utensil: 'Serving Spoon', vessel: '1 per chafing dish' },
-  { trigger: 'Thai Fried Chicken',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
-  { trigger: 'Thai Slaw',                utensil: 'Tongs',         vessel: '1 per bowl' },
-  { trigger: 'Asian Chopped Salad',      utensil: 'Tongs',         vessel: '1 per bowl' },
-  { trigger: 'Shrimp Kabob',             utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Thai Chicken Kabob',       utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Pulled Pork Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
-  { trigger: 'Mini Burger Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
-  { trigger: 'Buffalo Chicken Slider',   utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Cheese Platter',           utensil: 'Tongs',         vessel: '1 per board',        vesselLabel: 'Large White Platter(s)' },
+  { trigger: 'Hummus',                   utensil: 'Serving Spoon', vessel: '1 per bowl',         vesselLabel: 'Large White Bowl' },
+  { trigger: 'French Fries',             utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Chips',                    utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large White Platter(s)' },
+  { trigger: 'Salsa',                    utensil: 'Small Ladle',   vessel: '1 per bowl',         vesselLabel: 'Bowl' },
+  { trigger: 'Queso',                    utensil: 'Small Ladle',   vessel: '1 per bowl',         vesselLabel: 'Bowl' },
+  { trigger: 'Pork Arepa',               utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Green Tomato Arepa',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Black Bean Arepa',         utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Jasmine Rice',             utensil: 'Serving Spoon', vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Thai Fried Chicken',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Thai Slaw',                utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large Bowl' },
+  { trigger: 'Asian Chopped Salad',      utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large Bowl' },
+  { trigger: 'Shrimp Kabob',             utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Thai Chicken Kabob',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Pulled Pork Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Mini Burger Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Buffalo Chicken Slider',   utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
+  { trigger: 'Veggies',                  utensil: 'Tongs',         vessel: '1 per platter',      vesselLabel: 'Large White Platter(s)' },
+  { trigger: 'Crudités',                 utensil: 'Tongs',         vessel: '1 per platter',      vesselLabel: 'Large White Platter(s)' },
 ]
+
+function vesselLabelFor(item: CalculatedItem): string {
+  const sw = SERVINGWARE_RULES.find(r =>
+    item.item_name.toLowerCase().includes(r.trigger.toLowerCase())
+  )
+  if (sw) return sw.vesselLabel
+  if (item.unit_name === '200 Pan') return 'Large Chafer'
+  if (item.unit_name === '1/2 Chafer') return 'Half Chafer'
+  return item.unit_name ?? ''
+}
+
+export function formatCateringText(
+  sections: Array<{ name: string; items: CalculatedItem[] }>,
+  selectedSauces?: string
+): string {
+  const sauceSet = selectedSauces
+    ? new Set(selectedSauces.split(',').map(s => s.trim()).filter(Boolean))
+    : null
+
+  function saucesFor(itemName: string): string[] {
+    return SAUCE_RULES
+      .filter(r => itemName.toLowerCase().includes(r.trigger.toLowerCase()))
+      .flatMap(r => r.sauces.filter(s => !r.selectable || !sauceSet || sauceSet.has(s)))
+  }
+
+  return sections.map(({ name, items }) => {
+    const lines = [name.toUpperCase()]
+    for (const item of items) {
+      if (typeof item.total_qty !== 'number' || item.total_qty === 0) continue
+      const vessel = vesselLabelFor(item)
+      const pcs = item.piece_count ? ` (${item.piece_count} pcs)` : ''
+      const vesselPart = vessel ? `${vessel} of ` : ''
+      const stagger = item.total_qty > 1 ? '  — Serve 1 @ a time' : ''
+      lines.push(`(${item.total_qty}) ${vesselPart}${item.item_name}${pcs}${stagger}`)
+      for (const sauce of saucesFor(item.item_name)) {
+        lines.push(`    - ${sauce}`)
+      }
+    }
+    return lines.join('\n')
+  }).join('\n\n')
+}
+
+function pluralUtensil(utensil: string, count: number): string {
+  if (count === 1) return utensil
+  if (utensil === 'Tongs') return 'Tongs'
+  return `${utensil}s`
+}
+
+export function formatEquipmentText(
+  items: CalculatedItem[],
+  serveStyle: Record<string, 'all' | 'staggered'> = {}
+): string {
+  const chafing = countChafingDishes(items, serveStyle)
+  const utensilCounts = new Map<string, number>()
+
+  for (const item of items) {
+    if (typeof item.total_qty !== 'number' || item.total_qty === 0) continue
+    const sw = SERVINGWARE_RULES.find(r =>
+      item.item_name.toLowerCase().includes(r.trigger.toLowerCase())
+    )
+    if (!sw) continue
+    utensilCounts.set(sw.utensil, (utensilCounts.get(sw.utensil) ?? 0) + item.total_qty)
+  }
+
+  const lines: string[] = []
+  if (chafing.fullSize > 0) lines.push(`(${chafing.fullSize}) Full-Size Chafing ${chafing.fullSize === 1 ? 'Dish' : 'Dishes'}`)
+  if (chafing.halfSize > 0) lines.push(`(${chafing.halfSize}) Half-Size Chafing ${chafing.halfSize === 1 ? 'Dish' : 'Dishes'}`)
+  for (const utensil of Array.from(utensilCounts.keys())) {
+    const count = utensilCounts.get(utensil)!
+    lines.push(`(${count}) ${pluralUtensil(utensil, count)}`)
+  }
+  return lines.join('   ')
+}
 
 export function getServingware(itemName: string): ServingwareRule | null {
   return SERVINGWARE_RULES.find(r =>
@@ -157,11 +251,44 @@ export function countChafingDishes(
   for (const item of items) {
     if (typeof item.total_qty !== 'number') continue
     // Staggered items only ever have 1 pan on the buffet at a time
-    const qty = (serveStyle[item.item_name] ?? 'all') === 'staggered' ? 1 : item.total_qty
+    // Items with no explicit style default to staggered when qty > 1 (only 1 on the floor at a time)
+    const style = serveStyle[item.item_name] ?? (item.total_qty > 1 ? 'staggered' : 'all')
+    const qty = style === 'staggered' ? 1 : item.total_qty
     if (item.unit_name === '200 Pan') fullSize += qty
     else if (item.unit_name === '1/2 Chafer') halfSize += qty
   }
   return { fullSize, halfSize, total: fullSize + halfSize }
+}
+
+export interface SupplyList {
+  plates: number
+  rolledSilverware: number
+  sternos: number
+  tablecloths: number
+  highTopCovers: number
+}
+
+export function calcSupplies(params: {
+  guestCount: number
+  bufferPct: number
+  chafing: ChafingDishCount
+  floorPlan: FloorPlanRec
+  durationHours: number
+}): SupplyList {
+  const { guestCount, bufferPct, chafing, floorPlan, durationHours } = params
+  const guests = effectiveGuests(guestCount, bufferPct)
+
+  const plates = guests
+  const rolledSilverware = guests
+
+  // 2 sternos per chafing dish; 4 if event exceeds 4 hours
+  const sternosPerDish = durationHours > 4 ? 4 : 2
+  const sternos = chafing.total * sternosPerDish
+
+  const tablecloths = floorPlan.tablesNeeded ?? 0
+  const highTopCovers = (floorPlan.highTopCount ?? 0) + (floorPlan.receptionHighTops ?? 0)
+
+  return { plates, rolledSilverware, sternos, tablecloths, highTopCovers }
 }
 
 export function formatCurrency(amount: number): string {

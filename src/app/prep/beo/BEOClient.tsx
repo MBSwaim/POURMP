@@ -2,10 +2,10 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes } from '@/lib/calculations'
+import { calcAllItems, mergeCalculatedItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies } from '@/lib/calculations'
 import { Logo } from '@/components/Logo'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
-import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient } from '@/lib/db'
+import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
 
 interface FullData {
   event: Event
@@ -100,7 +100,7 @@ function BEODocument({ data }: { data: FullData }) {
     ? data.packages
     : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cateringItems = allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : [])
+  const cateringItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
     try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
@@ -334,6 +334,49 @@ function BEODocument({ data }: { data: FullData }) {
           </table>
         </div>
       )}
+
+      {/* Supplies */}
+      {guestCount > 0 && (() => {
+        const floorPlan = calcFloorPlan(guestCount)
+        const chafing = countChafingDishes(cateringItems, serveStyle)
+
+        let durationHours = 3
+        if (event.event_time && event.teardown_time) {
+          const [sh, sm] = event.event_time.split(':').map(Number)
+          const [eh, em] = event.teardown_time.split(':').map(Number)
+          let start = sh * 60 + sm
+          let end = eh * 60 + em
+          if (end < start) end += 24 * 60
+          durationHours = (end - start) / 60
+        }
+
+        const s = calcSupplies({
+          guestCount,
+          bufferPct,
+          chafing,
+          floorPlan,
+          durationHours,
+        })
+
+        const rows: Array<[string, string]> = [
+          ['Plates', String(s.plates)],
+          ['Rolled Silverware', String(s.rolledSilverware)],
+          ...(s.sternos > 0 ? [['Sternos', String(s.sternos)] as [string, string]] : []),
+          ...(s.tablecloths > 0 ? [['Tablecloths', String(s.tablecloths)] as [string, string]] : []),
+          ...(s.highTopCovers > 0 ? [['High-Top Covers', String(s.highTopCovers)] as [string, string]] : []),
+        ]
+
+        return (
+          <div>
+            <SectionHeader>Supplies Needed</SectionHeader>
+            <div className="grid grid-cols-4 gap-x-6 gap-y-0.5">
+              {rows.map(([label, val]) => (
+                <Row key={label} label={label} value={val} />
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Bar & Beverage + Add-ons — side by side when both present */}
       {(details?.bar_tab_type || addOns.length > 0) && (

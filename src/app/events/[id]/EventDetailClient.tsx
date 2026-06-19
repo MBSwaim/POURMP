@@ -14,10 +14,10 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { calcFloorPlan } from '@/lib/calculations'
+import { calcFloorPlan, calcAllItems, mergeCalculatedItems, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import Link from 'next/link'
-import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem } from '@/lib/db'
+import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems } from '@/lib/db'
 
 const ProposalDownloadButton = dynamic(
   () => import('@/components/ProposalPDF').then((m) => m.ProposalDownloadButton),
@@ -456,40 +456,77 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
         {/* Catering Tab */}
         <div className={tab === 'catering' ? 'space-y-4' : 'hidden'}>
 
-            {/* Package & Quantities */}
+            {/* Catering Packages */}
             <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
-              <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Buffet Package</h3>
-              <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm mb-4">
-                <div className="flex gap-2">
-                  <span className="text-gray-400">Package</span>
-                  <span className="text-white font-medium">{selectedPkg?.name ?? <span className="text-gray-500 italic">None selected</span>}</span>
-                </div>
-                {details?.guest_count ? (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400">Guests</span>
-                    <span className="text-white font-medium">
-                      {details.guest_count}
-                      {details.buffer_pct ? ` (effective ${Math.ceil(details.guest_count * (1 + details.buffer_pct))} w/ ${Math.round(details.buffer_pct * 100)}% buffer)` : ''}
-                    </span>
-                  </div>
-                ) : null}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Catering Packages</h3>
+                <button
+                  onClick={addPackage}
+                  className="text-xs px-2.5 py-1 rounded-md bg-[#C8973A]/20 text-[#C8973A] hover:bg-[#C8973A]/30 transition-colors font-medium"
+                >
+                  + Add Package
+                </button>
               </div>
-              <CateringCalculator
-                packageId={details?.package_id ?? null}
-                guestCount={details?.guest_count ?? 0}
-                bufferPct={details?.buffer_pct ?? 0}
-                pricePerGuest={selectedPkg?.price_per_guest ?? 0}
-                savedSauces={details?.selected_sauces ?? ''}
-                onSauceChange={(csv) => {
-                  saveField('details', 'selected_sauces', csv)
-                  toast.success('Sauce selection saved')
-                }}
-                serveStyleJson={details?.serve_style_json ?? '{}'}
-                onServeStyleChange={(json) => {
-                  saveField('details', 'serve_style_json', json)
-                  toast.success('Serve style saved')
-                }}
-              />
+              {eventPackages.length === 0 && (
+                <p className="text-sm text-gray-500 italic">No packages added. Click &quot;+ Add Package&quot; to begin.</p>
+              )}
+              <div className="space-y-6">
+                {eventPackages.map((ep, idx) => (
+                  <div key={ep.id} className={idx > 0 ? 'border-t border-white/10 pt-6' : ''}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Package {idx + 1}</p>
+                      <button onClick={() => removePackage(ep.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">
+                        Remove
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Package</label>
+                        <select
+                          defaultValue={ep.package_id}
+                          onBlur={e => updatePackage(ep.id, { package_id: e.target.value })}
+                          className="bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        >
+                          <option value="">— none —</option>
+                          {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Guests</label>
+                        <input
+                          type="number"
+                          defaultValue={ep.guest_count || ''}
+                          onBlur={e => updatePackage(ep.id, { guest_count: Number(e.target.value) || 0 })}
+                          placeholder="0"
+                          className="w-20 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Buffer %</label>
+                        <input
+                          type="number"
+                          defaultValue={ep.buffer_pct ? Math.round(ep.buffer_pct * 100) : ''}
+                          onBlur={e => updatePackage(ep.id, { buffer_pct: (Number(e.target.value) || 0) / 100 })}
+                          placeholder="0"
+                          className="w-16 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                        />
+                      </div>
+                    </div>
+                    {ep.pkg && ep.guest_count > 0 && (
+                      <CateringCalculator
+                        packageId={ep.package_id}
+                        guestCount={ep.guest_count}
+                        bufferPct={ep.buffer_pct}
+                        pricePerGuest={ep.pkg.price_per_guest ?? 0}
+                        savedSauces={details?.selected_sauces ?? ''}
+                        onSauceChange={(csv) => { saveField('details', 'selected_sauces', csv); toast.success('Sauce selection saved') }}
+                        serveStyleJson={details?.serve_style_json ?? '{}'}
+                        onServeStyleChange={(json) => { saveField('details', 'serve_style_json', json) }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Add-ons */}
@@ -576,6 +613,82 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                 />
               </div>
             </div>
+
+            {/* Supplies Summary */}
+            {(() => {
+              const guestCount = details?.guest_count ?? 0
+              const bufferPct = details?.buffer_pct ?? 0
+              if (guestCount === 0) return null
+
+              const allPkgs = eventPackages.length > 0
+                ? eventPackages
+                : (data.pkg ? [{ pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: event.id, package_id: data.pkg.id, sort_order: 0 }] : [])
+              const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
+                try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
+              })()
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const merged = mergeCalculatedItems(allPkgs.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
+              const chafing = countChafingDishes(merged, serveStyle)
+              const floorPlan = calcFloorPlan(guestCount)
+
+              let durationHours = 3
+              if (event.event_time && event.teardown_time) {
+                const [sh, sm] = event.event_time.split(':').map(Number)
+                const [eh, em] = event.teardown_time.split(':').map(Number)
+                let start = sh * 60 + sm
+                let end = eh * 60 + em
+                if (end < start) end += 24 * 60
+                durationHours = (end - start) / 60
+              }
+
+              const supplies = calcSupplies({
+                guestCount,
+                bufferPct,
+                chafing,
+                floorPlan,
+                durationHours,
+              })
+
+              return (
+                <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                  <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Supplies Summary</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <SupplyStat label="Plates" value={supplies.plates} />
+                    <SupplyStat label="Rolled Silverware" value={supplies.rolledSilverware} />
+                    {supplies.sternos > 0 && <SupplyStat label="Sternos" value={supplies.sternos} note={`${chafing.total} dish${chafing.total !== 1 ? 'es' : ''}`} />}
+                    {supplies.tablecloths > 0 && <SupplyStat label="Tablecloths" value={supplies.tablecloths} />}
+                    {supplies.highTopCovers > 0 && <SupplyStat label="High-Top Covers" value={supplies.highTopCovers} />}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Plain-Text Catering & Equipment Summaries */}
+            {(() => {
+              const guestCount = details?.guest_count ?? 0
+              const allPkgs = eventPackages.length > 0
+                ? eventPackages
+                : (data.pkg ? [{ pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0, id: 0, event_id: event.id, package_id: data.pkg.id, sort_order: 0 }] : [])
+              const activePkgs = allPkgs.filter(ep => ep.pkg && ep.guest_count > 0)
+              if (activePkgs.length === 0) return null
+
+              const combinedTitle = activePkgs.map(ep => ep.pkg!.name).join(' | ')
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const mergedItems = mergeCalculatedItems(activePkgs.flatMap(ep => calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct)))
+              const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
+                try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
+              })()
+
+              const cateringText = formatCateringText([{ name: combinedTitle, items: mergedItems }], details?.selected_sauces ?? '')
+              const equipmentText = formatEquipmentText(mergedItems, serveStyle)
+
+              return (
+                <>
+                  <CateringTextCard label="Catering Summary — Plain Text" text={cateringText} showDisclaimer />
+                  {equipmentText && <CateringTextCard label="Equipment — Plain Text" text={equipmentText} />}
+                </>
+              )
+            })()}
 
           </div>
 
@@ -841,6 +954,97 @@ function ExpandableText({ label, value, locked, onSave }: {
           {value || <span className="text-gray-500 italic">—</span>}
         </button>
       )}
+    </div>
+  )
+}
+
+const CATERING_DISCLAIMER = 'Please Note: Ordering off our taproom food menu during events is not permitted.'
+
+function isHeaderLine(line: string) {
+  const t = line.trim()
+  return t.length > 0 && t === t.toUpperCase() && /[A-Z]/.test(t)
+}
+
+function buildRichHtml(text: string, showDisclaimer?: boolean): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const lines = text.split('\n')
+  const parts = lines.map(line => {
+    if (line.trim() === '') return '<p>&nbsp;</p>'
+    return isHeaderLine(line)
+      ? `<p><strong>${esc(line)}</strong></p>`
+      : `<p>${esc(line)}</p>`
+  })
+  if (showDisclaimer) {
+    parts.push('<p>&nbsp;</p>')
+    parts.push(`<p><strong>${esc(CATERING_DISCLAIMER)}</strong></p>`)
+  }
+  return parts.join('')
+}
+
+function CateringTextCard({ label, text, showDisclaimer }: { label: string; text: string; showDisclaimer?: boolean }) {
+  const [copied, setCopied] = useState(false)
+  const plainText = showDisclaimer ? `${text}\n\n${CATERING_DISCLAIMER}` : text
+
+  async function copy() {
+    try {
+      if (typeof ClipboardItem !== 'undefined') {
+        const html = buildRichHtml(text, showDisclaimer)
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([plainText], { type: 'text/plain' }),
+          }),
+        ])
+      } else {
+        await navigator.clipboard.writeText(plainText)
+      }
+    } catch {
+      await navigator.clipboard.writeText(plainText)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const lines = text.split('\n')
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{label}</h3>
+        <button
+          onClick={copy}
+          className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+            copied
+              ? 'bg-green-600/30 text-green-400 border border-green-500/40'
+              : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
+          }`}
+        >
+          {copied ? '✓ Copied!' : 'Copy to Clipboard'}
+        </button>
+      </div>
+      <div className="w-full bg-[#0f1e2d] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 font-mono leading-relaxed">
+        <pre className="whitespace-pre-wrap">
+          {lines.map((line, i) => (
+            <span key={i}>
+              {isHeaderLine(line) ? <strong className="text-white">{line}</strong> : line}
+              {i < lines.length - 1 ? '\n' : ''}
+            </span>
+          ))}
+          {showDisclaimer && (
+            <>{'\n\n'}<strong className="text-white">{CATERING_DISCLAIMER}</strong></>
+          )}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
+function SupplyStat({ label, value, note }: { label: string; value: number | string; note?: string }) {
+  return (
+    <div className="rounded-lg bg-white/5 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">{label}</p>
+      <p className="text-lg font-bold text-white leading-none">{value}</p>
+      {note && <p className="text-xs text-gray-500 mt-0.5">{note}</p>}
     </div>
   )
 }

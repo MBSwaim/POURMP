@@ -2,10 +2,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, effectiveGuests, getApplicableSauces, getServingware, countChafingDishes } from '@/lib/calculations'
+import { calcAllItems, mergeCalculatedItems, effectiveGuests, getApplicableSauces, getServingware, countChafingDishes } from '@/lib/calculations'
 import type { ApplicableSauce } from '@/lib/calculations'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
-import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient } from '@/lib/db'
+import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
 import { Logo } from '@/components/Logo'
 
 interface FullData {
@@ -102,7 +102,7 @@ function PrepSheet({ data }: { data: FullData }) {
     ? data.packages
     : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prepItems = allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : [])
+  const prepItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
   const ticketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {

@@ -179,6 +179,7 @@ function initSchema(db: Database.Database) {
     `ALTER TABLE event_details ADD COLUMN beo_notes TEXT DEFAULT ''`,
     `ALTER TABLE event_details ADD COLUMN kitchen_notes TEXT DEFAULT ''`,
     `CREATE TABLE IF NOT EXISTS event_setup_checklist (event_id INTEGER NOT NULL, item_key TEXT NOT NULL, checked INTEGER DEFAULT 0, checked_at TEXT, PRIMARY KEY (event_id, item_key))`,
+    `CREATE TABLE IF NOT EXISTS event_packages (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, package_id TEXT NOT NULL DEFAULT '', guest_count INTEGER NOT NULL DEFAULT 0, buffer_pct REAL NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0)`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -254,6 +255,20 @@ export interface EventDetails {
   serve_style_json: string
   beo_notes: string
   kitchen_notes: string
+}
+
+export interface EventPackage {
+  id: number
+  event_id: number
+  package_id: string
+  guest_count: number
+  buffer_pct: number
+  sort_order: number
+}
+
+export interface EventPackageWithItems extends EventPackage {
+  pkg: Package | null
+  menuItems: MenuItem[]
 }
 
 export interface Payment {
