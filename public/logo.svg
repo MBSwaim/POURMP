@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="248" height="242" viewBox="0 0 248 242" role="img" aria-label="Atom bottle logo vector">
+  <title>Atom Bottle Logo</title>
+  <g fill="none" stroke="#1d1d1d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- atom orbit lines -->
+    <ellipse cx="124" cy="121" rx="42" ry="91"/>
+    <ellipse cx="124" cy="121" rx="91" ry="38" transform="rotate(-29 124 121)"/>
+    <ellipse cx="124" cy="121" rx="91" ry="38" transform="rotate(29 124 121)"/>
+  </g>
+
+  <!-- center bottle silhouette -->
+  <path fill="#000000" d="
+    M116.6 182.7
+    L139.4 182.7
+    L134.1 96.6
+    C133.5 91.8 132.1 87.8 130.0 84.1
+    L130.0 58.7
+    L119.1 58.7
+    L119.1 84.1
+    C116.9 87.8 115.5 91.8 114.9 96.6
+    Z"/>
+</svg>

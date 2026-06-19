@@ -65,6 +65,24 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.22s ease-out;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0.4in 0.45in;
+  }
+  /* Tighten base font so everything scales down proportionally */
+  body {
+    font-size: 11px;
+  }
 }
 
 /* Make date/time picker icons visible on dark backgrounds */

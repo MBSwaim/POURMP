@@ -6,17 +6,17 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge, PaymentStatusBadge } from '@/components/StatusBadge'
 import { CateringCalculator } from '@/components/CateringCalculator'
-import { PaymentPanel } from '@/components/PaymentPanel'
 import dynamic from 'next/dynamic'
-import { EVENT_STATUSES, DRINK_TICKET_PRICE } from '@/lib/constants'
+import { EVENT_STATUSES } from '@/lib/constants'
 
 const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'Pre-Paid Drink Ticket(s)': 'Includes all beer selections on tap, wine, rosé, sparkling brut, beer- and wine-based cocktails, coffee, and non-alcoholic beverage options.',
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { formatCurrency, calcFloorPlan } from '@/lib/calculations'
-import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
+import { calcFloorPlan } from '@/lib/calculations'
+import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
+import Link from 'next/link'
 import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem } from '@/lib/db'
 
 const ProposalDownloadButton = dynamic(
@@ -44,7 +44,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'payments'|'notes'>('overview')
+  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'notes'>('overview')
   const [editingConfirmed, setEditingConfirmed] = useState(false)
 
   const { event, client, details, payments, addOns, notes } = data
@@ -52,21 +52,10 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
   const deposit = payments.find(p => p.payment_type === 'deposit') ?? null
   const finalPayment = payments.find(p => p.payment_type === 'final') ?? null
 
-  const [feeForm, setFeeForm] = useState({
-    service_fee: details?.service_fee ? String(details.service_fee) : '',
-    gratuity_pct: details?.gratuity_pct ? String(Math.round(details.gratuity_pct * 100)) : '',
-    tax_pct: String(Math.round((details?.tax_pct ?? 0.0825) * 10000) / 100),
-  })
-  const [feesSaving, setFeesSaving] = useState(false)
   const [floorPlanNotes, setFloorPlanNotes] = useState(details?.floor_plan_notes ?? '')
   const [floorNotesSaving, setFloorNotesSaving] = useState(false)
 
   useEffect(() => {
-    setFeeForm({
-      service_fee: data.details?.service_fee ? String(data.details.service_fee) : '',
-      gratuity_pct: data.details?.gratuity_pct ? String(Math.round(data.details.gratuity_pct * 100)) : '',
-      tax_pct: String(Math.round((data.details?.tax_pct ?? 0.0825) * 10000) / 100),
-    })
     setFloorPlanNotes(data.details?.floor_plan_notes ?? '')
   }, [data])
 
@@ -195,29 +184,6 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     await reload()
   }
 
-  async function saveFees() {
-    setFeesSaving(true)
-    try {
-      await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          details: {
-            service_fee: Number(feeForm.service_fee) || 0,
-            gratuity_pct: Number(feeForm.gratuity_pct) / 100 || 0,
-            tax_pct: Number(feeForm.tax_pct) / 100 || 0,
-          },
-        }),
-      })
-      toast.success('Fees saved')
-      await reload()
-    } catch {
-      toast.error('Failed to save fees')
-    } finally {
-      setFeesSaving(false)
-    }
-  }
-
   async function saveFloorPlanNotes() {
     setFloorNotesSaving(true)
     try {
@@ -274,6 +240,18 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
           <Button size="sm" onClick={saveAndConfirm} className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white">
             Save & Confirm
           </Button>
+          <Link
+            href={`/prep/kitchen-sheet?event=${event.id}`}
+            className="inline-flex items-center px-3 py-1.5 text-sm rounded-md border border-white/30 text-white hover:bg-white/10 transition-colors"
+          >
+            Kitchen Sheet
+          </Link>
+          <Link
+            href={`/prep/beo?event=${event.id}`}
+            className="inline-flex items-center px-3 py-1.5 text-sm rounded-md border border-white/30 text-white hover:bg-white/10 transition-colors"
+          >
+            BEO
+          </Link>
           <ProposalDownloadButton eventId={event.id} />
         </div>
       </div>
@@ -291,7 +269,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-white/10 mb-5">
-          {(['overview','catering','floorplan','payments','notes'] as const).map((id) => (
+          {(['overview','catering','floorplan','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -301,7 +279,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
               }`}
             >
-              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', payments: 'Payments', notes: 'Notes' }[id]}
+              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', notes: 'Notes' }[id]}
             </button>
           ))}
         </div>
@@ -317,6 +295,14 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <EditableRow locked={locked} label="Setup Begins" value={event.setup_time} type="time" display={to12Hour(event.setup_time)} onSave={(v) => saveField('event', 'setup_time', v)} />
               <EditableRow locked={locked} label="Decorating / Customer Access" value={event.decorate_time} type="time" display={to12Hour(event.decorate_time)} onSave={(v) => saveField('event', 'decorate_time', v)} />
               <EditableRow locked={locked} label="Event Ends" value={event.teardown_time} type="time" display={to12Hour(event.teardown_time)} onSave={(v) => saveField('event', 'teardown_time', v)} />
+              {event.event_time && (
+                <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
+                  <span className="text-gray-400 shrink-0 mr-2">Food Ready By</span>
+                  <span className="text-right font-medium text-[#C8973A]">
+                    {to12Hour(shiftTime(event.event_time, -15))}
+                  </span>
+                </div>
+              )}
               <EditableRow locked={locked} label="Space" value={event.space} onSave={(v) => saveField('event', 'space', v)} />
               {(deposit || finalPayment) && (
                 <div className="border-t border-white/5 pt-2 mt-1 space-y-1">
@@ -365,111 +351,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   )}
                 </div>
                 <EditableRow locked={locked} label="Guests" value={String(details?.guest_count ?? '')} type="number" onSave={(v) => saveField('details', 'guest_count', Number(v))} />
-                <EditableRow locked={locked} label="Buffer %" value={String((details?.buffer_pct ?? 0) * 100)} type="number" onSave={(v) => saveField('details', 'buffer_pct', Number(v) / 100)} />
-                <div className="pt-2 mt-1 border-t border-white/10 space-y-2">
-                  <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Fees & Tax</p>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-2">
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Tax %</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        placeholder="8.25"
-                        value={feeForm.tax_pct}
-                        onChange={e => setFeeForm(f => ({ ...f, tax_pct: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Service Fee ($)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={feeForm.service_fee}
-                        onChange={e => setFeeForm(f => ({ ...f, service_fee: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Gratuity %</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="1"
-                        placeholder="0"
-                        value={feeForm.gratuity_pct}
-                        onChange={e => setFeeForm(f => ({ ...f, gratuity_pct: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={saveFees}
-                    disabled={feesSaving}
-                    className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white"
-                  >
-                    {feesSaving ? 'Saving…' : 'Save Fees'}
-                  </Button>
-                </div>
-                {selectedPkg && details?.guest_count ? (() => {
-                  const foodSub = details.guest_count * selectedPkg.price_per_guest
-                  const ticketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
-                  const ticketSub = ticketQty * DRINK_TICKET_PRICE
-                  const addOnsSub = addOns.reduce((s, a) => s + a.qty * a.price_each, 0)
-                  const taxableBase = foodSub + addOnsSub
-                  const taxPct = details?.tax_pct ?? 0.0825
-                  const taxAmt = taxableBase * taxPct
-                  const gratuityBase = foodSub + ticketSub + addOnsSub
-                  const gratuityAmt = gratuityBase * (details?.gratuity_pct ?? 0)
-                  const serviceFee = details?.service_fee ?? 0
-                  const grandTotal = gratuityBase + taxAmt + gratuityAmt + serviceFee
-                  return (
-                    <div className="pt-1 border-t border-white/10 space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Food Subtotal</span>
-                        <span className="text-white">{formatCurrency(foodSub)}</span>
-                      </div>
-                      {addOnsSub > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Add-ons</span>
-                          <span className="text-white">{formatCurrency(addOnsSub)}</span>
-                        </div>
-                      )}
-                      {ticketQty > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Drink Tickets ({ticketQty} × ${DRINK_TICKET_PRICE})</span>
-                          <span className="text-white">{formatCurrency(ticketSub)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Tax ({(taxPct * 100).toFixed(2)}%)</span>
-                        <span className="text-white">{formatCurrency(taxAmt)}</span>
-                      </div>
-                      {serviceFee > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Service Fee</span>
-                          <span className="text-white">{formatCurrency(serviceFee)}</span>
-                        </div>
-                      )}
-                      {gratuityAmt > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Gratuity ({((details.gratuity_pct ?? 0) * 100).toFixed(0)}%)</span>
-                          <span className="text-white">{formatCurrency(gratuityAmt)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm font-semibold border-t border-white/10 pt-1">
-                        <span className="text-gray-400">Grand Total</span>
-                        <span className="text-[#C8973A]">{formatCurrency(grandTotal)}</span>
-                      </div>
-                    </div>
-                  )
-                })() : null}
+                <EditableRow locked={locked} label="Extra Headcount %" value={String((details?.buffer_pct ?? 0) * 100)} type="number" onSave={(v) => saveField('details', 'buffer_pct', Number(v) / 100)} />
                 <EditableRow locked={locked} label="Food Notes / Allergies" value={details?.food_notes ?? ''} onSave={(v) => saveField('details', 'food_notes', v)} />
                 <EditableRow locked={locked} label="Dietary Restrictions" value={details?.dietary_restrictions ?? ''} onSave={(v) => saveField('details', 'dietary_restrictions', v)} />
               </div>
@@ -514,8 +396,6 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   <th className="text-left py-1">Item</th>
                   <th className="text-right py-1">Qty</th>
                   <th className="text-right py-1">Unit</th>
-                  <th className="text-right py-1">Price Ea.</th>
-                  <th className="text-right py-1">Total</th>
                   <th className="py-1"></th>
                 </tr></thead>
                 <tbody>
@@ -524,8 +404,6 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                       <td className="py-1.5">{a.item_name}</td>
                       <td className="text-right">{a.qty}</td>
                       <td className="text-right text-gray-400">{a.unit}</td>
-                      <td className="text-right">{formatCurrency(a.price_each)}</td>
-                      <td className="text-right text-[#C8973A]">{formatCurrency(a.qty * a.price_each)}</td>
                       <td className="text-right pl-2">
                         <button onClick={() => deleteAddOn(a.id)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
                       </td>
@@ -538,23 +416,136 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <Input placeholder="Item name" value={newAddOn.item_name} onChange={(e) => setNewAddOn((n) => ({ ...n, item_name: e.target.value }))} className="flex-1 min-w-28" />
               <Input placeholder="Qty" type="number" value={newAddOn.qty} onChange={(e) => setNewAddOn((n) => ({ ...n, qty: e.target.value }))} className="w-16" />
               <Input placeholder="Unit" value={newAddOn.unit} onChange={(e) => setNewAddOn((n) => ({ ...n, unit: e.target.value }))} className="w-20" />
-              <Input placeholder="$/ea" type="number" value={newAddOn.price_each} onChange={(e) => setNewAddOn((n) => ({ ...n, price_each: e.target.value }))} className="w-20" />
               <Button size="sm" variant="outline" onClick={addAddOn}>Add</Button>
             </div>
           </InfoCard>
         </div>}
 
         {/* Catering Tab */}
-        {tab === 'catering' && (
-          <InfoCard title="Catering Calculator">
-            <CateringCalculator
-              packageId={details?.package_id ?? null}
-              guestCount={details?.guest_count ?? 0}
-              bufferPct={details?.buffer_pct ?? 0}
-              pricePerGuest={selectedPkg?.price_per_guest ?? 0}
-            />
-          </InfoCard>
-        )}
+        <div className={tab === 'catering' ? 'space-y-4' : 'hidden'}>
+
+            {/* Package & Quantities */}
+            <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Buffet Package</h3>
+              <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm mb-4">
+                <div className="flex gap-2">
+                  <span className="text-gray-400">Package</span>
+                  <span className="text-white font-medium">{selectedPkg?.name ?? <span className="text-gray-500 italic">None selected</span>}</span>
+                </div>
+                {details?.guest_count ? (
+                  <div className="flex gap-2">
+                    <span className="text-gray-400">Guests</span>
+                    <span className="text-white font-medium">
+                      {details.guest_count}
+                      {details.buffer_pct ? ` (effective ${Math.ceil(details.guest_count * (1 + details.buffer_pct))} w/ ${Math.round(details.buffer_pct * 100)}% buffer)` : ''}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+              <CateringCalculator
+                packageId={details?.package_id ?? null}
+                guestCount={details?.guest_count ?? 0}
+                bufferPct={details?.buffer_pct ?? 0}
+                pricePerGuest={selectedPkg?.price_per_guest ?? 0}
+                savedSauces={details?.selected_sauces ?? ''}
+                onSauceChange={(csv) => {
+                  saveField('details', 'selected_sauces', csv)
+                  toast.success('Sauce selection saved')
+                }}
+                serveStyleJson={details?.serve_style_json ?? '{}'}
+                onServeStyleChange={(json) => {
+                  saveField('details', 'serve_style_json', json)
+                  toast.success('Serve style saved')
+                }}
+              />
+            </div>
+
+            {/* Add-ons */}
+            {addOns.length > 0 && (
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Add-ons & Extras</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-gray-400">
+                      <th className="text-left py-1.5">Item</th>
+                      <th className="text-right py-1.5">Qty</th>
+                      <th className="text-right py-1.5">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {addOns.map((a) => (
+                      <tr key={a.id} className="border-b border-white/5">
+                        <td className="py-1.5">{a.item_name}</td>
+                        <td className="text-right">{a.qty}</td>
+                        <td className="text-right text-gray-400">{a.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Bar & Beverage */}
+            {details?.bar_tab_type && (
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Bar & Beverage</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex gap-2">
+                    <span className="text-gray-400 w-32 shrink-0">Bar Setup</span>
+                    <span className="text-white font-medium">BAR TAB | {details.bar_tab_type}</span>
+                  </div>
+                  {details.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && details.drink_tickets ? (
+                    <div className="flex gap-2">
+                      <span className="text-gray-400 w-32 shrink-0">Drink Tickets</span>
+                      <span className="text-white font-medium">{details.drink_tickets}</span>
+                    </div>
+                  ) : null}
+                  {details.tab_details && (
+                    <p className="text-gray-400 text-xs mt-2 leading-relaxed">{details.tab_details}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Food Notes & Restrictions */}
+            {(details?.dietary_restrictions || details?.food_notes) && (
+              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Food Notes & Restrictions</h3>
+                <div className="space-y-2 text-sm">
+                  {details.dietary_restrictions && (
+                    <div className="rounded-lg bg-red-900/20 border border-red-500/30 px-3 py-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-red-400 mb-0.5">Dietary Restrictions</p>
+                      <p className="text-white leading-relaxed">{details.dietary_restrictions}</p>
+                    </div>
+                  )}
+                  {details.food_notes && (
+                    <div className="rounded-lg bg-white/5 px-3 py-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">Food Notes</p>
+                      <p className="text-white leading-relaxed">{details.food_notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Staff Notes */}
+            <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Staff Notes</h3>
+              <div className="space-y-4">
+                <NoteField
+                  label="BEO Notes"
+                  value={details?.beo_notes ?? ''}
+                  onSave={(v) => saveField('details', 'beo_notes', v)}
+                />
+                <NoteField
+                  label="Kitchen Notes"
+                  value={details?.kitchen_notes ?? ''}
+                  onSave={(v) => saveField('details', 'kitchen_notes', v)}
+                />
+              </div>
+            </div>
+
+          </div>
 
         {/* Floor Plan Tab */}
         {tab === 'floorplan' && (() => {
@@ -581,7 +572,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   </div>
 
                   {!rec.isOverCapacity && rec.tablesNeeded !== null && (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-3">
                       <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
                         <p className="text-2xl font-bold text-white">{rec.tablesNeeded}</p>
                         <p className="text-xs text-gray-400 mt-0.5">6-ft Tables</p>
@@ -589,6 +580,10 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                       <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
                         <p className="text-2xl font-bold text-white">{rec.highTopCount ?? 0}</p>
                         <p className="text-xs text-gray-400 mt-0.5">High-Tops</p>
+                      </div>
+                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-white">{rec.receptionHighTops ?? 0}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Reception High-Tops</p>
                       </div>
                       <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
                         <p className="text-2xl font-bold text-white">{rec.seatedCapacity ?? '—'}</p>
@@ -629,6 +624,10 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
                     Place black velvet ropes at each marked position for guest safety
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
+                    Place current <strong className="text-white">beer list</strong> and <strong className="text-white">wine list</strong> on each table for guests to review before ordering at the bar
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
@@ -686,18 +685,6 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
             </div>
           )
         })()}
-
-        {/* Payments Tab */}
-        {tab === 'payments' && (
-          <PaymentPanel
-            eventId={event.id}
-            payments={payments}
-            details={details}
-            addOns={addOns}
-            pkg={selectedPkg ?? null}
-            onUpdate={reload}
-          />
-        )}
 
         {/* Notes Tab */}
         {tab === 'notes' && (
@@ -822,6 +809,24 @@ function ExpandableText({ label, value, locked, onSave }: {
           {value || <span className="text-gray-500 italic">—</span>}
         </button>
       )}
+    </div>
+  )
+}
+
+function NoteField({ label, value, onSave }: { label: string; value: string; onSave: (v: string) => void }) {
+  const [val, setVal] = useState(value)
+  function commit() { if (val !== value) onSave(val) }
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">{label}</label>
+      <Textarea
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        rows={3}
+        placeholder={`Notes that will appear on the ${label.replace(' Notes', '')}…`}
+        className="w-full text-sm resize-none"
+      />
     </div>
   )
 }

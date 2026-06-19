@@ -3,7 +3,7 @@ import { BEOClient } from './BEOClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function BEOPage() {
+export default function BEOPage({ searchParams }: { searchParams: { event?: string } }) {
   const today = new Date().toISOString().slice(0, 10)
   const events = getEvents()
     .filter(e => e.status === 'Confirmed' && e.event_date >= today)
@@ -17,7 +17,7 @@ export default function BEOPage() {
           Full run-of-show document for confirmed upcoming events.
         </p>
       </div>
-      <BEOClient events={events} />
+      <BEOClient events={events} initialEventId={searchParams.event ?? ''} />
     </div>
   )
 }

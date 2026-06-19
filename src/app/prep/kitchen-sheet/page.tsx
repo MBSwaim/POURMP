@@ -3,7 +3,7 @@ import { KitchenSheetClient } from './KitchenSheetClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function KitchenSheetPage() {
+export default function KitchenSheetPage({ searchParams }: { searchParams: { event?: string } }) {
   const today = new Date().toISOString().slice(0, 10)
   const events = getEvents()
     .filter(e => e.status === 'Confirmed' && e.event_date >= today)
@@ -17,7 +17,7 @@ export default function KitchenSheetPage() {
           Print-ready prep quantities for confirmed upcoming events.
         </p>
       </div>
-      <KitchenSheetClient events={events} />
+      <KitchenSheetClient events={events} initialEventId={searchParams.event ?? ''} />
     </div>
   )
 }

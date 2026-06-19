@@ -174,6 +174,11 @@ function initSchema(db: Database.Database) {
     // Floor plan fields
     `ALTER TABLE event_details ADD COLUMN floor_plan_notes TEXT DEFAULT ''`,
     `ALTER TABLE event_details ADD COLUMN big_screen_tv INTEGER DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN selected_sauces TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN serve_style_json TEXT DEFAULT '{}'`,
+    `ALTER TABLE event_details ADD COLUMN beo_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN kitchen_notes TEXT DEFAULT ''`,
+    `CREATE TABLE IF NOT EXISTS event_setup_checklist (event_id INTEGER NOT NULL, item_key TEXT NOT NULL, checked INTEGER DEFAULT 0, checked_at TEXT, PRIMARY KEY (event_id, item_key))`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -231,6 +236,10 @@ export interface EventDetails {
   tax_pct: number
   floor_plan_notes: string
   big_screen_tv: number
+  selected_sauces: string
+  serve_style_json: string
+  beo_notes: string
+  kitchen_notes: string
 }
 
 export interface Payment {
@@ -556,19 +565,6 @@ export function getDashboardStats() {
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
   ).get(monthStart, today.substring(0, 7) + '-31') as { c: number }).c
 
-  const revenueProjected = (db.prepare(
-    `SELECT COALESCE(SUM(ed.guest_count * p.price_per_guest), 0) as total
-     FROM events e
-     JOIN event_details ed ON ed.event_id = e.id
-     JOIN packages p ON p.id = ed.package_id
-     WHERE e.event_date >= ? AND e.status NOT IN ('Closed')`
-  ).get(monthStart) as { total: number }).total
-
-  const depositsOutstanding = (db.prepare(
-    `SELECT COALESCE(SUM(amount_due - amount_paid), 0) as total
-     FROM payments WHERE payment_type = 'deposit' AND status != 'paid'`
-  ).get() as { total: number }).total
-
   const eventsThisWeek = (db.prepare(
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
   ).get(today, in14) as { c: number }).c
@@ -582,7 +578,7 @@ export function getDashboardStats() {
     ORDER BY e.event_date ASC
   `).all(today, in14) as Array<Event & { first_name: string; last_name: string; guest_count: number }>
 
-  return { eventsThisMonth, revenueProjected, depositsOutstanding, eventsThisWeek, upcomingEvents }
+  return { eventsThisMonth, eventsThisWeek, upcomingEvents }
 }
 
 export function getKanbanEvents() {
@@ -821,6 +817,28 @@ export function updateLeadStatus(id: number, status: string) {
 
 export function deleteLead(id: number) {
   getDb().prepare(`DELETE FROM leads WHERE id = ?`).run(id)
+}
+
+// ─── Setup Checklist ──────────────────────────────────────────────────────────
+
+export function getChecklist(eventId: number): Record<string, string | null> {
+  const rows = getDb().prepare(
+    `SELECT item_key, checked_at FROM event_setup_checklist WHERE event_id = ?`
+  ).all(eventId) as { item_key: string; checked_at: string | null }[]
+  return Object.fromEntries(rows.map(r => [r.item_key, r.checked_at]))
+}
+
+export function setChecklistItem(eventId: number, itemKey: string, checked: boolean) {
+  const now = checked ? new Date().toISOString() : null
+  getDb().prepare(`
+    INSERT INTO event_setup_checklist (event_id, item_key, checked, checked_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(event_id, item_key) DO UPDATE SET checked = excluded.checked, checked_at = excluded.checked_at
+  `).run(eventId, itemKey, checked ? 1 : 0, now)
+}
+
+export function resetChecklist(eventId: number) {
+  getDb().prepare(`DELETE FROM event_setup_checklist WHERE event_id = ?`).run(eventId)
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────

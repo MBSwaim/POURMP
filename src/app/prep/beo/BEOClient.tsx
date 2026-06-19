@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, effectiveGuests, formatCurrency, calcFloorPlan } from '@/lib/calculations'
-import { to12Hour } from '@/lib/timeUtils'
-import { DRINK_TICKET_PRICE } from '@/lib/constants'
+import { calcAllItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes } from '@/lib/calculations'
+import { Logo } from '@/components/Logo'
+import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient } from '@/lib/db'
 
 interface FullData {
@@ -16,10 +17,15 @@ interface FullData {
   menuItems: MenuItem[]
 }
 
-export function BEOClient({ events }: { events: EventWithClient[] }) {
-  const [selectedId, setSelectedId] = useState('')
+export function BEOClient({ events, initialEventId = '' }: { events: EventWithClient[], initialEventId?: string }) {
+  const router = useRouter()
+  const [selectedId, setSelectedId] = useState(initialEventId)
   const [beoData, setBeoData] = useState<FullData | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useState(() => {
+    if (initialEventId) loadEvent(initialEventId)
+  })
 
   async function loadEvent(id: string) {
     setSelectedId(id)
@@ -37,6 +43,14 @@ export function BEOClient({ events }: { events: EventWithClient[] }) {
     <div>
       {/* Controls — hidden when printing */}
       <div className="print:hidden space-y-4 mb-6">
+        {initialEventId && (
+          <button
+            onClick={() => router.push(`/events/${initialEventId}`)}
+            className="flex items-center gap-1.5 text-sm text-[#C8973A] hover:text-[#C8973A]/80 transition-colors"
+          >
+            ← Back to Event
+          </button>
+        )}
         {events.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-8 text-center text-gray-500 text-sm">
             No confirmed upcoming events found.
@@ -76,7 +90,7 @@ export function BEOClient({ events }: { events: EventWithClient[] }) {
 }
 
 function BEODocument({ data }: { data: FullData }) {
-  const { event, client, details, payments, addOns, pkg, menuItems } = data
+  const { event, client, details, addOns, pkg, menuItems } = data
 
   const guestCount = details?.guest_count ?? 0
   const bufferPct  = details?.buffer_pct ?? 0
@@ -84,101 +98,88 @@ function BEODocument({ data }: { data: FullData }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cateringItems = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
 
-  // Financials — same logic as PaymentPanel
-  const foodSub      = guestCount * (pkg?.price_per_guest ?? 0)
-  const ticketQty    = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
-  const ticketSub    = ticketQty * DRINK_TICKET_PRICE
-  const addOnsSub    = addOns.reduce((s, a) => s + a.qty * a.price_each, 0)
-  const taxableBase  = foodSub + addOnsSub
-  const taxPct       = details?.tax_pct ?? 0.0825
-  const taxAmt       = taxableBase * taxPct
-  const gratuityBase = foodSub + ticketSub + addOnsSub
-  const gratuityAmt  = gratuityBase * (details?.gratuity_pct ?? 0)
-  const serviceFee   = details?.service_fee ?? 0
-  const grandTotal   = gratuityBase + taxAmt + gratuityAmt + serviceFee
-  const totalCollected  = payments.reduce((s, p) => s + (p.amount_paid ?? 0), 0)
-  const balanceRemaining = grandTotal - totalCollected
-  const deposit      = payments.find(p => p.payment_type === 'deposit') ?? null
-  const finalPmt     = payments.find(p => p.payment_type === 'final') ?? null
+  const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
+    try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
+  })()
+
+  const savedSauceSet = details?.selected_sauces
+    ? new Set(details.selected_sauces.split(',').map((s: string) => s.trim()).filter(Boolean))
+    : null
+
+  function saucesForItem(itemName: string): string[] {
+    return SAUCE_RULES
+      .filter(r => itemName.toLowerCase().includes(r.trigger.toLowerCase()))
+      .flatMap(r => r.sauces.filter(s => !r.selectable || !savedSauceSet || savedSauceSet.has(s)))
+  }
 
   const timeline = [
-    { label: 'Production Closes',  time: event.production_close_time },
-    { label: 'Setup Begins',        time: event.setup_time },
-    { label: 'Customer Access',     time: event.decorate_time },
-    { label: 'Event Start',         time: event.event_time,    highlight: true },
-    { label: 'Event End',           time: event.teardown_time  },
+    { label: 'Production Closes',        time: event.production_close_time },
+    { label: 'Setup Begins',             time: event.setup_time },
+    { label: 'Customer Access',          time: event.decorate_time },
+    { label: 'Food Ready — Buffet Opens',time: event.event_time ? shiftTime(event.event_time, -15) : null, note: 'All food must be set and hot' },
+    { label: 'Event Start',              time: event.event_time, highlight: true },
+    { label: 'Event End',                time: event.teardown_time },
   ].filter(t => t.time)
 
-  const dayOfWeek = new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })
+  const dayOfWeek    = new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })
   const formattedDate = new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  const beoRef = `BEO-${String(event.id).padStart(4, '0')}`
-  const generatedAt = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const beoRef       = `BEO-${String(event.id).padStart(4, '0')}`
+  const generatedAt  = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const tvOn         = !!(details?.big_screen_tv)
 
   return (
     <div className="
-      rounded-xl border border-white/10 bg-[#1F3348]/50 p-6 space-y-5
-      print:rounded-none print:border-0 print:bg-white print:p-0 print:space-y-5 print:text-black
+      rounded-xl border border-white/10 bg-[#1F3348]/50 p-6 space-y-4
+      print:rounded-none print:border-0 print:bg-white print:p-0 print:space-y-3 print:text-black
     ">
 
       {/* Document header */}
-      <div className="border-b-2 border-[#C8973A] print:border-gray-800 pb-4">
+      <div className="border-b-2 border-[#C8973A] print:border-gray-800 pb-3">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500">
-              Manhattan Project Beer Co.
-            </p>
-            <h2 className="text-2xl font-bold text-white print:text-black mt-0.5">
-              BANQUET EVENT ORDER
-            </h2>
-            <p className="text-lg font-semibold text-gray-300 print:text-gray-700 mt-1">
-              {event.event_name}
-            </p>
+          <div className="flex items-start gap-3">
+            <Logo className="w-12 h-12 print:w-9 print:h-9 shrink-0 mt-0.5" color="black" />
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500">
+                Manhattan Project Beer Co.
+              </p>
+              <h2 className="text-xl font-bold text-white print:text-black mt-0.5">BANQUET EVENT ORDER</h2>
+              <p className="text-base font-semibold text-gray-300 print:text-gray-700 mt-0.5">{event.event_name}</p>
+            </div>
           </div>
-          <div className="text-right text-sm space-y-1">
+          <div className="text-right text-sm space-y-0.5">
             <p className="font-bold text-[#C8973A] print:text-gray-800 tracking-wider">{beoRef}</p>
             <p className="text-gray-400 print:text-gray-500 font-semibold">{event.status}</p>
-            <p className="text-xs text-gray-500 print:text-gray-400 mt-1">Generated {generatedAt}</p>
+            <p className="text-xs text-gray-500 print:text-gray-400">Generated {generatedAt}</p>
           </div>
         </div>
       </div>
 
-      {/* Top grid: event info + client */}
-      <div className="grid grid-cols-2 gap-6">
-
-        {/* Event details */}
+      {/* Top grid: event info + client side by side */}
+      <div className="grid grid-cols-2 gap-5">
         <div>
           <SectionHeader>Event Details</SectionHeader>
-          <div className="space-y-1">
-            <Row label="Date" value={`${dayOfWeek}, ${formattedDate}`} />
-            <Row label="Space" value={event.space || '—'} />
+          <div className="space-y-0.5">
+            <Row label="Date"    value={`${dayOfWeek}, ${formattedDate}`} />
+            <Row label="Space"   value={event.space || '—'} />
             <Row label="Package" value={pkg?.name ?? '—'} />
-            <Row
-              label="Guests"
-              value={
-                guestCount > 0
-                  ? bufferPct > 0
-                    ? `${guestCount} (effective ${effGuests} w/ ${(bufferPct * 100).toFixed(0)}% buffer)`
-                    : String(guestCount)
-                  : '—'
-              }
-            />
-            {details?.contract_signed ? (
-              <Row label="Contract" value="✓ Signed" />
-            ) : (
-              <Row label="Contract" value="✗ Not signed" alert />
-            )}
+            <Row label="Guests"  value={
+              guestCount > 0
+                ? bufferPct > 0
+                  ? `${guestCount} (effective ${effGuests} w/ ${(bufferPct * 100).toFixed(0)}% buffer)`
+                  : String(guestCount)
+                : '—'
+            } />
           </div>
         </div>
 
-        {/* Client info */}
         <div>
           <SectionHeader>Client</SectionHeader>
           {client ? (
-            <div className="space-y-1">
-              <Row label="Name" value={`${client.first_name} ${client.last_name}`} />
+            <div className="space-y-0.5">
+              <Row label="Name"    value={`${client.first_name} ${client.last_name}`} />
               {client.company && <Row label="Company" value={client.company} />}
-              {client.phone  && <Row label="Phone"   value={client.phone} />}
-              {client.email  && <Row label="Email"   value={client.email} />}
+              {client.phone   && <Row label="Phone"   value={client.phone} />}
+              {client.email   && <Row label="Email"   value={client.email} />}
             </div>
           ) : (
             <p className="text-sm text-gray-500 italic">No client on file.</p>
@@ -186,26 +187,25 @@ function BEODocument({ data }: { data: FullData }) {
         </div>
       </div>
 
-      {/* Timeline */}
+      {/* Run of Show */}
       {timeline.length > 0 && (
         <div>
-          <SectionHeader>Timeline</SectionHeader>
-          <div className="grid grid-cols-1 gap-0">
-            {timeline.map(({ label, time, highlight }) => (
+          <SectionHeader>Run of Show</SectionHeader>
+          <div className="grid grid-cols-1">
+            {timeline.map(({ label, time, highlight, note }) => (
               <div
                 key={label}
-                className={`flex items-center gap-4 px-3 py-2 rounded-lg
-                  ${highlight
-                    ? 'bg-[#C8973A]/15 print:bg-transparent print:font-bold'
-                    : 'hover:bg-white/5 print:bg-transparent'}
+                className={`flex items-center gap-4 px-2 py-1 rounded
+                  ${highlight ? 'bg-[#C8973A]/15 print:bg-transparent print:font-bold' : 'print:bg-transparent'}
                   border-b border-white/5 print:border-gray-200 last:border-0`}
               >
-                <span className={`font-mono tabular-nums text-sm w-20 shrink-0
+                <span className={`font-mono tabular-nums text-sm w-18 shrink-0
                   ${highlight ? 'text-[#C8973A] print:text-black font-bold' : 'text-gray-300 print:text-black'}`}>
                   {to12Hour(time)}
                 </span>
                 <span className={`text-sm ${highlight ? 'text-white print:text-black font-semibold' : 'text-gray-400 print:text-gray-600'}`}>
                   {label}
+                  {note && <span className="ml-2 text-xs text-gray-500 print:text-gray-400 italic">{note}</span>}
                 </span>
               </div>
             ))}
@@ -215,146 +215,202 @@ function BEODocument({ data }: { data: FullData }) {
 
       {/* Catering */}
       <div>
-        <SectionHeader>
-          Catering{pkg ? ` — ${pkg.name}` : ''}
-          {pkg && guestCount > 0 && (
-            <span className="ml-2 text-gray-400 print:text-gray-500 font-normal normal-case tracking-normal">
-              ({guestCount} guests × {formatCurrency(pkg.price_per_guest)})
-            </span>
-          )}
-        </SectionHeader>
+        <SectionHeader>Catering{pkg ? ` — ${pkg.name}` : ''}</SectionHeader>
         {cateringItems.length === 0 ? (
           <p className="text-sm text-gray-500 italic">No package set.</p>
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-white/20 print:border-gray-300">
-                <th className="text-left py-1.5 text-gray-400 print:text-gray-600 font-semibold">Item</th>
-                <th className="text-right py-1.5 text-gray-400 print:text-gray-600 font-semibold w-16">Qty</th>
-                <th className="text-right py-1.5 text-gray-400 print:text-gray-600 font-semibold w-28 pl-3">Unit</th>
+                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Item</th>
+                <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-16">Qty</th>
+                <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-28 pl-3">Unit</th>
               </tr>
             </thead>
             <tbody>
               {cateringItems.map((item, i) => (
-                <tr key={i} className="border-b border-white/5 print:border-gray-100">
-                  <td className="py-1.5 text-white print:text-black">{item.item_name}</td>
-                  <td className="py-1.5 text-right tabular-nums text-white print:text-black font-medium">
-                    {typeof item.total_qty === 'string' ? '—' : item.total_qty}
-                  </td>
-                  <td className="py-1.5 text-right text-gray-400 print:text-gray-600 pl-3">
-                    {typeof item.total_qty === 'string' ? item.total_qty : (item.unit_name ?? '')}
-                  </td>
-                </tr>
+                <React.Fragment key={i}>
+                  <tr className="border-b border-white/5 print:border-gray-100">
+                    <td className="py-1 text-white print:text-black">
+                      {item.item_name}
+                      {typeof item.total_qty === 'number' && item.total_qty > 1 && (
+                        <span className="ml-2 text-xs text-gray-400 print:text-gray-500 italic font-normal">
+                          ({(serveStyle[item.item_name] ?? 'all') === 'staggered' ? '1 @ a time' : 'all at once'})
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1 text-right tabular-nums text-white print:text-black font-medium">
+                      {typeof item.total_qty === 'string' ? '—' : item.total_qty}
+                    </td>
+                    <td className="py-1 text-right text-gray-400 print:text-gray-600 pl-3">
+                      {typeof item.total_qty === 'string' ? item.total_qty : (item.unit_name ?? '')}
+                    </td>
+                  </tr>
+                  {saucesForItem(item.item_name).map(sauce => (
+                    <tr key={`${i}-${sauce}`} className="border-b border-white/5 print:border-gray-100">
+                      <td className="py-0.5 pl-5 text-gray-400 print:text-gray-500 italic text-xs">↳ {sauce}</td>
+                      <td />
+                      <td className="py-0.5 text-right text-gray-500 print:text-gray-400 italic text-xs pl-3">Sauce</td>
+                    </tr>
+                  ))}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* Bar & Beverage */}
-      {(details?.bar_tab_type || ticketQty > 0) && (
+      {/* Equipment Required */}
+      {cateringItems.length > 0 && (
         <div>
-          <SectionHeader>Bar & Beverage</SectionHeader>
-          <div className="space-y-1">
-            {details?.bar_tab_type && <Row label="Bar Setup" value={`BAR TAB | ${details.bar_tab_type}`} />}
-            {ticketQty > 0       && <Row label="Drink Tickets" value={`${ticketQty} tickets`} />}
-            {details?.bar_tab_limit ? <Row label="Tab Limit" value={formatCurrency(details.bar_tab_limit)} /> : null}
-            {details?.tab_details && (
-              <div className="mt-2 text-sm text-gray-300 print:text-gray-700 leading-relaxed whitespace-pre-wrap bg-white/5 print:bg-transparent rounded-lg px-3 py-2 print:px-0 print:py-0">
-                {details.tab_details}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Add-ons */}
-      {addOns.length > 0 && (
-        <div>
-          <SectionHeader>Add-ons & Extras</SectionHeader>
+          <SectionHeader>Equipment Required</SectionHeader>
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-white/20 print:border-gray-300">
-                <th className="text-left py-1.5 text-gray-400 print:text-gray-600 font-semibold">Item</th>
-                <th className="text-right py-1.5 text-gray-400 print:text-gray-600 font-semibold w-16">Qty</th>
-                <th className="text-right py-1.5 text-gray-400 print:text-gray-600 font-semibold w-24 pl-3">Unit</th>
-                <th className="text-right py-1.5 text-gray-400 print:text-gray-600 font-semibold w-24 pl-3">Amount</th>
+                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold pr-4">Food Item</th>
+                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold w-36">Utensil</th>
+                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold w-40">Servingware</th>
+                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Notes</th>
               </tr>
             </thead>
             <tbody>
-              {addOns.map(a => (
-                <tr key={a.id} className="border-b border-white/5 print:border-gray-100">
-                  <td className="py-1.5 text-white print:text-black">{a.item_name}</td>
-                  <td className="py-1.5 text-right tabular-nums text-white print:text-black font-medium">{a.qty}</td>
-                  <td className="py-1.5 text-right text-gray-400 print:text-gray-600 pl-3">{a.unit}</td>
-                  <td className="py-1.5 text-right tabular-nums text-white print:text-black pl-3">{formatCurrency(a.qty * a.price_each)}</td>
-                </tr>
-              ))}
+              {cateringItems.map((item, i) => {
+                const sw = getServingware(item.item_name)
+                if (!sw) return null
+                return (
+                  <tr key={i} className="border-b border-white/5 print:border-gray-100">
+                    <td className="py-1 text-white print:text-black pr-4">{item.item_name}</td>
+                    <td className="py-1 text-gray-300 print:text-gray-700 w-36">{sw.utensil}</td>
+                    <td className="py-1 text-gray-300 print:text-gray-700 w-40">{sw.vessel}</td>
+                    <td className="py-1 text-gray-500 print:text-gray-400 italic text-xs">{sw.altNote ?? ''}</td>
+                  </tr>
+                )
+              })}
+              {(() => {
+                const seen = new Set<string>()
+                const saucesToShow: string[] = []
+                for (const item of cateringItems) {
+                  for (const sauce of saucesForItem(item.item_name)) {
+                    if (!seen.has(sauce)) {
+                      seen.add(sauce)
+                      if (!savedSauceSet || savedSauceSet.has(sauce)) saucesToShow.push(sauce)
+                    }
+                  }
+                }
+                return saucesToShow.map(sauce => (
+                  <tr key={`sw-sauce-${sauce}`} className="border-b border-white/5 print:border-gray-100">
+                    <td className="py-1 text-gray-400 print:text-gray-600 pr-4 italic">{sauce}</td>
+                    <td className="py-1 text-gray-300 print:text-gray-700 w-36">Small Ladle</td>
+                    <td className="py-1 text-gray-300 print:text-gray-700 w-40">1 per bowl</td>
+                    <td />
+                  </tr>
+                ))
+              })()}
+              {(() => {
+                const c = countChafingDishes(cateringItems, serveStyle)
+                if (c.total === 0) return null
+                return (
+                  <tr className="border-t-2 border-[#C8973A]/40 print:border-gray-400 bg-[#C8973A]/5 print:bg-transparent">
+                    <td colSpan={4} className="py-2 px-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-bold text-[#C8973A] print:text-black tabular-nums">{c.total}</span>
+                        <span className="text-sm font-semibold text-white print:text-black">Chafing {c.total === 1 ? 'Dish' : 'Dishes'} Needed</span>
+                        <span className="text-xs text-gray-400 print:text-gray-600 ml-1">
+                          {[
+                            c.fullSize > 0 ? `${c.fullSize} × full-size (200 pan)` : '',
+                            c.halfSize > 0 ? `${c.halfSize} × half-size (1/2 pan)` : '',
+                          ].filter(Boolean).join(' · ')}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })()}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Financial Summary */}
-      {(pkg || addOns.length > 0) && (
-        <div>
-          <SectionHeader>Financial Summary</SectionHeader>
-          <div className="max-w-xs space-y-1">
-            {foodSub > 0   && <FinRow label={`Food (${guestCount} × ${formatCurrency(pkg?.price_per_guest ?? 0)})`} value={formatCurrency(foodSub)} />}
-            {addOnsSub > 0 && <FinRow label="Add-ons" value={formatCurrency(addOnsSub)} />}
-            {ticketSub > 0 && <FinRow label={`Drink Tickets (${ticketQty} × $${DRINK_TICKET_PRICE})`} value={formatCurrency(ticketSub)} />}
-            <FinRow label={`Tax (${(taxPct * 100).toFixed(2)}%)`} value={formatCurrency(taxAmt)} />
-            {serviceFee > 0  && <FinRow label="Service Fee" value={formatCurrency(serviceFee)} />}
-            {gratuityAmt > 0 && <FinRow label={`Gratuity (${((details?.gratuity_pct ?? 0) * 100).toFixed(0)}%)`} value={formatCurrency(gratuityAmt)} />}
-            <div className="border-t border-white/20 print:border-gray-400 pt-1 mt-1 space-y-1">
-              <FinRow label="Grand Total" value={formatCurrency(grandTotal)} bold />
-              {deposit && (
-                <FinRow
-                  label={`Deposit (${deposit.status})`}
-                  value={formatCurrency(deposit.amount_due)}
-                  muted
-                />
-              )}
-              {finalPmt && (
-                <FinRow
-                  label={`Final Payment (${finalPmt.status})`}
-                  value={formatCurrency(finalPmt.amount_due)}
-                  muted
-                />
-              )}
-              <FinRow
-                label="Balance Remaining"
-                value={formatCurrency(balanceRemaining)}
-                bold
-                highlight={balanceRemaining > 0 ? 'amber' : 'green'}
-              />
+      {/* Bar & Beverage + Add-ons — side by side when both present */}
+      {(details?.bar_tab_type || addOns.length > 0) && (
+        <div className={`grid gap-5 ${details?.bar_tab_type && addOns.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+
+          {details?.bar_tab_type && (
+            <div>
+              <SectionHeader>Bar & Beverage</SectionHeader>
+              <div className="space-y-0.5">
+                <Row label="Bar Setup" value={`BAR TAB | ${details.bar_tab_type}`} />
+                {details.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && details.drink_tickets
+                  ? <Row label="Drink Tickets" value={`${details.drink_tickets} tickets`} /> : null}
+                {details.bar_tab_limit ? <Row label="Tab Limit" value={formatCurrency(details.bar_tab_limit)} /> : null}
+                {details.tab_details && (
+                  <p className="text-sm text-gray-300 print:text-gray-700 leading-relaxed whitespace-pre-wrap mt-1 text-xs">
+                    {details.tab_details}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {addOns.length > 0 && (
+            <div>
+              <SectionHeader>Add-ons & Extras</SectionHeader>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-white/20 print:border-gray-300">
+                    <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Item</th>
+                    <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-12">Qty</th>
+                    <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-20 pl-2">Unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {addOns.map(a => (
+                    <tr key={a.id} className="border-b border-white/5 print:border-gray-100">
+                      <td className="py-1 text-white print:text-black">{a.item_name}</td>
+                      <td className="py-1 text-right tabular-nums text-white print:text-black font-medium">{a.qty}</td>
+                      <td className="py-1 text-right text-gray-400 print:text-gray-600 pl-2">{a.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {/* Floor Plan & Setup */}
       {(() => {
         const rec = calcFloorPlan(guestCount)
-        const tvOn = !!(details?.big_screen_tv)
         const hasNotes = !!(details?.floor_plan_notes)
         return (
           <div>
             <SectionHeader>Floor Plan &amp; Setup</SectionHeader>
             <div className="space-y-2">
-              <div className="flex items-center gap-4 flex-wrap">
-                <Row label="Layout" value={rec.layoutType} alert={rec.isOverCapacity} />
-              </div>
-              {!rec.isOverCapacity && rec.tablesNeeded !== null && (
-                <div className="flex gap-6 text-sm pl-0">
-                  <span className="text-gray-400 print:text-gray-500 w-28 shrink-0">Tables / High-Tops</span>
-                  <span className="text-white print:text-black font-medium">
-                    {rec.tablesNeeded} × 6-ft table{rec.tablesNeeded !== 1 ? 's' : ''}
-                    {(rec.highTopCount ?? 0) > 0 ? ` + ${rec.highTopCount} high-top${rec.highTopCount !== 1 ? 's' : ''}` : ''}
-                    {rec.seatedCapacity ? ` (seats ${rec.seatedCapacity})` : ''}
-                  </span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-0.5">
+                  <Row label="Layout" value={rec.layoutType} alert={rec.isOverCapacity} />
+                  {!rec.isOverCapacity && rec.tablesNeeded !== null && (
+                    <Row
+                      label="Tables"
+                      value={`${rec.tablesNeeded} × 6-ft${(rec.highTopCount ?? 0) > 0 ? ` + ${rec.highTopCount} high-top${rec.highTopCount !== 1 ? 's' : ''}` : ''}${rec.seatedCapacity ? ` (seats ${rec.seatedCapacity})` : ''}`}
+                    />
+                  )}
                 </div>
-              )}
+                <div>
+                  <p className="text-xs text-gray-500 print:text-gray-400 uppercase tracking-wide font-semibold mb-1">Setup Checklist</p>
+                  <ul className="text-xs space-y-0.5 text-gray-300 print:text-gray-700">
+                    <li>☐ Black tablecloths on all tables</li>
+                    <li>☐ Beer list &amp; wine list on each table</li>
+                    <li>☐ Black velvet ropes at marked positions</li>
+                    <li>☐ Lights dimmed · Music on Source 2, vol ≥ 90</li>
+                    <li>☐ Garage door: open only if 65°–75°</li>
+                    <li className={tvOn ? 'font-semibold text-white print:text-black' : 'text-gray-500 print:text-gray-400'}>
+                      ☐ Big Screen TV: {tvOn ? 'YES — set up and test' : 'N/A'}
+                    </li>
+                    <li>☐ Post-event: linens in washing machine immediately</li>
+                  </ul>
+                </div>
+              </div>
               {rec.warning && (
                 <div className={`rounded-lg px-3 py-1.5 text-sm print:rounded-none print:px-0 print:border-l-4 print:pl-3
                   ${rec.warningLevel === 'danger'  ? 'bg-red-900/20 border border-red-500/30 text-red-300 print:border-red-600 print:text-red-700' :
@@ -363,44 +419,22 @@ function BEODocument({ data }: { data: FullData }) {
                   {rec.warning}
                 </div>
               )}
-              <div className="pt-1">
-                <p className="text-xs text-gray-500 print:text-gray-400 uppercase tracking-wide font-semibold mb-1">Setup Checklist</p>
-                <ul className="text-sm space-y-0.5 text-gray-300 print:text-gray-700">
-                  <li>• Cover all tables with black tablecloths (check BEO for exemptions)</li>
-                  <li>• Garage Door: open only if weather 65°–75°; one warning for chain misuse, then close</li>
-                  <li>• Place black velvet ropes at all marked positions</li>
-                  <li>• Dim lights; music on Source 2 at minimum volume 90</li>
-                  <li className={tvOn ? 'font-semibold text-white print:text-black' : 'text-gray-500 print:text-gray-400'}>
-                    • Big Screen TV: {tvOn ? 'YES — include in setup' : 'No'}
-                  </li>
-                  <li>• Post-event: start linens in washing machine immediately</li>
-                </ul>
-              </div>
-              {hasNotes && (
-                <NoteBlock label="Floor Plan Notes" value={details!.floor_plan_notes} />
-              )}
+              {hasNotes && <NoteBlock label="Floor Plan Notes" value={details!.floor_plan_notes} />}
             </div>
           </div>
         )
       })()}
 
       {/* Special Instructions */}
-      {(details?.dietary_restrictions || details?.food_notes || details?.setup_notes || details?.staffing_notes) && (
+      {(details?.dietary_restrictions || details?.food_notes || details?.setup_notes || details?.staffing_notes || details?.beo_notes) && (
         <div>
           <SectionHeader>Special Instructions</SectionHeader>
           <div className="space-y-2">
-            {details.dietary_restrictions && (
-              <NoteBlock label="⚠ Dietary Restrictions" value={details.dietary_restrictions} alert />
-            )}
-            {details.food_notes && (
-              <NoteBlock label="Food Notes" value={details.food_notes} />
-            )}
-            {details.setup_notes && (
-              <NoteBlock label="Setup Notes" value={details.setup_notes} />
-            )}
-            {details.staffing_notes && (
-              <NoteBlock label="Staffing Notes" value={details.staffing_notes} />
-            )}
+            {details.dietary_restrictions && <NoteBlock label="⚠ Dietary Restrictions" value={details.dietary_restrictions} alert />}
+            {details.food_notes    && <NoteBlock label="Food Notes"      value={details.food_notes} />}
+            {details.setup_notes   && <NoteBlock label="Setup Notes"     value={details.setup_notes} />}
+            {details.staffing_notes && <NoteBlock label="Staffing Notes" value={details.staffing_notes} />}
+            {details.beo_notes     && <NoteBlock label="BEO Notes"       value={details.beo_notes} />}
           </div>
         </div>
       )}
@@ -413,7 +447,7 @@ function BEODocument({ data }: { data: FullData }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-2 pb-1 border-b border-white/10 print:border-gray-300">
+    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-1.5 pb-0.5 border-b border-white/10 print:border-gray-300">
       {children}
     </h3>
   )
@@ -422,33 +456,10 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 function Row({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="flex gap-2 text-sm py-0.5">
-      <span className="text-gray-400 print:text-gray-500 shrink-0 w-28">{label}</span>
+      <span className="text-gray-400 print:text-gray-500 shrink-0 w-24">{label}</span>
       <span className={`font-medium ${alert ? 'text-red-400 print:text-red-700' : 'text-white print:text-black'}`}>
         {value}
       </span>
-    </div>
-  )
-}
-
-function FinRow({ label, value, bold, muted, highlight }: {
-  label: string
-  value: string
-  bold?: boolean
-  muted?: boolean
-  highlight?: 'amber' | 'green'
-}) {
-  const valueColor =
-    highlight === 'amber' ? 'text-[#C8973A] print:text-black' :
-    highlight === 'green' ? 'text-green-400 print:text-green-700' :
-    muted ? 'text-gray-400 print:text-gray-600' :
-    'text-white print:text-black'
-
-  return (
-    <div className={`flex justify-between text-sm ${bold ? 'font-semibold' : ''}`}>
-      <span className={muted ? 'text-gray-400 print:text-gray-500' : 'text-gray-300 print:text-gray-700'}>
-        {label}
-      </span>
-      <span className={`tabular-nums ${valueColor}`}>{value}</span>
     </div>
   )
 }

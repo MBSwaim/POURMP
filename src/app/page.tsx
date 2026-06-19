@@ -1,16 +1,13 @@
-import { getDashboardStats, getKanbanEvents, getNewLeads } from '@/lib/db'
+import { getDashboardStats, getKanbanEvents } from '@/lib/db'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
-import { NewLeadsCard } from '@/components/NewLeadsCard'
-import { formatCurrency } from '@/lib/calculations'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
 export default function Dashboard() {
-  const { eventsThisMonth, revenueProjected, depositsOutstanding, eventsThisWeek, upcomingEvents } = getDashboardStats()
+  const { eventsThisMonth, eventsThisWeek, upcomingEvents } = getDashboardStats()
   const kanban = getKanbanEvents()
-  const newLeads = getNewLeads()
 
   return (
     <div className="p-4 space-y-4">
@@ -25,22 +22,17 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard label="Events This Month" value={String(eventsThisMonth)} />
-        <StatCard label="Revenue Projected" value={formatCurrency(revenueProjected)} />
-        <StatCard label="Deposits Outstanding" value={formatCurrency(depositsOutstanding)} accent />
         <StatCard label="Events Next 14 Days" value={String(eventsThisWeek)} />
       </div>
 
-      {/* New Leads + Upcoming side by side */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        <NewLeadsCard initialLeads={newLeads} />
-        <UpcomingEventsCard events={upcomingEvents} />
-      </div>
+      {/* Upcoming Events */}
+      <UpcomingEventsCard events={upcomingEvents} />
 
-      {/* Kanban */}
+      {/* Event Status Board */}
       <section>
-        <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Pipeline</p>
+        <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Events by Status</p>
         <KanbanBoard initialEvents={kanban} />
       </section>
     </div>
