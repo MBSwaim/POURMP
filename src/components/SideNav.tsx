@@ -1,9 +1,14 @@
 'use client'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { EVENT_STATUSES } from '@/lib/constants'
 import { Logo } from '@/components/Logo'
+
+function todayISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 const STATUS_DOT: Record<string, string> = {
   'New':       'bg-gray-400',
@@ -32,6 +37,7 @@ function SubLink({ href, pathname, label, icon, onClose }: { href: string; pathn
 export function SideNav({ onClose }: { onClose?: () => void }) {
   const pathname  = usePathname()
   const params    = useSearchParams()
+  const router    = useRouter()
   const activeStatus = pathname === '/events' ? (params.get('status') ?? null) : null
   const onEvents  = pathname.startsWith('/events')
 
@@ -41,33 +47,68 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
   const [eventsOpen, setEventsOpen] = useState(onEvents)
   const [prepOpen, setPrepOpen] = useState(onPrepTools)
 
+  // Date picker: prefill from ?date= if on /today, otherwise use today
+  const pickerDefault = (pathname === '/today' && params.get('date')) ? params.get('date')! : todayISO()
+  const [pickerDate, setPickerDate] = useState(pickerDefault)
+
+  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setPickerDate(val)
+    if (val) {
+      router.push(`/today?date=${val}`)
+      onClose?.()
+    }
+  }
+
+  // Active nav item: left gold bar + background
   function navClass(href: string) {
     const active = pathname === href && !activeStatus
-    return `flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-      ${active ? 'bg-[#C8973A]/20 text-[#C8973A]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`
+    return active
+      ? 'flex items-center gap-2 pl-[10px] pr-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium border-l-2 border-[#C8973A] bg-[#C8973A]/10 text-[#C8973A] transition-colors'
+      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-gray-400 hover:bg-white/8 hover:text-white transition-colors'
   }
 
   function todayClass() {
     const active = pathname === '/today'
-    return `flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-      ${active ? 'bg-[#C8973A]/20 text-[#C8973A]' : 'bg-[#C8973A]/10 text-[#C8973A] hover:bg-[#C8973A]/20'}`
+    return active
+      ? 'flex items-center gap-2 pl-[10px] pr-3 py-2 rounded-lg text-xs tracking-widest uppercase font-semibold border-l-2 border-[#C8973A] bg-[#C8973A]/15 text-[#C8973A] transition-colors'
+      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-semibold bg-[#C8973A]/8 text-[#C8973A] hover:bg-[#C8973A]/15 transition-colors'
   }
 
   return (
-    <nav className="w-56 shrink-0 bg-[#1F3348] border-r border-white/10 flex flex-col print:hidden">
-      <div className="p-4 border-b border-white/10 flex items-center gap-3">
-        <Logo className="w-10 h-10 shrink-0" color="gold" />
+    <nav className="w-56 shrink-0 bg-[#172c3f] border-r border-white/8 flex flex-col print:hidden">
+      {/* Logo */}
+      <div className="px-4 py-4 border-b border-white/8 flex items-center gap-3">
+        <Logo className="w-9 h-9 shrink-0" color="gold" />
         <div>
-          <div className="text-sm font-bold text-[#C8973A] tracking-widest uppercase leading-tight">Manhattan Project</div>
-          <div className="text-[10px] text-gray-400 tracking-widest uppercase">Beer Co. · Events</div>
+          <div className="text-xs font-bold text-[#C8973A] tracking-[0.18em] uppercase leading-tight">Manhattan Project</div>
+          <div className="text-[9px] text-gray-500 tracking-widest uppercase mt-0.5">Beer Co. · Events</div>
         </div>
       </div>
 
-      <div className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <div className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+        {/* Today + date picker group */}
         <Link href="/today" onClick={onClose} className={todayClass()}>
           <span className="text-sm leading-none">📅</span>
           Today
         </Link>
+
+        <div className="px-1 pb-2">
+          <label className="block text-[9px] tracking-widest uppercase text-gray-600 mb-1 px-2 pt-1">
+            Jump to Date
+          </label>
+          <input
+            type="date"
+            value={pickerDate}
+            onChange={handleDateChange}
+            className="w-full bg-[#0f1e2d] border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-gray-400
+              focus:outline-none focus:border-[#C8973A]/50 focus:text-gray-200 transition-colors cursor-pointer"
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-white/5 my-1" />
+
         <Link href="/" onClick={onClose} className={navClass('/')}>Dashboard</Link>
 
         {/* Events with submenu */}
@@ -75,28 +116,26 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
           <button
             onClick={() => setEventsOpen(v => !v)}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onEvents ? 'text-[#C8973A]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}
+              ${onEvents ? 'text-[#C8973A]' : 'text-gray-400 hover:bg-white/8 hover:text-white'}`}
           >
             <span>Events</span>
-            <span className={`text-[10px] transition-transform ${eventsOpen ? 'rotate-90' : ''}`}>▶</span>
+            <span className={`text-[10px] transition-transform duration-150 ${eventsOpen ? 'rotate-90' : ''}`}>▶</span>
           </button>
 
           {eventsOpen && (
-            <div className="mt-0.5 ml-3 border-l border-white/10 pl-3 space-y-0.5">
-              {/* All Events */}
+            <div className="mt-0.5 ml-3 border-l border-white/8 pl-3 space-y-0.5">
               <Link
                 href="/events"
                 onClick={onClose}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium transition-colors
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
                   ${pathname === '/events' && !activeStatus
-                    ? 'bg-white/10 text-white'
+                    ? 'text-white bg-white/8'
                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white/30 inline-block" />
+                <span className="w-1.5 h-1.5 rounded-full bg-white/25 inline-block shrink-0" />
                 All Events
               </Link>
 
-              {/* Per-status links */}
               {EVENT_STATUSES.map((s) => {
                 const isActive = activeStatus === s
                 return (
@@ -104,24 +143,21 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
                     key={s}
                     href={`/events?status=${s}`}
                     onClick={onClose}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium transition-colors
-                      ${isActive
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
+                      ${isActive ? 'text-white bg-white/8' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${STATUS_DOT[s]}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${STATUS_DOT[s]}`} />
                     {s}
                   </Link>
                 )
               })}
 
-              {/* New event shortcut */}
               <Link
                 href="/events/new"
                 onClick={onClose}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium text-[#C8973A]/70 hover:text-[#C8973A] transition-colors mt-1"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-[#C8973A]/60 hover:text-[#C8973A] transition-colors mt-1"
               >
-                <span className="text-sm leading-none">+</span>
+                <span className="text-base leading-none">+</span>
                 New Event
               </Link>
             </div>
@@ -132,12 +168,15 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         <Link href="/archive" onClick={onClose} className={navClass('/archive')}>Archive</Link>
         <Link href="/analytics" onClick={onClose} className={navClass('/analytics')}>Analytics</Link>
 
+        {/* Divider before prep tools */}
+        <div className="border-t border-white/5 my-1" />
+
         {/* Prep Tools submenu */}
         <div>
           <button
             onClick={() => setPrepOpen(v => !v)}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onPrepTools ? 'text-[#C8973A]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}
+              ${onPrepTools ? 'text-[#C8973A]' : 'text-gray-400 hover:bg-white/8 hover:text-white'}`}
           >
             <span>Prep & Docs</span>
             <span className={`text-[10px] transition-transform ${prepOpen ? 'rotate-90' : ''}`}>▶</span>
@@ -145,24 +184,30 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
 
           {prepOpen && (
             <div className="mt-0.5 ml-3 border-l border-white/10 pl-3 space-y-0.5">
-              <SubLink href="/prep/checklist" pathname={pathname} label="Setup Checklist" icon="✓" onClose={onClose} />
-              <SubLink href="/prep/kitchen-sheet" pathname={pathname} label="Kitchen Sheet" icon="🍳" onClose={onClose} />
-              <SubLink href="/prep/beo" pathname={pathname} label="Banquet Event Order" icon="📋" onClose={onClose} />
-              <a
-                href="/book"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium text-gray-400 hover:bg-white/5 hover:text-gray-200 transition-colors"
+              <p className="px-2.5 py-2 text-xs text-gray-400 leading-relaxed">
+                Open an event and click "Generate Outputs" to build Toast Notes, Kitchen Sheet, FOH, Bar &amp; Run of Show.
+              </p>
+              <Link
+                href="/events"
+                onClick={onClose}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium text-[#C8973A]/70 hover:text-[#C8973A] transition-colors"
               >
-                <span className="text-sm leading-none">🔗</span>
-                <span>Customer Booking Form</span>
-                <span className="ml-auto text-[10px] text-gray-600">↗</span>
-              </a>
+                <span className="text-sm leading-none">→</span>
+                Go to Events
+              </Link>
             </div>
           )}
         </div>
 
+        {/* Divider before settings */}
+        <div className="border-t border-white/5 my-1" />
+
         <Link href="/settings" onClick={onClose} className={navClass('/settings')}>Settings</Link>
+      </div>
+
+      {/* Sidebar footer */}
+      <div className="px-4 py-3 border-t border-white/5">
+        <p className="text-[9px] text-gray-600 tracking-widest uppercase">Internal Use Only</p>
       </div>
     </nav>
   )

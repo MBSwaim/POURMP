@@ -7,24 +7,29 @@ import { to12Hour, shiftTime } from '@/lib/timeUtils'
 
 export const dynamic = 'force-dynamic'
 
-async function getTodayEvents() {
+async function getEventsForDate(dateStr: string) {
   const db = getDb()
-  const today = format(new Date(), 'yyyy-MM-dd')
   const rows = db.prepare(
     `SELECT id FROM events WHERE event_date = ? AND status = 'Confirmed' ORDER BY event_time ASC`
-  ).all(today) as { id: number }[]
+  ).all(dateStr) as { id: number }[]
 
   const events = []
   for (const row of rows) {
     const full = getEventFull(row.id)
     if (full) events.push(full)
   }
-  return { events, today }
+  return events
 }
 
-export default async function TodayPage() {
-  const { events, today } = await getTodayEvents()
-  const todayFormatted = format(new Date(today + 'T12:00:00'), 'EEEE, MMMM d, yyyy')
+export default async function TodayPage({ searchParams }: { searchParams: { date?: string } }) {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  // Use ?date= param if provided and valid (YYYY-MM-DD), otherwise use actual today
+  const rawDate = searchParams.date
+  const dateStr = (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) ? rawDate : today
+  const isToday = dateStr === today
+
+  const events = await getEventsForDate(dateStr)
+  const todayFormatted = format(new Date(dateStr + 'T12:00:00'), 'EEEE, MMMM d, yyyy')
 
   return (
     <div className="min-h-screen bg-[#0f1e2d] text-white">
@@ -33,10 +38,10 @@ export default async function TodayPage() {
         {/* Page header */}
         <div>
           <h1 className="text-xl font-bold text-[#C8973A] tracking-widest uppercase">
-            Today — {todayFormatted}
+            {isToday ? 'Today' : 'Events'} — {todayFormatted}
           </h1>
           <p className="text-xs text-gray-400 mt-1 tracking-wide">
-            On-shift reference · {events.length} event{events.length !== 1 ? 's' : ''} today
+            On-shift reference · {events.length} event{events.length !== 1 ? 's' : ''} {isToday ? 'today' : 'on this date'}
           </p>
         </div>
 

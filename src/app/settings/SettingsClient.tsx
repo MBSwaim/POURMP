@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency } from '@/lib/calculations'
-import type { Package } from '@/lib/db'
+import type { Package, MenuItem } from '@/lib/db'
 
 interface Settings {
   general_info: string
@@ -27,6 +27,8 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
   const [pkgSaving, setPkgSaving] = useState(false)
   const [addingNew, setAddingNew] = useState(false)
   const [newForm, setNewForm] = useState({ name: '', price_per_guest: '', description: '' })
+  const [pkgItems, setPkgItems] = useState<Record<string, MenuItem[]>>({})
+  const [itemUnits, setItemUnits] = useState<Record<number, string>>({})
 
   async function saveSetting(key: keyof Settings) {
     setSavingKey(key)
@@ -44,9 +46,26 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
     }
   }
 
-  function startEdit(pkg: Package) {
+  async function startEdit(pkg: Package) {
     setEditingId(pkg.id)
     setEditForm({ name: pkg.name, price_per_guest: String(pkg.price_per_guest), description: pkg.description ?? '' })
+    if (!pkgItems[pkg.id]) {
+      const res = await fetch(`/api/packages/${pkg.id}`)
+      const items: MenuItem[] = await res.json()
+      setPkgItems(prev => ({ ...prev, [pkg.id]: items }))
+      const units: Record<number, string> = {}
+      for (const item of items) units[item.id] = item.purchase_unit ?? ''
+      setItemUnits(prev => ({ ...prev, ...units }))
+    }
+  }
+
+  async function saveItemUnit(itemId: number) {
+    await fetch(`/api/menu-items/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchase_unit: itemUnits[itemId] ?? '' }),
+    })
+    toast.success('Unit saved')
   }
 
   async function savePackageEdit(id: string) {
@@ -227,6 +246,28 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                       className="text-sm resize-none"
                     />
                   </div>
+                  {/* Menu items — purchase units */}
+                  {pkgItems[pkg.id] && pkgItems[pkg.id].length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Kitchen Order Units</p>
+                      <div className="space-y-1">
+                        {pkgItems[pkg.id].map(item => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-300 flex-1 truncate">{item.item_name}</span>
+                            <Input
+                              value={itemUnits[item.id] ?? ''}
+                              onChange={e => setItemUnits(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onBlur={() => saveItemUnit(item.id)}
+                              placeholder="e.g. per lb, per tub, per bag"
+                              className="h-7 text-xs w-44 shrink-0"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-600">Changes save on blur. Shown on Kitchen Sheet.</p>
+                    </div>
+                  )}
+
                   <Button
                     size="sm"
                     onClick={() => savePackageEdit(pkg.id)}

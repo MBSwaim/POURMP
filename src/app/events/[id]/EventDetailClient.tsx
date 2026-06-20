@@ -273,16 +273,10 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
             Save & Confirm
           </Button>
           <Link
-            href={`/prep/kitchen-sheet?event=${event.id}`}
-            className="inline-flex items-center px-3 py-1.5 text-sm rounded-md border border-white/30 text-white hover:bg-white/10 transition-colors"
+            href={`/events/${event.id}/prep`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-[#C8973A]/15 border border-[#C8973A]/40 text-[#C8973A] hover:bg-[#C8973A]/25 transition-colors font-medium"
           >
-            Kitchen Sheet
-          </Link>
-          <Link
-            href={`/prep/beo?event=${event.id}`}
-            className="inline-flex items-center px-3 py-1.5 text-sm rounded-md border border-white/30 text-white hover:bg-white/10 transition-colors"
-          >
-            BEO
+            📋 Generate Outputs
           </Link>
           <ProposalDownloadButton eventId={event.id} />
         </div>

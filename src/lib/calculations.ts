@@ -7,6 +7,7 @@ export interface MenuItem {
   yield_per_unit: number | null
   unit_name: string | null
   sort_order: number
+  purchase_unit?: string | null
 }
 
 export interface CalculatedItem extends MenuItem {
@@ -155,7 +156,7 @@ export const SERVINGWARE_RULES: ServingwareRule[] = [
   { trigger: 'Crudités',                 utensil: 'Tongs',         vessel: '1 per platter',      vesselLabel: 'Large White Platter(s)' },
 ]
 
-function vesselLabelFor(item: CalculatedItem): string {
+export function vesselLabelFor(item: CalculatedItem): string {
   const sw = SERVINGWARE_RULES.find(r =>
     item.item_name.toLowerCase().includes(r.trigger.toLowerCase())
   )

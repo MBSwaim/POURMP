@@ -180,6 +180,8 @@ function initSchema(db: Database.Database) {
     `ALTER TABLE event_details ADD COLUMN kitchen_notes TEXT DEFAULT ''`,
     `CREATE TABLE IF NOT EXISTS event_setup_checklist (event_id INTEGER NOT NULL, item_key TEXT NOT NULL, checked INTEGER DEFAULT 0, checked_at TEXT, PRIMARY KEY (event_id, item_key))`,
     `CREATE TABLE IF NOT EXISTS event_packages (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, package_id TEXT NOT NULL DEFAULT '', guest_count INTEGER NOT NULL DEFAULT 0, buffer_pct REAL NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS drink_ticket_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, tickets_issued INTEGER DEFAULT 0, tickets_redeemed INTEGER DEFAULT 0, notes TEXT DEFAULT '', created_at TEXT, updated_at TEXT)`,
+    `ALTER TABLE menu_items ADD COLUMN purchase_unit TEXT DEFAULT ''`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -300,6 +302,7 @@ export interface MenuItem {
   yield_per_unit: number | null
   unit_name: string
   sort_order: number
+  purchase_unit: string | null
 }
 
 export interface AddOn {
@@ -565,6 +568,10 @@ export function getMenuItems(packageId: string): MenuItem[] {
   return getDb()
     .prepare('SELECT * FROM menu_items WHERE package_id = ? ORDER BY sort_order')
     .all(packageId) as MenuItem[]
+}
+
+export function updateMenuItemPurchaseUnit(id: number, purchaseUnit: string) {
+  getDb().prepare('UPDATE menu_items SET purchase_unit = ? WHERE id = ?').run(purchaseUnit, id)
 }
 
 // ─── Add-ons ──────────────────────────────────────────────────────────────────
@@ -928,3 +935,31 @@ export function updatePackage(id: string, data: Partial<{ name: string; price_pe
   getDb().prepare(`UPDATE packages SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
 }
 
+
+// ─── Drink Ticket Log ─────────────────────────────────────────────────────────
+
+export interface DrinkTicketLog {
+  id: number
+  event_id: number
+  tickets_issued: number
+  tickets_redeemed: number
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export function getDrinkTicketLog(eventId: number): DrinkTicketLog | undefined {
+  return getDb().prepare(`SELECT * FROM drink_ticket_log WHERE event_id = ?`).get(eventId) as DrinkTicketLog | undefined
+}
+
+export function upsertDrinkTicketLog(eventId: number, data: { tickets_issued: number; tickets_redeemed: number; notes: string }): void {
+  const now = new Date().toISOString()
+  const existing = getDrinkTicketLog(eventId)
+  if (existing) {
+    getDb().prepare(`UPDATE drink_ticket_log SET tickets_issued = ?, tickets_redeemed = ?, notes = ?, updated_at = ? WHERE event_id = ?`)
+      .run(data.tickets_issued, data.tickets_redeemed, data.notes, now, eventId)
+  } else {
+    getDb().prepare(`INSERT INTO drink_ticket_log (event_id, tickets_issued, tickets_redeemed, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(eventId, data.tickets_issued, data.tickets_redeemed, data.notes, now, now)
+  }
+}

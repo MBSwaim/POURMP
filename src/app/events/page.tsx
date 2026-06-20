@@ -28,39 +28,39 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
     sum + (e.guest_count && e.price_per_guest ? e.guest_count * e.price_per_guest : 0), 0)
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="px-4 py-5 space-y-5 max-w-7xl mx-auto">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
-            {statusFilter ? `${statusFilter} Events` : `${year} Events`}
+          <p className="text-[10px] text-gray-500 tracking-[0.2em] uppercase mb-1">{year}</p>
+          <h1 className="text-xl font-bold tracking-widest uppercase leading-none">
+            {statusFilter ? `${statusFilter} Events` : 'Events'}
           </h1>
-          {statusFilter && <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-widest">{year}</p>}
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Year picker */}
           <div className="flex items-center gap-1">
             {olderYear && (
               <Link href={`/events?year=${olderYear}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                className="px-2.5 py-1.5 rounded-lg border border-white/20 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors tracking-widest uppercase">
+                className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
                 ← {olderYear}
               </Link>
             )}
-            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest uppercase border ${
+            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest border ${
               isCurrentYear
-                ? 'border-[#C8973A]/50 bg-[#C8973A]/10 text-[#C8973A]'
-                : 'border-white/20 bg-[#1F3348] text-gray-300'
+                ? 'border-[#C8973A]/40 bg-[#C8973A]/10 text-[#C8973A]'
+                : 'border-white/15 bg-[#1F3348] text-gray-300'
             }`}>{year}</span>
             {newerYear && (
               <Link href={`/events?year=${newerYear}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                className="px-2.5 py-1.5 rounded-lg border border-white/20 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors tracking-widest uppercase">
+                className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
                 {newerYear} →
               </Link>
             )}
           </div>
           <Link href="/events/new"
-            className="px-4 py-2 rounded-lg bg-[#C8973A] text-white text-xs font-bold tracking-widest uppercase hover:bg-[#b07d2e] transition-colors">
+            className="px-3 py-1.5 rounded-lg bg-[#C8973A] text-white text-xs font-semibold hover:bg-[#b07d2e] transition-colors tracking-wide">
             + New Event
           </Link>
         </div>
@@ -69,17 +69,17 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
       {/* Quick stats */}
       {events.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-lg bg-[#1F3348]/60 border border-white/10 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total Events</p>
-            <p className="text-xl font-bold">{events.length}</p>
+          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-white/20 px-4 py-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Total</p>
+            <p className="text-xl font-bold tabular-nums">{events.length}</p>
           </div>
-          <div className="rounded-lg bg-[#1F3348]/60 border border-white/10 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{isCurrentYear ? 'Upcoming' : 'Confirmed'}</p>
-            <p className="text-xl font-bold">{isCurrentYear ? upcoming : confirmed}</p>
+          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-green-500/50 px-4 py-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">{isCurrentYear ? 'Upcoming' : 'Confirmed'}</p>
+            <p className="text-xl font-bold tabular-nums">{isCurrentYear ? upcoming : confirmed}</p>
           </div>
-          <div className="rounded-lg bg-[#1F3348]/60 border border-white/10 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total Value</p>
-            <p className="text-xl font-bold text-[#C8973A]">{formatCurrency(totalValue)}</p>
+          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-[#C8973A] px-4 py-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Value</p>
+            <p className="text-xl font-bold text-[#C8973A] tabular-nums">{formatCurrency(totalValue)}</p>
           </div>
         </div>
       )}

@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile top bar — hidden on md+ */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-[#1F3348] border-b border-white/10 flex items-center justify-between px-4 print:hidden">
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-[#1a2e42] border-b border-[#C8973A]/30 flex items-center justify-between px-4 print:hidden shadow-[0_1px_12px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-2">
           <Logo className="w-7 h-7 shrink-0" color="gold" />
           <div>
@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content — add top padding on mobile for the sticky header */}
-      <main className="flex-1 overflow-auto pt-12 md:pt-0">{children}</main>
+      <main className="flex-1 overflow-auto overflow-x-hidden pt-12 md:pt-0">{children}</main>
     </div>
   )
 }

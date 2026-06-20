@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --background: 214 40% 16%;
-    --foreground: 0 0% 98%;
+    --foreground: 210 30% 96%;
     --card: 214 40% 20%;
     --card-foreground: 0 0% 98%;
     --popover: 214 40% 18%;
@@ -32,12 +32,20 @@
 
   body {
     background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    color: #f0f4f8;
     font-family: var(--font-josefin), ui-sans-serif, system-ui;
     letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Josefin Sans for all headings — uppercase + tracked like the brand guide */
+  /* Gold text selection */
+  ::selection {
+    background-color: rgba(200, 151, 58, 0.3);
+    color: #fff;
+  }
+
+  /* Josefin Sans for headings — uppercase + tracked */
   h1, h2 {
     font-family: var(--font-josefin), ui-sans-serif, system-ui;
     letter-spacing: 0.06em;
@@ -64,6 +72,16 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Hide scrollbar while keeping scroll functionality (for tab rows on mobile) */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   @keyframes slide-in-left {
