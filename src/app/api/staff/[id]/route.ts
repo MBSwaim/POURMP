@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { updateReservation, deleteReservation, completeNotificationsForEntity } from '@/lib/db'
+import { updateStaffMember, deleteStaffMember } from '@/lib/db'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const id = Number(params.id)
     const data = await req.json()
-    updateReservation(id, data)
-    if (data.tables_assigned_at) completeNotificationsForEntity('reservation', id)
+    updateStaffMember(Number(params.id), data)
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
@@ -15,7 +13,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    deleteReservation(Number(params.id))
+    deleteStaffMember(Number(params.id))
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

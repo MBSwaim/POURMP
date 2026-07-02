@@ -1,6 +1,7 @@
 import { getDashboardStats, getKanbanEvents } from '@/lib/db'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
+import { NotificationSummaryCard } from '@/components/NotificationSummaryCard'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
@@ -35,6 +36,9 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Notification Center summary */}
+      <NotificationSummaryCard />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">

@@ -11,6 +11,7 @@ import { CateringCalculator } from '@/components/CateringCalculator'
 import Link from 'next/link'
 import { EVENT_STATUSES, BUSINESS_HOURS } from '@/lib/constants'
 import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
+import { formatPhoneNumber } from '@/lib/phone'
 import type { Package, Client } from '@/lib/db'
 
 interface Prefill {
@@ -267,7 +268,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
               <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required={!useExistingClient} />
             </Field>
             <Field label="Phone" required>
-              <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} required={!useExistingClient} />
+              <Input type="tel" value={form.phone} onChange={(e) => set('phone', formatPhoneNumber(e.target.value))} required={!useExistingClient} />
             </Field>
             <Field label="Company">
               <Input value={form.company} onChange={(e) => set('company', e.target.value)} />

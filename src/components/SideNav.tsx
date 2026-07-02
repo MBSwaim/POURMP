@@ -1,9 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { EVENT_STATUSES } from '@/lib/constants'
 import { Logo } from '@/components/Logo'
+
+const NOTIFICATIONS_POLL_MS = 45_000
 
 function todayISO() {
   const d = new Date()
@@ -50,6 +52,20 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
   // Date picker: prefill from ?date= if on /today, otherwise use today
   const pickerDefault = (pathname === '/today' && params.get('date')) ? params.get('date')! : todayISO()
   const [pickerDate, setPickerDate] = useState(pickerDefault)
+
+  const [pendingAlerts, setPendingAlerts] = useState(0)
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/notifications')
+        const data = await res.json()
+        setPendingAlerts(data.pending?.length ?? 0)
+      } catch { /* keep last known count on a transient failure */ }
+    }
+    load()
+    const id = setInterval(load, NOTIFICATIONS_POLL_MS)
+    return () => clearInterval(id)
+  }, [])
 
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
@@ -165,8 +181,18 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </div>
 
         <Link href="/calendar" onClick={onClose} className={navClass('/calendar')}>Calendar</Link>
+        <Link href="/reservations" onClick={onClose} className={navClass('/reservations')}>Reservations</Link>
         <Link href="/archive" onClick={onClose} className={navClass('/archive')}>Archive</Link>
         <Link href="/analytics" onClick={onClose} className={navClass('/analytics')}>Analytics</Link>
+
+        <Link href="/notifications" onClick={onClose} className={`${navClass('/notifications')} justify-between`}>
+          <span>Notifications</span>
+          {pendingAlerts > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C8973A] text-white leading-none">
+              {pendingAlerts}
+            </span>
+          )}
+        </Link>
 
         {/* Divider before prep tools */}
         <div className="border-t border-white/5 my-1" />

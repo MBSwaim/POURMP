@@ -100,6 +100,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
         <thead>
           <tr className="border-b border-white/10 text-gray-400">
             <th className="text-left py-1.5">Item</th>
+            <th className="text-left py-1.5">Serve</th>
             <th className="text-right py-1.5">Qty</th>
             <th className="text-right py-1.5">Unit</th>
           </tr>
@@ -109,32 +110,31 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
             <React.Fragment key={i}>
               <tr className="border-b border-white/5 hover:bg-white/5">
                 <td className="py-1.5">
-                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
-                    <span>
-                      {item.item_name}
-                      {item.piece_count !== undefined && (
-                        <span className="ml-2 text-xs text-gray-400 font-normal">({item.piece_count} pcs)</span>
-                      )}
-                    </span>
-                    {typeof item.total_qty === 'number' && item.total_qty > 1 && (
-                      <span className="inline-flex items-center gap-1 text-xs">
-                        <span className="text-gray-500">Serve:</span>
-                        {(['all', 'staggered'] as const).map(opt => (
-                          <button
-                            key={opt}
-                            onClick={() => setServeStyle(item.item_name, opt)}
-                            className={`px-2 py-0.5 rounded text-xs transition-colors ${
-                              (serveStyle[item.item_name] ?? 'all') === opt
-                                ? 'bg-[#C8973A] text-white'
-                                : 'bg-white/10 text-gray-400 hover:bg-white/20'
-                            }`}
-                          >
-                            {opt === 'all' ? 'All at once' : '1 @ a time'}
-                          </button>
-                        ))}
-                      </span>
+                  <span>
+                    {item.item_name}
+                    {item.piece_count !== undefined && (
+                      <span className="ml-2 text-xs text-gray-400 font-normal">({item.piece_count} pcs)</span>
                     )}
-                  </div>
+                  </span>
+                </td>
+                <td className="py-1.5">
+                  {typeof item.total_qty === 'number' && item.total_qty > 1 && (
+                    <span className="inline-flex items-center gap-1 text-xs">
+                      {(['all', 'staggered'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setServeStyle(item.item_name, opt)}
+                          className={`w-[76px] px-2 py-0.5 rounded text-xs text-center transition-colors ${
+                            (serveStyle[item.item_name] ?? 'all') === opt
+                              ? 'bg-[#C8973A] text-white'
+                              : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          }`}
+                        >
+                          {opt === 'all' ? 'All at once' : '1 @ a time'}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                 </td>
                 <td className="text-right py-1.5 tabular-nums">
                   {typeof item.total_qty === 'string' ? item.total_qty : String(item.total_qty)}
@@ -144,6 +144,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
               {saucesForItem(item.item_name).map(sauce => (
                 <tr key={`${i}-${sauce}`} className="border-b border-white/5">
                   <td className="py-1 pl-4 text-gray-400 italic">↳ {sauce}</td>
+                  <td />
                   <td />
                   <td className="text-right py-1 text-gray-500 italic">Sauce</td>
                 </tr>

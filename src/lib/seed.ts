@@ -30,6 +30,7 @@ const MENU_ITEMS: Array<{
   { package_id: 'fried_chicken', item_name: 'French Fries', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: '1/2 Chafer', sort_order: 2 },
   { package_id: 'fried_chicken', item_name: 'Hummus', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: 'Large Bowl', sort_order: 3 },
   { package_id: 'fried_chicken', item_name: 'Thai Slaw', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 25, unit_name: 'Large Bowl', sort_order: 4 },
+  { package_id: 'fried_chicken', item_name: 'Veggie Plate', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: 'Platter', sort_order: 5 },
 
   // Arepa Buffet
   { package_id: 'arepa_buffet', item_name: 'Braised Pork Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 1.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },

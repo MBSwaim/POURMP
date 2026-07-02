@@ -11,6 +11,8 @@ interface Settings {
   general_info: string
   cancellation_policy: string
   contact: string
+  notif_sms_enabled: string
+  notif_email_enabled: string
 }
 
 interface Props {
@@ -43,6 +45,21 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
       toast.error('Failed to save')
     } finally {
       setSavingKey(null)
+    }
+  }
+
+  async function toggleNotifSetting(key: 'notif_sms_enabled' | 'notif_email_enabled') {
+    const value = settings[key] === 'true' ? 'false' : 'true'
+    setSettings((s) => ({ ...s, [key]: value }))
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      })
+      toast.success('Saved')
+    } catch {
+      toast.error('Failed to save')
     }
   }
 
@@ -169,6 +186,32 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
             />
             <SaveButton onClick={() => saveSetting('cancellation_policy')} loading={savingKey === 'cancellation_policy'} />
           </div>
+        </div>
+      </SettingsCard>
+
+      {/* Notification Delivery */}
+      <SettingsCard title="Notification Delivery" description="In-app alerts are always on. These add backup channels — both are stubbed until a provider is connected, so toggling them on just starts logging what would be sent.">
+        <div className="space-y-2.5">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={settings.notif_sms_enabled === 'true'}
+              onChange={() => toggleNotifSetting('notif_sms_enabled')}
+              className="rounded accent-[#C8973A] w-4 h-4"
+            />
+            <span className="text-sm text-white">SMS via Twilio</span>
+            <span className="text-xs text-gray-500">(not yet connected — stub only)</span>
+          </label>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={settings.notif_email_enabled === 'true'}
+              onChange={() => toggleNotifSetting('notif_email_enabled')}
+              className="rounded accent-[#C8973A] w-4 h-4"
+            />
+            <span className="text-sm text-white">Email backup</span>
+            <span className="text-xs text-gray-500">(not yet connected — stub only)</span>
+          </label>
         </div>
       </SettingsCard>
 

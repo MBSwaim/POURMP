@@ -16,6 +16,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
 }
 import { calcFloorPlan, calcAllItems, mergeCalculatedItems, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
+import { formatPhoneNumber } from '@/lib/phone'
 import Link from 'next/link'
 import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems } from '@/lib/db'
 
@@ -353,7 +354,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <EditableRow locked={locked} label="First Name" value={client?.first_name ?? ''} onSave={(v) => saveField('client', 'first_name', v)} />
               <EditableRow locked={locked} label="Last Name" value={client?.last_name ?? ''} onSave={(v) => saveField('client', 'last_name', v)} />
               <EditableRow locked={locked} label="Email" value={client?.email ?? ''} type="email" onSave={(v) => saveField('client', 'email', v)} />
-              <EditableRow locked={locked} label="Phone" value={client?.phone ?? ''} onSave={(v) => saveField('client', 'phone', v)} />
+              <EditableRow locked={locked} label="Phone" type="tel" value={client?.phone ?? ''} format={formatPhoneNumber} onSave={(v) => saveField('client', 'phone', v)} />
               <EditableRow locked={locked} label="Company" value={client?.company ?? ''} onSave={(v) => saveField('client', 'company', v)} />
               <EditableRow locked={locked} label="Referral" value={client?.referral_source ?? ''} onSave={(v) => saveField('client', 'referral_source', v)} />
             </InfoCard>
@@ -605,8 +606,24 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   value={details?.kitchen_notes ?? ''}
                   onSave={(v) => saveField('details', 'kitchen_notes', v)}
                 />
+                <NoteField
+                  label="FOH Notes"
+                  value={details?.foh_notes ?? ''}
+                  onSave={(v) => saveField('details', 'foh_notes', v)}
+                />
+                <NoteField
+                  label="Bar Notes"
+                  value={details?.bar_notes ?? ''}
+                  onSave={(v) => saveField('details', 'bar_notes', v)}
+                />
               </div>
             </div>
+
+            {/* Alert Timing */}
+            <AlertTimingCard
+              value={details?.alert_offsets_json ?? '{}'}
+              onSave={(v) => saveField('details', 'alert_offsets_json', v)}
+            />
 
             {/* Supplies Summary */}
             {(() => {
@@ -866,12 +883,13 @@ function InfoCard({ title, children, fullWidth }: { title: string; children: Rea
   )
 }
 
-function EditableRow({ label, value, type = 'text', display, locked, onSave }: {
+function EditableRow({ label, value, type = 'text', display, locked, format, onSave }: {
   label: string
   value: string
   type?: string
   display?: string
   locked?: boolean
+  format?: (v: string) => string
   onSave: (v: string) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -891,7 +909,7 @@ function EditableRow({ label, value, type = 'text', display, locked, onSave }: {
         <Input
           type={type}
           value={val}
-          onChange={(e) => setVal(e.target.value)}
+          onChange={(e) => setVal(format ? format(e.target.value) : e.target.value)}
           onBlur={(e) => commitWith(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && commitWith((e.target as HTMLInputElement).value)}
           autoFocus
@@ -1057,6 +1075,53 @@ function NoteField({ label, value, onSave }: { label: string; value: string; onS
         placeholder={`Notes that will appear on the ${label.replace(' Notes', '')}…`}
         className="w-full text-sm resize-none"
       />
+    </div>
+  )
+}
+
+const DEFAULT_ALERT_OFFSETS: Record<string, number> = { setup: 240, kitchen: 120, final: 30 }
+
+function AlertTimingCard({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  function parse(json: string): Record<string, number> {
+    try { return { ...DEFAULT_ALERT_OFFSETS, ...JSON.parse(json || '{}') } } catch { return DEFAULT_ALERT_OFFSETS }
+  }
+  const [offsets, setOffsets] = useState(parse(value))
+  useEffect(() => setOffsets(parse(value)), [value])
+
+  function commit(key: string, mins: number) {
+    const next = { ...offsets, [key]: mins }
+    setOffsets(next)
+    onSave(JSON.stringify(next))
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-1">Alert Timing</h3>
+      <p className="text-xs text-gray-500 mb-3">Minutes before event start that each notification fires.</p>
+      <div className="grid grid-cols-3 gap-3">
+        <AlertTimingField label="Setup Checklist" value={offsets.setup} onCommit={(m) => commit('setup', m)} />
+        <AlertTimingField label="Kitchen Prep" value={offsets.kitchen} onCommit={(m) => commit('kitchen', m)} />
+        <AlertTimingField label="Final Readiness" value={offsets.final} onCommit={(m) => commit('final', m)} />
+      </div>
+    </div>
+  )
+}
+
+function AlertTimingField({ label, value, onCommit }: { label: string; value: number; onCommit: (mins: number) => void }) {
+  const [val, setVal] = useState(String(value))
+  const id = `alert-offset-${label.toLowerCase().replace(/\s+/g, '-')}`
+  useEffect(() => setVal(String(value)), [value])
+  function commit() {
+    const n = Number(val)
+    if (!Number.isNaN(n) && n !== value) onCommit(n)
+  }
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-[10px] uppercase tracking-widest text-gray-500">{label}</label>
+      <div className="flex items-center gap-1.5">
+        <Input id={id} type="number" min="0" value={val} onChange={(e) => setVal(e.target.value)} onBlur={commit} className="h-8 text-sm w-20" />
+        <span className="text-xs text-gray-500">min before</span>
+      </div>
     </div>
   )
 }

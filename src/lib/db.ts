@@ -182,6 +182,30 @@ function initSchema(db: Database.Database) {
     `CREATE TABLE IF NOT EXISTS event_packages (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, package_id TEXT NOT NULL DEFAULT '', guest_count INTEGER NOT NULL DEFAULT 0, buffer_pct REAL NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS drink_ticket_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, tickets_issued INTEGER DEFAULT 0, tickets_redeemed INTEGER DEFAULT 0, notes TEXT DEFAULT '', created_at TEXT, updated_at TEXT)`,
     `ALTER TABLE menu_items ADD COLUMN purchase_unit TEXT DEFAULT ''`,
+    `INSERT OR IGNORE INTO menu_items (package_id, item_name, calc_method, qty_per_guest, yield_per_unit, unit_name, sort_order) VALUES ('fried_chicken', 'Veggie Plate', 'guests_per_unit', NULL, 20, 'Platter', 5)`,
+    // Notification engine
+    `CREATE TABLE IF NOT EXISTS staff_members (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT DEFAULT '', email TEXT DEFAULT '', active INTEGER DEFAULT 1, created_at TEXT)`,
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      alert_key TEXT NOT NULL,
+      trigger_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      completed_at TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(entity_type, entity_id, alert_key)
+    )`,
+    `ALTER TABLE reservations ADD COLUMN tables_required INTEGER DEFAULT 0`,
+    `ALTER TABLE reservations ADD COLUMN assigned_staff_id INTEGER REFERENCES staff_members(id)`,
+    `ALTER TABLE reservations ADD COLUMN tables_assigned_at TEXT`,
+    `ALTER TABLE reservations ADD COLUMN alert_offset_mins INTEGER`,
+    // Specific table-number assignment replaces the plain tables_required count.
+    `ALTER TABLE reservations ADD COLUMN table_numbers TEXT DEFAULT ''`,
+    `ALTER TABLE reservations DROP COLUMN tables_required`,
+    `ALTER TABLE event_details ADD COLUMN foh_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN bar_notes TEXT DEFAULT ''`,
+    `ALTER TABLE event_details ADD COLUMN alert_offsets_json TEXT DEFAULT '{}'`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -257,6 +281,9 @@ export interface EventDetails {
   serve_style_json: string
   beo_notes: string
   kitchen_notes: string
+  foh_notes: string
+  bar_notes: string
+  alert_offsets_json: string
 }
 
 export interface EventPackage {
@@ -772,6 +799,10 @@ export interface Reservation {
   notes: string
   status: string
   created_at: string
+  table_numbers: string
+  assigned_staff_id: number | null
+  tables_assigned_at: string | null
+  alert_offset_mins: number | null
 }
 
 export { RESERVATION_STATUSES } from './constants'
@@ -787,6 +818,10 @@ export function getReservations(date?: string): Reservation[] {
     .all() as Reservation[]
 }
 
+export function getReservation(id: number): Reservation | undefined {
+  return getDb().prepare('SELECT * FROM reservations WHERE id = ?').get(id) as Reservation | undefined
+}
+
 export function getUpcomingReservations(limit = 20): Reservation[] {
   const today = format(new Date(), 'yyyy-MM-dd')
   return getDb()
@@ -794,16 +829,32 @@ export function getUpcomingReservations(limit = 20): Reservation[] {
     .all(today, limit) as Reservation[]
 }
 
-export function createReservation(data: Omit<Reservation, 'id' | 'created_at'>): number {
+export function createReservation(data: {
+  client_name: string
+  phone: string
+  email: string
+  party_size: number
+  reservation_date: string
+  reservation_time: string
+  notes: string
+  status?: string
+  table_numbers?: string
+  assigned_staff_id?: number | null
+  alert_offset_mins?: number | null
+}): number {
   const result = getDb()
     .prepare(
-      `INSERT INTO reservations (client_name, phone, email, party_size, reservation_date, reservation_time, notes, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO reservations (client_name, phone, email, party_size, reservation_date, reservation_time, notes, status, table_numbers, assigned_staff_id, alert_offset_mins, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       data.client_name, data.phone, data.email, data.party_size,
       data.reservation_date, data.reservation_time, data.notes,
-      data.status || 'Confirmed', new Date().toISOString()
+      data.status || 'Confirmed',
+      data.table_numbers ?? '',
+      data.assigned_staff_id ?? null,
+      data.alert_offset_mins ?? null,
+      new Date().toISOString()
     )
   return result.lastInsertRowid as number
 }
@@ -962,4 +1013,91 @@ export function upsertDrinkTicketLog(eventId: number, data: { tickets_issued: nu
     getDb().prepare(`INSERT INTO drink_ticket_log (event_id, tickets_issued, tickets_redeemed, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
       .run(eventId, data.tickets_issued, data.tickets_redeemed, data.notes, now, now)
   }
+}
+
+// ─── Staff Members ────────────────────────────────────────────────────────────
+
+export interface StaffMember {
+  id: number
+  name: string
+  phone: string
+  email: string
+  active: number
+  created_at: string
+}
+
+export function getStaffMembers(activeOnly = true): StaffMember[] {
+  const where = activeOnly ? 'WHERE active = 1' : ''
+  return getDb().prepare(`SELECT * FROM staff_members ${where} ORDER BY name`).all() as StaffMember[]
+}
+
+export function createStaffMember(data: { name: string; phone?: string; email?: string }): number {
+  const result = getDb()
+    .prepare(`INSERT INTO staff_members (name, phone, email, active, created_at) VALUES (?, ?, ?, 1, ?)`)
+    .run(data.name, data.phone ?? '', data.email ?? '', new Date().toISOString())
+  return result.lastInsertRowid as number
+}
+
+export function updateStaffMember(id: number, data: Partial<{ name: string; phone: string; email: string; active: number }>): void {
+  const fields = Object.keys(data).map(k => `${k} = ?`).join(', ')
+  getDb().prepare(`UPDATE staff_members SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
+}
+
+export function deleteStaffMember(id: number): void {
+  getDb().prepare(`DELETE FROM staff_members WHERE id = ?`).run(id)
+}
+
+// ─── Notifications (Alert Engine) ─────────────────────────────────────────────
+
+export interface Notification {
+  id: number
+  entity_type: 'reservation' | 'event'
+  entity_id: number
+  alert_key: string
+  trigger_at: string
+  status: 'pending' | 'completed'
+  completed_at: string | null
+  created_at: string
+}
+
+export function getNotifications(): Notification[] {
+  return getDb().prepare(`SELECT * FROM notifications ORDER BY trigger_at`).all() as Notification[]
+}
+
+/** Inserts a notification row if one doesn't already exist for this (entity, alert_key). Returns true if newly created. */
+export function createNotificationIfNew(entityType: 'reservation' | 'event', entityId: number, alertKey: string, triggerAt: string): boolean {
+  const result = getDb()
+    .prepare(`INSERT OR IGNORE INTO notifications (entity_type, entity_id, alert_key, trigger_at, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)`)
+    .run(entityType, entityId, alertKey, triggerAt, new Date().toISOString())
+  return result.changes > 0
+}
+
+export function completeNotification(id: number): void {
+  getDb().prepare(`UPDATE notifications SET status = 'completed', completed_at = ? WHERE id = ?`).run(new Date().toISOString(), id)
+}
+
+export function completeNotificationsForEntity(entityType: 'reservation' | 'event', entityId: number): void {
+  getDb()
+    .prepare(`UPDATE notifications SET status = 'completed', completed_at = ? WHERE entity_type = ? AND entity_id = ? AND status = 'pending'`)
+    .run(new Date().toISOString(), entityType, entityId)
+}
+
+/** Reservations eligible for alerting: not cancelled/completed/no-show, and tables not yet physically blocked off. */
+export function getActiveReservationsForAlerts(): Reservation[] {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return getDb()
+    .prepare(`SELECT * FROM reservations WHERE status NOT IN ('Cancelled', 'Completed', 'No-Show') AND tables_assigned_at IS NULL AND reservation_date >= ?`)
+    .all(today) as Reservation[]
+}
+
+/** Confirmed events with their details, for the private-event alert engine. */
+/** Confirmed events today or in the future — past events are excluded so their alerts don't linger forever unactioned. */
+export function getConfirmedEventsForAlerts(): (Event & { alert_offsets_json: string; guest_count: number | null })[] {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return getDb().prepare(`
+    SELECT e.*, ed.alert_offsets_json, ed.guest_count
+    FROM events e
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.status = 'Confirmed' AND e.event_date >= ?
+  `).all(today) as (Event & { alert_offsets_json: string; guest_count: number | null })[]
 }

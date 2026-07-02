@@ -8,6 +8,8 @@ export async function GET() {
       general_info:          getSetting('general_info',          GENERAL_INFO),
       cancellation_policy:   getSetting('cancellation_policy',   CANCELLATION_POLICY),
       contact:               getSetting('contact',               MPBC_CONTACT),
+      notif_sms_enabled:     getSetting('notif_sms_enabled',     'false'),
+      notif_email_enabled:   getSetting('notif_email_enabled',   'false'),
     })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

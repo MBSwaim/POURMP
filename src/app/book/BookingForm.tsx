@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { BUSINESS_HOURS } from '@/lib/constants'
 import { to12Hour, computeEventTimes } from '@/lib/timeUtils'
+import { formatPhoneNumber } from '@/lib/phone'
 import type { Package } from '@/lib/db'
 
 interface Props {
@@ -205,7 +206,7 @@ export function BookingForm({ packages }: Props) {
             <input type="email" className={inputCls} value={form.email} onChange={(e) => set('email', e.target.value)} required />
           </Field>
           <Field label="Phone Number" required>
-            <input type="tel" className={inputCls} value={form.phone} onChange={(e) => set('phone', e.target.value)} required />
+            <input type="tel" className={inputCls} value={form.phone} onChange={(e) => set('phone', formatPhoneNumber(e.target.value))} required />
           </Field>
           <Field label="Company / Organization">
             <input className={inputCls} value={form.company} onChange={(e) => set('company', e.target.value)} />

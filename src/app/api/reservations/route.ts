@@ -12,7 +12,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { client_name, phone, email, party_size, reservation_date, reservation_time, notes, status } = body
+    const { client_name, phone, email, party_size, reservation_date, reservation_time, notes, status, table_numbers, assigned_staff_id, alert_offset_mins } = body
     if (!client_name || !reservation_date || !reservation_time) {
       return NextResponse.json({ error: 'Name, date, and time are required' }, { status: 400 })
     }
@@ -23,7 +23,13 @@ export async function POST(req: Request) {
         { status: 409 }
       )
     }
-    const id = createReservation({ client_name, phone, email, party_size: Number(party_size) || 0, reservation_date, reservation_time, notes, status: status || 'Confirmed' })
+    const id = createReservation({
+      client_name, phone, email, party_size: Number(party_size) || 0, reservation_date, reservation_time, notes,
+      status: status || 'Confirmed',
+      table_numbers: table_numbers || '',
+      assigned_staff_id: assigned_staff_id ?? null,
+      alert_offset_mins: alert_offset_mins ?? null,
+    })
     return NextResponse.json({ id }, { status: 201 })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

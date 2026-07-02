@@ -37,6 +37,27 @@ export const BUSINESS_HOURS: Record<number, { open: string; close: string; minSt
 
 export const RESERVATION_STATUSES = ['Confirmed', 'Seated', 'Completed', 'Cancelled', 'No-Show'] as const
 
+// Taproom table layout — number and seating capacity of each physical table.
+export const TAPROOM_TABLES = [
+  { number: 200, seats: 2 },
+  { number: 201, seats: 2 },
+  { number: 202, seats: 2 },
+  { number: 203, seats: 2 },
+  { number: 204, seats: 2 },
+  { number: 205, seats: 2 },
+  { number: 206, seats: 2 },
+  { number: 302, seats: 6 },
+  { number: 303, seats: 6 },
+  { number: 301, seats: 8 },
+  { number: 304, seats: 8 },
+] as const
+
+// The only two tables that ever get physically joined into one long table.
+export const TABLE_COMBOS = [
+  { tables: [301, 302] as const, seats: 14 },
+  { tables: [303, 304] as const, seats: 14 },
+] as const
+
 export const BLOCK_REASONS = ['Company Event', 'Holiday'] as const
 export type BlockReason = (typeof BLOCK_REASONS)[number]
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number]
