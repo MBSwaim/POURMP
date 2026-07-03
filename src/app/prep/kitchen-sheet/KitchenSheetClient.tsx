@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, mergeCalculatedItems, effectiveGuests, getApplicableSauces, getServingware, countChafingDishes } from '@/lib/calculations'
+import { calcAllItems, mergeCalculatedItems, effectiveGuests, getApplicableSauces, getServingware, countChafingDishes, parseMenuItemOverrides } from '@/lib/calculations'
 import type { ApplicableSauce } from '@/lib/calculations'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
@@ -101,8 +101,9 @@ function PrepSheet({ data }: { data: FullData }) {
   const allPackages = data.packages && data.packages.length > 0
     ? data.packages
     : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
+  const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prepItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
+  const prepItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides) : []))
   const ticketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
@@ -226,6 +227,9 @@ function PrepSheet({ data }: { data: FullData }) {
                   </td>
                   <td className="py-2 print:py-1 text-right text-gray-400 print:text-gray-600 w-28 pl-4">
                     {typeof item.total_qty === 'string' ? item.total_qty : (item.unit_name ?? '')}
+                    {item.half_pan_qty ? (
+                      <span className="block text-[10px] text-gray-500 print:text-gray-500">+ {item.half_pan_qty} 1/2 Chafer</span>
+                    ) : null}
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getEventFull, getDrinkTicketLog } from '@/lib/db'
+import { getEventFull, getDrinkTicketLog, getDebrief, getClientDebriefHistory } from '@/lib/db'
 import { PrepOutputsClient } from './PrepOutputsClient'
 import type { EventForNotes } from '@/lib/noteGenerators'
 
@@ -41,6 +41,7 @@ export default function PrepPage({ params }: { params: { id: string } }) {
     big_screen_tv: details?.big_screen_tv ?? 0,
     selected_sauces: details?.selected_sauces ?? '',
     serve_style_json: details?.serve_style_json ?? '',
+    menu_item_overrides_json: details?.menu_item_overrides_json ?? '',
     beo_notes: details?.beo_notes ?? '',
     kitchen_notes: details?.kitchen_notes ?? '',
     staffing_notes: details?.staffing_notes ?? '',
@@ -48,10 +49,18 @@ export default function PrepPage({ params }: { params: { id: string } }) {
     gratuity_pct: details?.gratuity_pct ?? 20,
     tax_pct: details?.tax_pct ?? 8.25,
     buffer_pct: details?.buffer_pct ?? 0,
+    contract_signed: details?.contract_signed ?? 0,
+    toast_proposal_sent_date: details?.toast_proposal_sent_date ?? null,
+    toast_confirmed_date: details?.toast_confirmed_date ?? null,
+    toast_invoice_sent_date: details?.toast_invoice_sent_date ?? null,
+    toast_deposit_received_date: details?.toast_deposit_received_date ?? null,
+    toast_final_payment_date: details?.toast_final_payment_date ?? null,
     menuItems: data.menuItems as import('@/lib/calculations').MenuItem[],
   }
 
   const ticketLog = getDrinkTicketLog(event.id) ?? null
+  const debrief = getDebrief(event.id) ?? null
+  const clientHistory = client ? getClientDebriefHistory(client.id, event.id) : []
 
-  return <PrepOutputsClient ev={ev} initialTicketLog={ticketLog} />
+  return <PrepOutputsClient ev={ev} initialTicketLog={ticketLog} initialDebrief={debrief} clientHistory={clientHistory} />
 }

@@ -35,7 +35,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database
+# local database (contains live customer data — never commit)
 /data/*.db
 /data/*.db-shm
 /data/*.db-wal
+/data/backups/

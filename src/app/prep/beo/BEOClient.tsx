@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, mergeCalculatedItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies } from '@/lib/calculations'
+import { calcAllItems, mergeCalculatedItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides } from '@/lib/calculations'
 import { Logo } from '@/components/Logo'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
@@ -99,8 +99,9 @@ function BEODocument({ data }: { data: FullData }) {
   const allPackages = data.packages && data.packages.length > 0
     ? data.packages
     : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
+  const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cateringItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
+  const cateringItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides) : []))
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
     try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
@@ -257,6 +258,13 @@ function BEODocument({ data }: { data: FullData }) {
                       <td className="py-0.5 text-right text-gray-500 print:text-gray-400 italic text-xs pl-3">Sauce</td>
                     </tr>
                   ))}
+                  {item.half_pan_qty ? (
+                    <tr key={`${i}-halfpan`} className="border-b border-white/5 print:border-gray-100">
+                      <td className="py-0.5 pl-5 text-gray-400 print:text-gray-500 italic text-xs">↳ remainder</td>
+                      <td className="py-0.5 text-right tabular-nums text-gray-400 print:text-gray-500 text-xs">{item.half_pan_qty}</td>
+                      <td className="py-0.5 text-right text-gray-500 print:text-gray-400 italic text-xs pl-3">1/2 Chafer</td>
+                    </tr>
+                  ) : null}
                 </React.Fragment>
               ))}
             </tbody>

@@ -126,6 +126,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         <div className="border-t border-white/5 my-1" />
 
         <Link href="/" onClick={onClose} className={navClass('/')}>Dashboard</Link>
+        <Link href="/operations" onClick={onClose} className={navClass('/operations')}>Operations</Link>
 
         {/* Events with submenu */}
         <div>

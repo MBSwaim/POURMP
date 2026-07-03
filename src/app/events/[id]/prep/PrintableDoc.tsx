@@ -7,8 +7,12 @@ import {
   formatEquipmentText,
   countChafingDishes,
   vesselLabelFor,
+  parseMenuItemOverrides,
 } from '@/lib/calculations'
 import type { EventForNotes } from '@/lib/noteGenerators'
+import { calcBarImpact, IMPACT_PRINT_COLORS } from '@/lib/barImpact'
+import { calcReadiness } from '@/lib/readiness'
+import { TOAST_STAGES } from '@/lib/toastStatus'
 
 // ─── Shared print styles injected once ────────────────────────────────────────
 
@@ -19,6 +23,7 @@ export function PrintStyles() {
         body { background: white !important; color: black !important; }
         nav, [data-sidenav], .no-print { display: none !important; }
         .print-doc { box-shadow: none !important; border: none !important; }
+        .print-page-break { page-break-after: always; }
         @page { margin: 0.5in 0.75in 0.75in 0.75in; size: letter; }
       }
     `}</style>
@@ -144,6 +149,24 @@ function TwoCol({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">{children}</div>
 }
 
+function ImpactBadge({ ev }: { ev: EventForNotes }) {
+  const impact = calcBarImpact(ev)
+  return (
+    <span className="font-[var(--font-josefin)] font-bold" style={{ color: IMPACT_PRINT_COLORS[impact.level] }}>
+      {impact.level.toUpperCase()}
+    </span>
+  )
+}
+
+function ImpactRow({ ev, label = 'Main Bar Impact' }: { ev: EventForNotes; label?: string }) {
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="font-[var(--font-josefin)] text-[10px] uppercase tracking-wider text-gray-400 w-36 shrink-0 pt-0.5">{label}</span>
+      <span className="font-[var(--font-crimson)] text-base flex-1"><ImpactBadge ev={ev} /></span>
+    </div>
+  )
+}
+
 // ─── Extra tab notes dedup ─────────────────────────────────────────────────────
 
 const STANDARD_TAB_DESCRIPTIONS: Record<string, string> = {
@@ -198,6 +221,7 @@ export function RunOfShowDoc({ ev }: { ev: EventForNotes }) {
         {ev.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && (ev.drink_tickets ?? 0) > 0 && (
           <BulletItem>{ev.drink_tickets} tickets — host distributes, redeemed at bar on event tab.</BulletItem>
         )}
+        <BulletItem>Main Bar Impact: <ImpactBadge ev={ev} /> — give main bar a heads-up before guests arrive.</BulletItem>
         <BulletItem>FOH monitors guest flow and answers host questions.</BulletItem>
         <BulletItem>Restrooms: exit through glass door closest to event space.</BulletItem>
       </Section>
@@ -244,6 +268,7 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
     ev.menuItems as Parameters<typeof calcAllItems>[0],
     ev.guest_count,
     (ev.buffer_pct ?? 0) / 100,
+    parseMenuItemOverrides(ev.menu_item_overrides_json),
   )
 
   const sauceSet = ev.selected_sauces
@@ -293,6 +318,16 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
             {sauces.map(s => (
               <p key={s} className="font-[var(--font-crimson)] text-sm text-gray-500 ml-10">— {s}</p>
             ))}
+            {item.half_pan_qty ? (
+              <div className="flex items-baseline gap-3">
+                <span className="font-[var(--font-josefin)] text-sm font-semibold text-gray-900 shrink-0 w-6 text-right">
+                  ({item.half_pan_qty})
+                </span>
+                <span className="font-[var(--font-crimson)] text-base text-gray-800 flex-1">
+                  Half Chafer of {item.item_name}
+                </span>
+              </div>
+            ) : null}
           </div>
         )
       })}
@@ -309,7 +344,7 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
 
 export function KitchenSheetDoc({ ev }: { ev: EventForNotes }) {
   const items = ev.menuItems
-    ? calcAllItems(ev.menuItems as Parameters<typeof calcAllItems>[0], ev.guest_count, (ev.buffer_pct ?? 0) / 100)
+    ? calcAllItems(ev.menuItems as Parameters<typeof calcAllItems>[0], ev.guest_count, (ev.buffer_pct ?? 0) / 100, parseMenuItemOverrides(ev.menu_item_overrides_json))
     : []
   const serveStyle = (() => { try { return JSON.parse(ev.serve_style_json ?? '{}') } catch { return {} } })()
   const chafing = countChafingDishes(items, serveStyle)
@@ -340,9 +375,11 @@ export function KitchenSheetDoc({ ev }: { ev: EventForNotes }) {
   ]
   const utensilCounts = new Map<string, number>()
   for (const item of items) {
-    if (typeof item.total_qty !== 'number' || item.total_qty === 0) continue
+    if (typeof item.total_qty !== 'number') continue
+    const dishCount = item.total_qty + (item.half_pan_qty ?? 0)
+    if (dishCount === 0) continue
     const rule = UTENSIL_TRIGGERS.find(r => item.item_name.toLowerCase().includes(r.trigger.toLowerCase()))
-    if (rule) utensilCounts.set(rule.utensil, (utensilCounts.get(rule.utensil) ?? 0) + item.total_qty)
+    if (rule) utensilCounts.set(rule.utensil, (utensilCounts.get(rule.utensil) ?? 0) + dishCount)
   }
   Array.from(utensilCounts.entries()).forEach(([utensil, count]) => {
     equipmentLines.push(`(${count}) ${utensil}${count > 1 && utensil !== 'Tongs' ? 's' : ''}`)
@@ -408,6 +445,13 @@ export function FOHNotesDoc({ ev }: { ev: EventForNotes }) {
         {ev.teardown_time && <TimeRow time={ev.teardown_time} label="Event ends — reset begins" />}
       </Section>
 
+      <Section title="Main Bar Impact">
+        <ImpactRow ev={ev} label="Expected Impact" />
+        {calcBarImpact(ev).guestFlowNotes.map((note, i) => (
+          <BulletItem key={i}>{note}</BulletItem>
+        ))}
+      </Section>
+
       <Section title="Setup Checklist">
         <CheckItem>Tables and chairs set per floor plan{ev.floor_plan_notes ? ` — ${ev.floor_plan_notes}` : ''}</CheckItem>
         <CheckItem>Linens placed</CheckItem>
@@ -448,8 +492,17 @@ export function FOHNotesDoc({ ev }: { ev: EventForNotes }) {
 export function BarNotesDoc({ ev }: { ev: EventForNotes }) {
   const lastCall = shiftTime(ev.teardown_time, -30)
 
+  const impact = calcBarImpact(ev)
+
   return (
     <PrintDoc title="Bar Notes" ev={ev}>
+      <Section title="Main Bar Impact">
+        <ImpactRow ev={ev} />
+        {impact.congestionNotes.map((note, i) => (
+          <BulletItem key={i}>{note}</BulletItem>
+        ))}
+      </Section>
+
       <Section title="Beverage Setup">
         <Row label="Beverage Option" value={beverageLabel(ev)} />
         {ev.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && (ev.drink_tickets ?? 0) > 0 && (
@@ -506,6 +559,7 @@ export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
           <Row label="Package" value={ev.package_name} />
           <Row label="Beverage" value={ev.bar_tab_type ? `BAR TAB | ${ev.bar_tab_type}` : undefined} />
           {ev.big_screen_tv ? <Row label="AV" value="TV / HDMI requested" /> : null}
+          <ImpactRow ev={ev} />
         </Section>
       </TwoCol>
 
@@ -564,6 +618,86 @@ export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
           <CheckItem>High-tops and tables reset to standard</CheckItem>
           <CheckItem>Production space returned to standard configuration</CheckItem>
         </div>
+      </Section>
+    </PrintDoc>
+  )
+}
+
+// ─── LEADS PACK ───────────────────────────────────────────────────────────────
+// Master control sheet for whoever is running point on the event — readiness,
+// Toast status, main bar impact, and a condensed timeline in one place.
+
+export function LeadsPackDoc({ ev }: { ev: EventForNotes }) {
+  const decorateTime = ev.decorate_time || ev.setup_time
+  const lastCall = shiftTime(ev.teardown_time, -30)
+  const impact = calcBarImpact(ev)
+  const readiness = calcReadiness({
+    guest_count: ev.guest_count,
+    hasPackage: !!ev.package_name,
+    bar_tab_type: ev.bar_tab_type,
+    setup_notes: ev.setup_notes,
+    floor_plan_notes: ev.floor_plan_notes,
+    dietary_restrictions: ev.dietary_restrictions,
+    staffing_notes: ev.staffing_notes,
+    contract_signed: ev.contract_signed,
+  })
+
+  return (
+    <PrintDoc title="Leads Pack" ev={ev}>
+      <TwoCol>
+        <Section title="Event Readiness">
+          <div className="flex items-baseline gap-2">
+            <span className="font-[var(--font-josefin)] text-3xl font-bold text-gray-900">{readiness.score}%</span>
+            <span className="font-[var(--font-josefin)] text-[10px] uppercase tracking-widest text-gray-400">operational</span>
+          </div>
+          {readiness.missingLabels.length === 0 ? (
+            <p className="font-[var(--font-crimson)] text-sm text-gray-600 mt-1">All operational checks complete.</p>
+          ) : (
+            <div className="mt-1 space-y-0.5">
+              {readiness.missingLabels.map(label => <BulletItem key={label}>{label}</BulletItem>)}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Toast Status">
+          {TOAST_STAGES.map(stage => {
+            const date = ev[stage.key]
+            return (
+              <div key={stage.key} className="flex items-center gap-2 text-sm">
+                <span className={`w-4 h-4 rounded-sm border shrink-0 flex items-center justify-center text-[10px] ${date ? 'bg-gray-800 border-gray-800 text-white' : 'border-gray-400'}`}>
+                  {date ? '✓' : ''}
+                </span>
+                <span className="font-[var(--font-crimson)] text-base text-gray-800">{stage.label}</span>
+                {date && <span className="font-[var(--font-josefin)] text-[10px] text-gray-400 ml-auto">{date}</span>}
+              </div>
+            )
+          })}
+        </Section>
+      </TwoCol>
+
+      <Section title="Main Bar Impact">
+        <ImpactRow ev={ev} />
+        {impact.congestionNotes.slice(0, 3).map((note, i) => (
+          <BulletItem key={i}>{note}</BulletItem>
+        ))}
+      </Section>
+
+      <Section title="Quick Timeline">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+          {ev.production_close_time && <TimeRow time={ev.production_close_time} label="Production closed off" />}
+          {ev.setup_time && <TimeRow time={ev.setup_time} label="MP setup begins" />}
+          {decorateTime && <TimeRow time={decorateTime} label="Host access begins" />}
+          {ev.event_time && <TimeRow time={ev.event_time} label="Event starts" />}
+          {lastCall && <TimeRow time={lastCall} label="Last call" />}
+          {ev.teardown_time && <TimeRow time={ev.teardown_time} label="Event ends" />}
+        </div>
+      </Section>
+
+      <Section title="Key Info">
+        <Row label="Host" value={`${ev.first_name} ${ev.last_name}${ev.company ? ' / ' + ev.company : ''}`} />
+        <Row label="Package" value={ev.package_name} />
+        <Row label="Beverage" value={ev.bar_tab_type ? `BAR TAB | ${ev.bar_tab_type}` : undefined} />
+        {ev.staffing_notes && <Row label="Staffing Notes" value={ev.staffing_notes} />}
       </Section>
     </PrintDoc>
   )

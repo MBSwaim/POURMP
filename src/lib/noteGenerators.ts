@@ -5,9 +5,11 @@ import {
   formatCateringText,
   formatEquipmentText,
   countChafingDishes,
+  parseMenuItemOverrides,
   type MenuItem,
   type CalculatedItem,
 } from './calculations'
+import { calcBarImpact } from './barImpact'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,7 @@ export interface EventForNotes {
   big_screen_tv?: number
   selected_sauces?: string
   serve_style_json?: string
+  menu_item_overrides_json?: string
   beo_notes?: string
   kitchen_notes?: string
   staffing_notes?: string
@@ -48,6 +51,12 @@ export interface EventForNotes {
   gratuity_pct?: number
   tax_pct?: number
   buffer_pct?: number
+  contract_signed?: number
+  toast_proposal_sent_date?: string | null
+  toast_confirmed_date?: string | null
+  toast_invoice_sent_date?: string | null
+  toast_deposit_received_date?: string | null
+  toast_final_payment_date?: string | null
   // catering items from the package
   menuItems?: MenuItem[]
 }
@@ -95,7 +104,7 @@ function serveStyleMap(ev: EventForNotes): Record<string, 'all' | 'staggered'> {
 
 function calcItems(ev: EventForNotes): CalculatedItem[] {
   if (!ev.menuItems || ev.menuItems.length === 0) return []
-  return calcAllItems(ev.menuItems, ev.guest_count, (ev.buffer_pct ?? 0) / 100)
+  return calcAllItems(ev.menuItems, ev.guest_count, (ev.buffer_pct ?? 0) / 100, parseMenuItemOverrides(ev.menu_item_overrides_json))
 }
 
 // ─── TOAST NOTES BUILDER ──────────────────────────────────────────────────────
@@ -123,7 +132,6 @@ export function generateToastNotes(ev: EventForNotes): string {
   lines.push('FOOD DETAILS')
   lines.push('')
   lines.push(`DIETARY RESTRICTIONS: ${ev.dietary_restrictions || 'None noted'}`)
-  lines.push('')
 
   if (items.length > 0 && ev.package_name) {
     const foodText = formatCateringText(
@@ -139,10 +147,8 @@ export function generateToastNotes(ev: EventForNotes): string {
   }
 
   if (ev.food_notes) {
-    lines.push('')
     lines.push(`Notes: ${ev.food_notes}`)
   }
-  lines.push('')
   lines.push('Please Note: Ordering off our taproom food menu during events is not permitted.')
   lines.push('')
 
@@ -163,27 +169,27 @@ export function generateToastNotes(ev: EventForNotes): string {
   }
   const extraNotes = extraTabNotes(ev)
   if (extraNotes) {
-    lines.push('')
     lines.push(extraNotes)
   }
+  lines.push(`Main Bar Impact: ${calcBarImpact(ev).level.toUpperCase()} (see Main Bar Impact tab for details)`)
   lines.push('')
 
   // SETUP DETAILS
   lines.push('SETUP DETAILS')
   lines.push('')
-  lines.push('MP EVENT SETUP')
-  lines.push('\t• Space restrictions and safety boundaries in place')
-  lines.push('\t• Tables, linens, plates, utensils, and event materials prepared')
-  lines.push('\t• Lighting adjusted appropriately for event atmosphere')
-  lines.push('\t• Music source confirmed and volume adjusted appropriately')
-  if (ev.big_screen_tv) lines.push('\t• Audio/visual setup completed — TV/HDMI confirmed')
-  else lines.push('\t• Audio/visual setup completed if applicable')
-  lines.push('\t• Buffet tables and service areas prepared prior to guest arrival')
-  lines.push('\t• Reserved event area cleaned, organized, and guest-ready prior to host arrival')
+  // "MP EVENT SETUP" standard checklist removed from output per request (2026) — kept here for future reference:
+  // lines.push('MP EVENT SETUP')
+  // lines.push('\t• Space restrictions and safety boundaries in place')
+  // lines.push('\t• Tables, linens, plates, utensils, and event materials prepared')
+  // lines.push('\t• Lighting adjusted appropriately for event atmosphere')
+  // lines.push('\t• Music source confirmed and volume adjusted appropriately')
+  // if (ev.big_screen_tv) lines.push('\t• Audio/visual setup completed — TV/HDMI confirmed')
+  // else lines.push('\t• Audio/visual setup completed if applicable')
+  // lines.push('\t• Buffet tables and service areas prepared prior to guest arrival')
+  // lines.push('\t• Reserved event area cleaned, organized, and guest-ready prior to host arrival')
   if (ev.setup_notes || ev.floor_plan_notes) {
     lines.push('\t• Setup Notes: ' + [ev.setup_notes, ev.floor_plan_notes].filter(Boolean).join(' | '))
   }
-  lines.push('')
   lines.push('HOST EVENT SETUP')
   lines.push('\t• Host access begins one (1) hour prior to scheduled event start time')
   lines.push('\t• Decorations/setup must remain within reserved event area only')
@@ -214,17 +220,19 @@ export function generateToastNotes(ev: EventForNotes): string {
   lines.push('\t• Host responsible for removal of all outside items (including decorations, gifts, dessert items, etc.) brought into brewery')
   lines.push('\t• Host responsible for ensuring all guests have exited reserved event area at conclusion of scheduled event timeframe')
   lines.push('\t• Additional cleanup charges may apply for excessive mess, damages, or items left behind')
-  lines.push('')
-  lines.push('MP EVENT BREAKDOWN')
-  lines.push('\t• Food service and buffet areas cleared and broken down')
-  lines.push('\t• Remaining catering equipment and service materials removed')
-  lines.push('\t• Linens, plates, utensils, and service wares collected and cleaned')
-  lines.push('\t• Trash removed from reserved event area')
-  lines.push('\t• Tables and seating returned to standard floorplan as applicable')
-  if (ev.big_screen_tv) lines.push('\t• Audio/visual equipment powered down and secured')
-  else lines.push('\t• Audio/visual equipment powered down and secured if applicable')
-  lines.push('\t• Production Space cleaned and reset for normal brewery operations')
-  lines.push('\t• Final event walkthrough completed by MP staff')
+
+  // "MP EVENT BREAKDOWN" standard checklist removed from output per request (2026) — kept here for future reference:
+  // lines.push('')
+  // lines.push('MP EVENT BREAKDOWN')
+  // lines.push('\t• Food service and buffet areas cleared and broken down')
+  // lines.push('\t• Remaining catering equipment and service materials removed')
+  // lines.push('\t• Linens, plates, utensils, and service wares collected and cleaned')
+  // lines.push('\t• Trash removed from reserved event area')
+  // lines.push('\t• Tables and seating returned to standard floorplan as applicable')
+  // if (ev.big_screen_tv) lines.push('\t• Audio/visual equipment powered down and secured')
+  // else lines.push('\t• Audio/visual equipment powered down and secured if applicable')
+  // lines.push('\t• Production Space cleaned and reset for normal brewery operations')
+  // lines.push('\t• Final event walkthrough completed by MP staff')
 
   return lines.join('\n')
 }
@@ -256,6 +264,7 @@ export function generateRunOfShow(ev: EventForNotes): string {
   lines.push(`GUEST ARRIVAL — ${eventStart}`)
   lines.push(`  ${eventStart}  Guests enter through taproom/event space glass door`)
   lines.push(`  Bar service begins — ${beverageLine(ev)}`)
+  lines.push(`  Main Bar Impact: ${calcBarImpact(ev).level.toUpperCase()} — give main bar a heads-up before guests arrive`)
   lines.push('  FOH monitors guest flow and answers host questions')
   lines.push('  Restrooms: exit through glass door closest to event space')
   lines.push('')
@@ -363,6 +372,7 @@ export function generateFOHNotes(ev: EventForNotes): string {
   const lines: string[] = []
   const decorateDisplay = ev.decorate_time ? to12Hour(ev.decorate_time) : to12Hour(ev.setup_time)
   const lastCall = to12Hour(shiftTime(ev.teardown_time, -30))
+  const impact = calcBarImpact(ev)
 
   lines.push('FOH NOTES — MANHATTAN PROJECT BEER CO.')
   lines.push('')
@@ -381,6 +391,10 @@ export function generateFOHNotes(ev: EventForNotes): string {
   lines.push(`  ${to12Hour(ev.event_time)}  Event starts — guests arrive`)
   lines.push(`  ${lastCall}  Last call`)
   lines.push(`  ${to12Hour(ev.teardown_time)}  Event ends — reset begins`)
+  lines.push('')
+
+  lines.push(`MAIN BAR IMPACT — ${impact.level.toUpperCase()}`)
+  impact.guestFlowNotes.forEach(n => lines.push(`  • ${n}`))
   lines.push('')
 
   lines.push('SETUP CHECKLIST')
@@ -459,6 +473,11 @@ export function generateBarNotes(ev: EventForNotes): string {
   }
   lines.push('')
 
+  const impact = calcBarImpact(ev)
+  lines.push(`MAIN BAR IMPACT — ${impact.level.toUpperCase()}`)
+  impact.congestionNotes.forEach(n => lines.push(`  • ${n}`))
+  lines.push('')
+
   lines.push('POLICIES')
   lines.push('  • No outside alcohol permitted under any circumstances')
   lines.push('  • No capped open bars — budget control via pre-paid drink tickets only')
@@ -484,6 +503,7 @@ export function generateSetupChecklist(ev: EventForNotes): string {
   lines.push(`Host Access: ${decorateDisplay}`)
   lines.push(`Event Start: ${to12Hour(ev.event_time)}`)
   lines.push(`Event End:   ${to12Hour(ev.teardown_time)}`)
+  lines.push(`Main Bar Impact: ${calcBarImpact(ev).level.toUpperCase()}`)
   lines.push('')
 
   lines.push('BEFORE HOST ARRIVES')

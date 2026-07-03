@@ -3,29 +3,41 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { generateToastNotes, type EventForNotes } from '@/lib/noteGenerators'
-import { PrintStyles, RunOfShowDoc, KitchenSheetDoc, FOHNotesDoc, BarNotesDoc, SetupChecklistDoc } from './PrintableDoc'
+import { PrintStyles, RunOfShowDoc, KitchenSheetDoc, FOHNotesDoc, BarNotesDoc, SetupChecklistDoc, LeadsPackDoc } from './PrintableDoc'
 import { BarImpactTab } from './BarImpactTab'
+import { DebriefTab } from './DebriefTab'
 import { to12Hour } from '@/lib/timeUtils'
-import type { DrinkTicketLog } from '@/lib/db'
+import type { DrinkTicketLog, EventDebrief } from '@/lib/db'
 
 const TABS = [
-  { key: 'toast',   label: 'Toast Notes',    icon: '📋', printable: false },
-  { key: 'impact',  label: 'Bar Impact',     icon: '🍺', printable: false },
-  { key: 'ros',     label: 'Run of Show',    icon: '🕐', printable: true  },
-  { key: 'kitchen', label: 'Kitchen Sheet',  icon: '🍳', printable: true  },
-  { key: 'foh',     label: 'FOH Notes',      icon: '🪑', printable: true  },
-  { key: 'bar',     label: 'Bar Notes',      icon: '📌', printable: true  },
-  { key: 'setup',   label: 'Setup Checklist',icon: '✅', printable: true  },
+  { key: 'toast',    label: 'Toast Notes',    icon: '📋', printable: false },
+  { key: 'impact',   label: 'Main Bar Impact',icon: '🍺', printable: false },
+  { key: 'ros',      label: 'Run of Show',    icon: '🕐', printable: true  },
+  { key: 'kitchen',  label: 'Kitchen Sheet',  icon: '🍳', printable: true  },
+  { key: 'foh',      label: 'FOH Notes',      icon: '🪑', printable: true  },
+  { key: 'bar',      label: 'Bar Notes',      icon: '📌', printable: true  },
+  { key: 'leads',    label: 'Leads Pack',     icon: '🗝️', printable: true  },
+  { key: 'handoff',  label: 'Handoff Pack',   icon: '📦', printable: false },
+  { key: 'setup',    label: 'Setup Checklist',icon: '✅', printable: true  },
+  { key: 'debrief',  label: 'Debrief',        icon: '📝', printable: false },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
 
+interface ClientHistoryEntry {
+  id: number; event_name: string; event_date: string; actual_guest_count: number | null
+  went_well: string; issues: string; catering_accuracy: string; bar_impact_accuracy: string
+  would_repeat_client: string; recommendations: string
+}
+
 interface Props {
   ev: EventForNotes
   initialTicketLog: DrinkTicketLog | null
+  initialDebrief: EventDebrief | null
+  clientHistory: ClientHistoryEntry[]
 }
 
-export function PrepOutputsClient({ ev, initialTicketLog }: Props) {
+export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory }: Props) {
   const [active, setActive] = useState<TabKey>('toast')
   const activeTab = TABS.find(t => t.key === active)!
 
@@ -104,10 +116,38 @@ export function PrepOutputsClient({ ev, initialTicketLog }: Props) {
         </div>
       )}
 
-      {/* ── Bar Impact ── */}
+      {/* ── Main Bar Impact ── */}
       {active === 'impact' && (
         <div className="max-w-4xl mx-auto px-4 no-print">
           <BarImpactTab ev={ev} initialLog={initialTicketLog} />
+        </div>
+      )}
+
+      {/* ── Debrief ── */}
+      {active === 'debrief' && (
+        <div className="max-w-4xl mx-auto px-4 no-print">
+          <DebriefTab ev={ev} initialDebrief={initialDebrief} clientHistory={clientHistory} />
+        </div>
+      )}
+
+      {/* ── Handoff Pack: all four role docs in one print job ── */}
+      {active === 'handoff' && (
+        <div className="max-w-4xl mx-auto px-4 space-y-3">
+          <div className="flex items-center justify-between no-print">
+            <p className="text-xs text-gray-400">
+              Complete internal handoff — Kitchen, FOH, Bar, and Leads in one document. Each section prints on its own page.
+            </p>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1F3348] border border-white/15 text-gray-300 hover:text-white hover:border-white/30 text-xs font-medium transition-colors shrink-0"
+            >
+              🖨 Print Full Handoff Pack
+            </button>
+          </div>
+          <div className="print-page-break"><LeadsPackDoc ev={ev} /></div>
+          <div className="print-page-break"><KitchenSheetDoc ev={ev} /></div>
+          <div className="print-page-break"><FOHNotesDoc ev={ev} /></div>
+          <BarNotesDoc ev={ev} />
         </div>
       )}
 
@@ -126,6 +166,7 @@ export function PrepOutputsClient({ ev, initialTicketLog }: Props) {
           {active === 'kitchen' && <KitchenSheetDoc ev={ev} />}
           {active === 'foh'     && <FOHNotesDoc ev={ev} />}
           {active === 'bar'     && <BarNotesDoc ev={ev} />}
+          {active === 'leads'   && <LeadsPackDoc ev={ev} />}
           {active === 'setup'   && <SetupChecklistDoc ev={ev} />}
         </div>
       )}

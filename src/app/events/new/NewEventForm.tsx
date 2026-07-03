@@ -404,7 +404,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             />
           </Field>
           <Field label="Staffing Notes">
-            <Textarea value={form.staffing_notes} onChange={(e) => set('staffing_notes', e.target.value)} rows={2} placeholder="Staff count, bartenders, servers, coordinator notes…" />
+            <Textarea value={form.staffing_notes} onChange={(e) => set('staffing_notes', e.target.value)} rows={2} placeholder="Staff count, servers, coordinator notes… (guests order at the main bar — no dedicated event bartenders)" />
           </Field>
           <div className="flex items-center gap-2">
             <Checkbox

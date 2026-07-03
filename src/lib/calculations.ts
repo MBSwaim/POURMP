@@ -14,13 +14,25 @@ export interface CalculatedItem extends MenuItem {
   total_qty: number | string
   display: string
   piece_count?: number  // populated for pieces_per_guest items
+  is_override?: boolean // true when piece_count came from a manual override, not the guest-count formula
+  half_pan_qty?: number // extra 1/2 Chafer needed on top of total_qty full 200 Pans, for a partial remainder
+}
+
+// Manual per-item piece-count overrides, keyed by item_name. Lets staff rebalance
+// a split (e.g. more pork arepas, fewer black bean) for a specific event without
+// changing the package's default per-guest rate.
+export type MenuItemOverrides = Record<string, number>
+
+export function parseMenuItemOverrides(json: string | null | undefined): MenuItemOverrides {
+  if (!json) return {}
+  try { return JSON.parse(json) } catch { return {} }
 }
 
 export function effectiveGuests(guestCount: number, bufferPct = 0): number {
   return Math.ceil(guestCount * (1 + bufferPct))
 }
 
-export function calcItemQty(item: MenuItem, guests: number): number | string {
+export function calcItemQty(item: MenuItem, guests: number, overridePieces?: number): number | string {
   if (item.calc_method === 'manual') return 'Enter Manually'
 
   if (guests <= 0) return 0
@@ -32,7 +44,7 @@ export function calcItemQty(item: MenuItem, guests: number): number | string {
 
   if (item.calc_method === 'pieces_per_guest') {
     const qty = item.qty_per_guest ?? 1
-    const totalPieces = Math.ceil(guests * qty)
+    const totalPieces = overridePieces ?? Math.ceil(guests * qty)
     if (item.yield_per_unit && item.yield_per_unit > 0) {
       return Math.ceil(totalPieces / item.yield_per_unit)
     }
@@ -48,18 +60,36 @@ export function calcItemQty(item: MenuItem, guests: number): number | string {
   return 0
 }
 
-export function calcAllItems(items: MenuItem[], guestCount: number, bufferPct = 0): CalculatedItem[] {
+export function calcAllItems(items: MenuItem[], guestCount: number, bufferPct = 0, overrides: MenuItemOverrides = {}): CalculatedItem[] {
   const guests = effectiveGuests(guestCount, bufferPct)
   return items
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((item) => {
-      let qty = calcItemQty(item, guests)
+      const override = overrides[item.item_name]
+      let qty = calcItemQty(item, guests, override)
       let unitName = item.unit_name ?? ''
 
       // Capture piece count before unit conversion for pieces_per_guest items
       let piece_count: number | undefined
+      let half_pan_qty: number | undefined
       if (item.calc_method === 'pieces_per_guest' && item.yield_per_unit && item.yield_per_unit > 0) {
-        piece_count = Math.ceil(guests * (item.qty_per_guest ?? 1))
+        piece_count = override ?? Math.ceil(guests * (item.qty_per_guest ?? 1))
+
+        // Don't provision a full 200 Pan for less than a full pan's worth — use a
+        // 1/2 Chafer for the partial amount, whether that's the whole quantity
+        // (e.g. 15 pcs on a 20-yield pan) or just the leftover after full pans
+        // (e.g. 25 pcs = 1 full pan + 1 half pan for the remaining 5).
+        if (unitName === '200 Pan') {
+          const fullPans = Math.floor(piece_count / item.yield_per_unit)
+          const remainder = piece_count % item.yield_per_unit
+          if (fullPans === 0 && remainder > 0) {
+            qty = 1
+            unitName = '1/2 Chafer'
+          } else {
+            qty = fullPans
+            if (remainder > 0) half_pan_qty = 1
+          }
+        }
       }
 
       // 2 × 1/2 Chafer = 1 × 200 Pan
@@ -68,8 +98,10 @@ export function calcAllItems(items: MenuItem[], guestCount: number, bufferPct = 
         unitName = '200 Pan'
       }
 
-      const display = typeof qty === 'string' ? qty : `${qty} ${unitName}`
-      return { ...item, total_qty: qty, unit_name: unitName, display, piece_count }
+      const display = typeof qty === 'string'
+        ? qty
+        : `${qty} ${unitName}${half_pan_qty ? ` + ${half_pan_qty} 1/2 Chafer` : ''}`
+      return { ...item, total_qty: qty, unit_name: unitName, display, piece_count, is_override: override !== undefined, half_pan_qty }
     })
 }
 
@@ -83,7 +115,16 @@ export function mergeCalculatedItems(items: CalculatedItem[]): CalculatedItem[] 
       // Both numeric — sum them
       if (typeof existing.total_qty === 'number' && typeof item.total_qty === 'number') {
         existing.total_qty += item.total_qty
-        existing.display = `${existing.total_qty} ${existing.unit_name ?? ''}`.trim()
+        existing.half_pan_qty = (existing.half_pan_qty ?? 0) + (item.half_pan_qty ?? 0)
+
+        // Two half-pan remainders combine into a full pan
+        if (existing.half_pan_qty >= 2 && existing.unit_name === '200 Pan') {
+          existing.total_qty += Math.floor(existing.half_pan_qty / 2)
+          existing.half_pan_qty = existing.half_pan_qty % 2
+        }
+        if (existing.half_pan_qty === 0) existing.half_pan_qty = undefined
+
+        existing.display = `${existing.total_qty} ${existing.unit_name ?? ''}${existing.half_pan_qty ? ` + ${existing.half_pan_qty} 1/2 Chafer` : ''}`.trim()
       }
       // If either is a string quantity ("as needed" etc.) keep existing as-is
     }
@@ -192,6 +233,9 @@ export function formatCateringText(
       for (const sauce of saucesFor(item.item_name)) {
         lines.push(`    - ${sauce}`)
       }
+      if (item.half_pan_qty) {
+        lines.push(`(${item.half_pan_qty}) Half Chafer of ${item.item_name}`)
+      }
     }
     return lines.join('\n')
   }).join('\n\n')
@@ -211,12 +255,14 @@ export function formatEquipmentText(
   const utensilCounts = new Map<string, number>()
 
   for (const item of items) {
-    if (typeof item.total_qty !== 'number' || item.total_qty === 0) continue
+    if (typeof item.total_qty !== 'number') continue
+    const dishCount = item.total_qty + (item.half_pan_qty ?? 0)
+    if (dishCount === 0) continue
     const sw = SERVINGWARE_RULES.find(r =>
       item.item_name.toLowerCase().includes(r.trigger.toLowerCase())
     )
     if (!sw) continue
-    utensilCounts.set(sw.utensil, (utensilCounts.get(sw.utensil) ?? 0) + item.total_qty)
+    utensilCounts.set(sw.utensil, (utensilCounts.get(sw.utensil) ?? 0) + dishCount)
   }
 
   const lines: string[] = []
@@ -257,6 +303,8 @@ export function countChafingDishes(
     const qty = style === 'staggered' ? 1 : item.total_qty
     if (item.unit_name === '200 Pan') fullSize += qty
     else if (item.unit_name === '1/2 Chafer') halfSize += qty
+    // Partial remainder always needs its own half-size dish, regardless of serve style
+    if (item.half_pan_qty) halfSize += item.half_pan_qty
   }
   return { fullSize, halfSize, total: fullSize + halfSize }
 }

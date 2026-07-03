@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { getEventFull } from '@/lib/db'
 import { getDb } from '@/lib/db-internal'
-import { calcAllItems, getApplicableSauces, type MenuItem as CalcMenuItem } from '@/lib/calculations'
+import { calcAllItems, getApplicableSauces, parseMenuItemOverrides, type MenuItem as CalcMenuItem } from '@/lib/calculations'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 
 export const dynamic = 'force-dynamic'
@@ -68,7 +68,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
             const guestCount = details?.guest_count ?? 0
             const bufferPct = details?.buffer_pct ?? 0
             const calcItems = menuItems && menuItems.length > 0
-              ? calcAllItems(menuItems as CalcMenuItem[], guestCount, bufferPct)
+              ? calcAllItems(menuItems as CalcMenuItem[], guestCount, bufferPct, parseMenuItemOverrides(details?.menu_item_overrides_json))
               : []
 
             // Sauces

@@ -2,7 +2,10 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import { seedDatabase, seedHistoricalEvents } from './seed'
 import { DEPOSIT_PCT, FINAL_PCT, DEPOSIT_DAYS_BEFORE } from './constants'
-import { subDays, format, parseISO } from 'date-fns'
+import { subDays, addDays, format, parseISO } from 'date-fns'
+import { calcBarImpact } from './barImpact'
+import { calcReadiness } from './readiness'
+import type { EventForNotes } from './noteGenerators'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -206,6 +209,41 @@ function initSchema(db: Database.Database) {
     `ALTER TABLE event_details ADD COLUMN foh_notes TEXT DEFAULT ''`,
     `ALTER TABLE event_details ADD COLUMN bar_notes TEXT DEFAULT ''`,
     `ALTER TABLE event_details ADD COLUMN alert_offsets_json TEXT DEFAULT '{}'`,
+    // Links an event to its order number in the online ordering/catering system
+    `ALTER TABLE events ADD COLUMN external_order_number TEXT`,
+    // Arepa Buffet: 1.5 pcs/guest was being applied to EACH of the 3 arepa types (4.5 total/guest).
+    // Split evenly so the buffet totals 1.5 arepas/guest across all three.
+    `UPDATE menu_items SET qty_per_guest = 0.5 WHERE package_id = 'arepa_buffet' AND item_name IN ('Braised Pork Arepa', 'Pickled Green Tomato Arepa', 'Black Bean Arepa')`,
+    // Same bug in Kabob Buffet (2 pcs/guest each → 1 pc/guest each, 2 total/guest) and
+    // Sliders Buffet (2 pcs/guest each → 2/3 pc/guest each, 2 total/guest).
+    `UPDATE menu_items SET qty_per_guest = 1 WHERE package_id = 'kabob_buffet' AND item_name IN ('Shrimp Kabob', 'Thai Chicken Kabob')`,
+    `UPDATE menu_items SET qty_per_guest = 0.6667 WHERE package_id = 'sliders_buffet' AND item_name IN ('Pulled Pork Slider', 'Mini Burger Slider', 'Fried Buffalo Chicken Slider')`,
+    // Per-event manual override of individual item piece counts (e.g. rebalance an
+    // arepa/kabob/slider split for a specific order without changing the package default).
+    `ALTER TABLE event_details ADD COLUMN menu_item_overrides_json TEXT DEFAULT '{}'`,
+    // Toast Status Tracker — mirrors where the event stands in Toast Catering & Events
+    // (proposal/invoice/payment workflow lives in Toast; this is a manual status mirror,
+    // not payment processing). Each is a date string, null = not done yet.
+    `ALTER TABLE event_details ADD COLUMN toast_proposal_sent_date TEXT`,
+    `ALTER TABLE event_details ADD COLUMN toast_confirmed_date TEXT`,
+    `ALTER TABLE event_details ADD COLUMN toast_invoice_sent_date TEXT`,
+    `ALTER TABLE event_details ADD COLUMN toast_deposit_received_date TEXT`,
+    `ALTER TABLE event_details ADD COLUMN toast_final_payment_date TEXT`,
+    // Post-Event Debrief — internal review + repeat-event intelligence
+    `CREATE TABLE IF NOT EXISTS event_debriefs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+      actual_guest_count INTEGER,
+      went_well TEXT DEFAULT '',
+      issues TEXT DEFAULT '',
+      catering_accuracy TEXT DEFAULT '',
+      bar_impact_accuracy TEXT DEFAULT '',
+      staffing_notes TEXT DEFAULT '',
+      would_repeat_client TEXT DEFAULT '',
+      recommendations TEXT DEFAULT '',
+      created_at TEXT,
+      updated_at TEXT
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -254,6 +292,7 @@ export interface Event {
   client_id: number
   created_at: string
   updated_at: string
+  external_order_number: string | null
 }
 
 export interface EventDetails {
@@ -284,6 +323,27 @@ export interface EventDetails {
   foh_notes: string
   bar_notes: string
   alert_offsets_json: string
+  menu_item_overrides_json: string
+  toast_proposal_sent_date: string | null
+  toast_confirmed_date: string | null
+  toast_invoice_sent_date: string | null
+  toast_deposit_received_date: string | null
+  toast_final_payment_date: string | null
+}
+
+export interface EventDebrief {
+  id: number
+  event_id: number
+  actual_guest_count: number | null
+  went_well: string
+  issues: string
+  catering_accuracy: string
+  bar_impact_accuracy: string
+  staffing_notes: string
+  would_repeat_client: string
+  recommendations: string
+  created_at: string
+  updated_at: string
 }
 
 export interface EventPackage {
@@ -670,6 +730,147 @@ export function getDashboardStats() {
   return { eventsThisMonth, eventsThisWeek, upcomingEvents }
 }
 
+// ─── Operational Dashboard ──────────────────────────────────────────────────────
+// Internal ops layer alongside Toast Catering & Events — surfaces what needs
+// staff attention. Not a payments/invoicing view; Toast remains system of record.
+
+export interface OpsEventSummary {
+  id: number
+  event_name: string
+  event_date: string
+  event_time: string
+  status: string
+  guest_count: number
+  client_name: string
+  barImpactLevel: string
+  readinessScore: number
+  missingLabels: string[]
+}
+
+export interface OperationalDashboard {
+  weekStart: string
+  weekEnd: string
+  thisWeek: OpsEventSummary[]
+  awaitingDeposit: OpsEventSummary[]
+  awaitingMenu: OpsEventSummary[]
+  awaitingInvoice: OpsEventSummary[]
+  highRisk: OpsEventSummary[]
+  highBarImpact: OpsEventSummary[]
+}
+
+const RISK_READINESS_THRESHOLD = 70
+const RISK_WINDOW_DAYS = 14
+
+export function getOperationalDashboard(): OperationalDashboard {
+  const db = getDb()
+  refreshOverduePayments()
+
+  const now = new Date()
+  const today = format(now, 'yyyy-MM-dd')
+  const dow = now.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const weekStartDate = addDays(now, mondayOffset)
+  const weekStart = format(weekStartDate, 'yyyy-MM-dd')
+  const weekEnd = format(addDays(weekStartDate, 6), 'yyyy-MM-dd')
+  const riskWindowEnd = format(addDays(now, RISK_WINDOW_DAYS), 'yyyy-MM-dd')
+
+  const rows = db.prepare(`
+    SELECT e.id, e.event_name, e.event_date, e.event_time, e.teardown_time, e.space, e.status,
+           c.first_name, c.last_name, c.company,
+           ed.guest_count, ed.bar_tab_type, ed.drink_tickets, ed.setup_notes, ed.floor_plan_notes,
+           ed.dietary_restrictions, ed.staffing_notes, ed.contract_signed,
+           ed.toast_invoice_sent_date, ed.toast_deposit_received_date,
+           (SELECT p.name FROM event_packages ep JOIN packages p ON p.id = ep.package_id
+              WHERE ep.event_id = e.id AND ep.package_id != '' ORDER BY ep.sort_order LIMIT 1) AS package_name,
+           (SELECT COUNT(*) FROM event_packages ep WHERE ep.event_id = e.id AND ep.package_id != '') AS package_count
+    FROM events e
+    LEFT JOIN clients c ON c.id = e.client_id
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.event_date >= ? AND e.status != 'Closed'
+    ORDER BY e.event_date ASC
+  `).all(today) as Array<{
+    id: number; event_name: string; event_date: string; event_time: string; teardown_time: string
+    space: string; status: string; first_name: string | null; last_name: string | null; company: string | null
+    guest_count: number | null; bar_tab_type: string | null; drink_tickets: number | null
+    setup_notes: string | null; floor_plan_notes: string | null; dietary_restrictions: string | null
+    staffing_notes: string | null; contract_signed: number | null
+    toast_invoice_sent_date: string | null; toast_deposit_received_date: string | null
+    package_name: string | null; package_count: number
+  }>
+
+  const thisWeek: OpsEventSummary[] = []
+  const awaitingDeposit: OpsEventSummary[] = []
+  const awaitingMenu: OpsEventSummary[] = []
+  const awaitingInvoice: OpsEventSummary[] = []
+  const highRisk: OpsEventSummary[] = []
+  const highBarImpact: OpsEventSummary[] = []
+
+  for (const row of rows) {
+    const evForCalc: EventForNotes = {
+      id: row.id,
+      event_name: row.event_name,
+      event_date: row.event_date,
+      event_time: row.event_time ?? '',
+      setup_time: '',
+      decorate_time: '',
+      teardown_time: row.teardown_time ?? '',
+      production_close_time: '',
+      event_duration_mins: 180,
+      space: row.space ?? '',
+      status: row.status,
+      first_name: row.first_name ?? '',
+      last_name: row.last_name ?? '',
+      email: '',
+      company: row.company ?? '',
+      guest_count: row.guest_count ?? 0,
+      package_name: row.package_name ?? '',
+      bar_tab_type: row.bar_tab_type ?? '',
+      drink_tickets: row.drink_tickets ?? 0,
+    }
+
+    const hasPackage = row.package_count > 0
+    const readiness = calcReadiness({
+      guest_count: row.guest_count ?? 0,
+      hasPackage,
+      bar_tab_type: row.bar_tab_type,
+      setup_notes: row.setup_notes,
+      floor_plan_notes: row.floor_plan_notes,
+      dietary_restrictions: row.dietary_restrictions,
+      staffing_notes: row.staffing_notes,
+      contract_signed: row.contract_signed,
+    })
+    const barLevel = calcBarImpact(evForCalc).level
+
+    const summary: OpsEventSummary = {
+      id: row.id,
+      event_name: row.event_name,
+      event_date: row.event_date,
+      event_time: row.event_time ?? '',
+      status: row.status,
+      guest_count: row.guest_count ?? 0,
+      client_name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.company || '—',
+      barImpactLevel: barLevel,
+      readinessScore: readiness.score,
+      missingLabels: readiness.missingLabels,
+    }
+
+    if (row.event_date >= weekStart && row.event_date <= weekEnd) thisWeek.push(summary)
+
+    const isBooked = row.status === 'Tentative' || row.status === 'Confirmed'
+    if (row.status === 'Confirmed') {
+      if (!row.toast_deposit_received_date) awaitingDeposit.push(summary)
+      if (!row.toast_invoice_sent_date) awaitingInvoice.push(summary)
+    }
+    if (isBooked) {
+      if (!hasPackage) awaitingMenu.push(summary)
+      if (row.event_date <= riskWindowEnd && readiness.score < RISK_READINESS_THRESHOLD) highRisk.push(summary)
+      if (barLevel === 'High' || barLevel === 'Critical') highBarImpact.push(summary)
+    }
+  }
+
+  return { weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact }
+}
+
 export function getKanbanEvents() {
   const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
   return getDb().prepare(`
@@ -1013,6 +1214,48 @@ export function upsertDrinkTicketLog(eventId: number, data: { tickets_issued: nu
     getDb().prepare(`INSERT INTO drink_ticket_log (event_id, tickets_issued, tickets_redeemed, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
       .run(eventId, data.tickets_issued, data.tickets_redeemed, data.notes, now, now)
   }
+}
+
+// ─── Post-Event Debrief ─────────────────────────────────────────────────────────
+
+export function getDebrief(eventId: number): EventDebrief | undefined {
+  return getDb().prepare(`SELECT * FROM event_debriefs WHERE event_id = ?`).get(eventId) as EventDebrief | undefined
+}
+
+export function upsertDebrief(eventId: number, data: Omit<EventDebrief, 'id' | 'event_id' | 'created_at' | 'updated_at'>): void {
+  const now = new Date().toISOString()
+  const existing = getDebrief(eventId)
+  if (existing) {
+    getDb().prepare(`
+      UPDATE event_debriefs SET actual_guest_count = ?, went_well = ?, issues = ?, catering_accuracy = ?,
+        bar_impact_accuracy = ?, staffing_notes = ?, would_repeat_client = ?, recommendations = ?, updated_at = ?
+      WHERE event_id = ?
+    `).run(data.actual_guest_count, data.went_well, data.issues, data.catering_accuracy,
+      data.bar_impact_accuracy, data.staffing_notes, data.would_repeat_client, data.recommendations, now, eventId)
+  } else {
+    getDb().prepare(`
+      INSERT INTO event_debriefs (event_id, actual_guest_count, went_well, issues, catering_accuracy,
+        bar_impact_accuracy, staffing_notes, would_repeat_client, recommendations, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(eventId, data.actual_guest_count, data.went_well, data.issues, data.catering_accuracy,
+      data.bar_impact_accuracy, data.staffing_notes, data.would_repeat_client, data.recommendations, now, now)
+  }
+}
+
+// Repeat-event intelligence: past closed events + debriefs for the same client, excluding the current event
+export function getClientDebriefHistory(clientId: number, excludeEventId: number) {
+  return getDb().prepare(`
+    SELECT e.id, e.event_name, e.event_date, ed.actual_guest_count, ed.went_well, ed.issues,
+           ed.catering_accuracy, ed.bar_impact_accuracy, ed.would_repeat_client, ed.recommendations
+    FROM events e
+    JOIN event_debriefs ed ON ed.event_id = e.id
+    WHERE e.client_id = ? AND e.id != ?
+    ORDER BY e.event_date DESC
+  `).all(clientId, excludeEventId) as Array<{
+    id: number; event_name: string; event_date: string; actual_guest_count: number | null
+    went_well: string; issues: string; catering_accuracy: string; bar_impact_accuracy: string
+    would_repeat_client: string; recommendations: string
+  }>
 }
 
 // ─── Staff Members ────────────────────────────────────────────────────────────

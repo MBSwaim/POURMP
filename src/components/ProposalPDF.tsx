@@ -4,7 +4,7 @@ import {
   Document, Page, Text, View, StyleSheet, PDFDownloadLink,
 } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, formatCurrency } from '@/lib/calculations'
+import { calcAllItems, formatCurrency, parseMenuItemOverrides } from '@/lib/calculations'
 import { to12Hour } from '@/lib/timeUtils'
 import { DEPOSIT_PCT, FINAL_PCT, DRINK_TICKET_PRICE } from '@/lib/constants'
 import { format } from 'date-fns'
@@ -50,7 +50,7 @@ function ProposalDocument({ data }: { data: ProposalData }) {
   const guestCount = details?.guest_count ?? 0
   const bufferPct = details?.buffer_pct ?? 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const calculated = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct) : []
+  const calculated = pkg ? calcAllItems(menuItems as any, guestCount, bufferPct, parseMenuItemOverrides(details?.menu_item_overrides_json)) : []
   const foodSubtotal = guestCount * (pkg?.price_per_guest ?? 0)
   const addOnsTotal = addOns.reduce((s, a) => s + a.qty * a.price_each, 0)
   const drinkTicketQty = details?.bar_tab_type === 'Pre-Paid Drink Ticket(s)' ? (details?.drink_tickets ?? 0) : 0

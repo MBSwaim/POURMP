@@ -33,23 +33,23 @@ const MENU_ITEMS: Array<{
   { package_id: 'fried_chicken', item_name: 'Veggie Plate', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: 'Platter', sort_order: 5 },
 
   // Arepa Buffet
-  { package_id: 'arepa_buffet', item_name: 'Braised Pork Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 1.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
-  { package_id: 'arepa_buffet', item_name: 'Pickled Green Tomato Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 1.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
-  { package_id: 'arepa_buffet', item_name: 'Black Bean Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 1.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 3 },
+  { package_id: 'arepa_buffet', item_name: 'Braised Pork Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 0.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
+  { package_id: 'arepa_buffet', item_name: 'Pickled Green Tomato Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 0.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
+  { package_id: 'arepa_buffet', item_name: 'Black Bean Arepa', calc_method: 'pieces_per_guest', qty_per_guest: 0.5, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 3 },
   { package_id: 'arepa_buffet', item_name: 'Jasmine Rice', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: '1/2 Chafer', sort_order: 4 },
   { package_id: 'arepa_buffet', item_name: 'Chips', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: 'Large Bowl', sort_order: 5 },
   { package_id: 'arepa_buffet', item_name: 'Salsa', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: 'Large Bowl', sort_order: 6 },
 
   // Kabob Buffet
-  { package_id: 'kabob_buffet', item_name: 'Shrimp Kabob', calc_method: 'pieces_per_guest', qty_per_guest: 2, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
-  { package_id: 'kabob_buffet', item_name: 'Thai Chicken Kabob', calc_method: 'pieces_per_guest', qty_per_guest: 2, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
+  { package_id: 'kabob_buffet', item_name: 'Shrimp Kabob', calc_method: 'pieces_per_guest', qty_per_guest: 1, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
+  { package_id: 'kabob_buffet', item_name: 'Thai Chicken Kabob', calc_method: 'pieces_per_guest', qty_per_guest: 1, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
   { package_id: 'kabob_buffet', item_name: 'Jasmine Rice', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: '1/2 Chafer', sort_order: 3 },
   { package_id: 'kabob_buffet', item_name: 'Thai Slaw', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 25, unit_name: 'Large Bowl', sort_order: 4 },
 
   // Sliders Buffet
-  { package_id: 'sliders_buffet', item_name: 'Pulled Pork Slider', calc_method: 'pieces_per_guest', qty_per_guest: 2, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
-  { package_id: 'sliders_buffet', item_name: 'Mini Burger Slider', calc_method: 'pieces_per_guest', qty_per_guest: 2, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
-  { package_id: 'sliders_buffet', item_name: 'Fried Buffalo Chicken Slider', calc_method: 'pieces_per_guest', qty_per_guest: 2, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 3 },
+  { package_id: 'sliders_buffet', item_name: 'Pulled Pork Slider', calc_method: 'pieces_per_guest', qty_per_guest: 0.6667, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 1 },
+  { package_id: 'sliders_buffet', item_name: 'Mini Burger Slider', calc_method: 'pieces_per_guest', qty_per_guest: 0.6667, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 2 },
+  { package_id: 'sliders_buffet', item_name: 'Fried Buffalo Chicken Slider', calc_method: 'pieces_per_guest', qty_per_guest: 0.6667, yield_per_unit: 20, unit_name: '200 Pan', sort_order: 3 },
   { package_id: 'sliders_buffet', item_name: 'French Fries', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 20, unit_name: '1/2 Chafer', sort_order: 4 },
   { package_id: 'sliders_buffet', item_name: 'Thai Slaw', calc_method: 'guests_per_unit', qty_per_guest: null, yield_per_unit: 25, unit_name: 'Large Bowl', sort_order: 5 },
 

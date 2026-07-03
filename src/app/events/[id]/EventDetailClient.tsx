@@ -14,9 +14,11 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { calcFloorPlan, calcAllItems, mergeCalculatedItems, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText } from '@/lib/calculations'
+import { calcFloorPlan, calcAllItems, mergeCalculatedItems, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import { formatPhoneNumber } from '@/lib/phone'
+import { TOAST_STAGES } from '@/lib/toastStatus'
+import { calcReadiness, readinessColor } from '@/lib/readiness'
 import Link from 'next/link'
 import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems } from '@/lib/db'
 
@@ -64,6 +66,18 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
 
   const isConfirmed = event.status === 'Confirmed'
   const locked = isConfirmed && !editingConfirmed
+
+  const readiness = calcReadiness({
+    guest_count: details?.guest_count ?? 0,
+    hasPackage: eventPackages.some(ep => !!ep.package_id),
+    bar_tab_type: details?.bar_tab_type,
+    setup_notes: details?.setup_notes,
+    floor_plan_notes: details?.floor_plan_notes,
+    dietary_restrictions: details?.dietary_restrictions,
+    staffing_notes: details?.staffing_notes,
+    contract_signed: details?.contract_signed,
+  })
+  const readinessColors = readinessColor(readiness.score)
 
   async function reload() {
     const res = await fetch(`/api/events/${event.id}`)
@@ -217,6 +231,15 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     await reload()
   }
 
+  async function updateAddOnPrice(id: number, price_each: number) {
+    await fetch('/api/add-ons', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, price_each }),
+    })
+    await reload()
+  }
+
   async function saveFloorPlanNotes() {
     setFloorNotesSaving(true)
     try {
@@ -359,6 +382,40 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <EditableRow locked={locked} label="Referral" value={client?.referral_source ?? ''} onSave={(v) => saveField('client', 'referral_source', v)} />
             </InfoCard>
 
+            <InfoCard title="Toast Status">
+              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
+                Manual mirror of where this event stands in Toast Catering &amp; Events. Toast remains the system of record for proposals, invoices, and payments.
+              </p>
+              {TOAST_STAGES.map(stage => (
+                <ToastStatusRow
+                  key={stage.key}
+                  label={stage.label}
+                  date={details?.[stage.key] ?? null}
+                  onToggle={(checked) => saveField('details', stage.key, checked ? new Date().toISOString().slice(0, 10) : null)}
+                />
+              ))}
+            </InfoCard>
+
+            <InfoCard title="Event Readiness">
+              <div className={`rounded-lg border px-3 py-2.5 mb-3 flex items-center justify-between ${readinessColors.bg} ${readinessColors.border}`}>
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Operational Readiness</span>
+                <span className={`text-xl font-bold ${readinessColors.text}`}>{readiness.score}%</span>
+              </div>
+              {readiness.missingLabels.length === 0 ? (
+                <p className="text-sm text-green-300">All operational checks complete.</p>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Still Needed</p>
+                  {readiness.missingLabels.map(label => (
+                    <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
+                      <span className="text-red-400">•</span>{label}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-gray-500 mt-2 italic">Based on operational prep, not payment status.</p>
+            </InfoCard>
+
             <InfoCard title="Package & Food">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -423,6 +480,8 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   <th className="text-left py-1">Item</th>
                   <th className="text-right py-1">Qty</th>
                   <th className="text-right py-1">Unit</th>
+                  <th className="text-right py-1">Price/Unit</th>
+                  <th className="text-right py-1">Total</th>
                   <th className="py-1"></th>
                 </tr></thead>
                 <tbody>
@@ -431,11 +490,40 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                       <td className="py-1.5">{a.item_name}</td>
                       <td className="text-right">{a.qty}</td>
                       <td className="text-right text-gray-400">{a.unit}</td>
+                      <td className="text-right">
+                        <div className="inline-flex items-center gap-0.5 justify-end">
+                          <span className="text-gray-500">$</span>
+                          <input
+                            key={`${a.id}-${a.price_each}`}
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            defaultValue={a.price_each || ''}
+                            placeholder="0.00"
+                            onBlur={(e) => {
+                              const val = Number(e.target.value)
+                              if (!Number.isFinite(val) || val < 0) return
+                              updateAddOnPrice(a.id, val)
+                            }}
+                            className="w-16 bg-white/5 border border-white/20 rounded px-1 py-0.5 text-right text-white focus:outline-none focus:border-[#C8973A]"
+                          />
+                        </div>
+                      </td>
+                      <td className="text-right text-gray-300">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
                       <td className="text-right pl-2">
                         <button onClick={() => deleteAddOn(a.id)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
                       </td>
                     </tr>
                   ))}
+                  {addOns.some(a => a.price_each > 0) && (
+                    <tr>
+                      <td colSpan={4} className="text-right py-1.5 text-gray-400 font-medium">Add-ons Total</td>
+                      <td className="text-right py-1.5 text-[#C8973A] font-semibold">
+                        {formatCurrency(addOns.reduce((s, a) => s + a.qty * a.price_each, 0))}
+                      </td>
+                      <td />
+                    </tr>
+                  )}
                 </tbody>
               </table>
             )}
@@ -443,6 +531,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <Input placeholder="Item name" value={newAddOn.item_name} onChange={(e) => setNewAddOn((n) => ({ ...n, item_name: e.target.value }))} className="flex-1 min-w-28" />
               <Input placeholder="Qty" type="number" value={newAddOn.qty} onChange={(e) => setNewAddOn((n) => ({ ...n, qty: e.target.value }))} className="w-16" />
               <Input placeholder="Unit" value={newAddOn.unit} onChange={(e) => setNewAddOn((n) => ({ ...n, unit: e.target.value }))} className="w-20" />
+              <Input placeholder="Price/unit" type="number" step="0.01" value={newAddOn.price_each} onChange={(e) => setNewAddOn((n) => ({ ...n, price_each: e.target.value }))} className="w-24" />
               <Button size="sm" variant="outline" onClick={addAddOn}>Add</Button>
             </div>
           </InfoCard>
@@ -517,6 +606,8 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                         onSauceChange={(csv) => { saveField('details', 'selected_sauces', csv); toast.success('Sauce selection saved') }}
                         serveStyleJson={details?.serve_style_json ?? '{}'}
                         onServeStyleChange={(json) => { saveField('details', 'serve_style_json', json) }}
+                        menuItemOverrides={details?.menu_item_overrides_json ?? '{}'}
+                        onOverridesChange={(json) => { saveField('details', 'menu_item_overrides_json', json) }}
                       />
                     )}
                   </div>
@@ -534,6 +625,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                       <th className="text-left py-1.5">Item</th>
                       <th className="text-right py-1.5">Qty</th>
                       <th className="text-right py-1.5">Unit</th>
+                      <th className="text-right py-1.5">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -542,8 +634,17 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                         <td className="py-1.5">{a.item_name}</td>
                         <td className="text-right">{a.qty}</td>
                         <td className="text-right text-gray-400">{a.unit}</td>
+                        <td className="text-right text-gray-400">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
                       </tr>
                     ))}
+                    {addOns.some(a => a.price_each > 0) && (
+                      <tr>
+                        <td colSpan={3} className="text-right py-1.5 text-gray-400 font-medium">Add-ons Total</td>
+                        <td className="text-right py-1.5 text-[#C8973A] font-semibold">
+                          {formatCurrency(addOns.reduce((s, a) => s + a.qty * a.price_each, 0))}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -637,8 +738,9 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
                 try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
               })()
+              const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const merged = mergeCalculatedItems(allPkgs.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct) : []))
+              const merged = mergeCalculatedItems(allPkgs.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides) : []))
               const chafing = countChafingDishes(merged, serveStyle)
               const floorPlan = calcFloorPlan(guestCount)
 
@@ -684,8 +786,9 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               if (activePkgs.length === 0) return null
 
               const combinedTitle = activePkgs.map(ep => ep.pkg!.name).join(' | ')
+              const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const mergedItems = mergeCalculatedItems(activePkgs.flatMap(ep => calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct)))
+              const mergedItems = mergeCalculatedItems(activePkgs.flatMap(ep => calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides)))
               const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
                 try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
               })()
@@ -879,6 +982,25 @@ function InfoCard({ title, children, fullWidth }: { title: string; children: Rea
     <div className={`rounded-xl border border-white/10 bg-[#1F3348]/50 p-4 ${fullWidth ? 'col-span-2' : ''}`}>
       <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+function ToastStatusRow({ label, date, onToggle }: { label: string; date: string | null; onToggle: (checked: boolean) => void }) {
+  return (
+    <div className="flex justify-between items-center text-sm py-1.5 border-b border-white/5 last:border-0">
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={!!date}
+          onChange={(e) => onToggle(e.target.checked)}
+          className="rounded accent-[#C8973A] w-4 h-4"
+        />
+        <span className={date ? 'text-white' : 'text-gray-400'}>{label}</span>
+      </label>
+      <span className="text-xs text-gray-500 tabular-nums">
+        {date ? new Date(date + 'T00:00:00').toLocaleDateString() : '—'}
+      </span>
     </div>
   )
 }
