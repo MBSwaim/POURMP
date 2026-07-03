@@ -43,18 +43,18 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
           <div className="flex items-center gap-1">
             {olderYear && (
               <Link href={`/events?year=${olderYear}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+                className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                 ← {olderYear}
               </Link>
             )}
             <span className={`px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest border ${
               isCurrentYear
                 ? 'border-[#C8973A]/40 bg-[#C8973A]/10 text-[#C8973A]'
-                : 'border-white/15 bg-[#1F3348] text-gray-300'
+                : 'border-gray-300 bg-white text-gray-700'
             }`}>{year}</span>
             {newerYear && (
               <Link href={`/events?year=${newerYear}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-[#1F3348] text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+                className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                 {newerYear} →
               </Link>
             )}
@@ -69,15 +69,15 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
       {/* Quick stats */}
       {events.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-white/20 px-4 py-3">
+          <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-gray-300 px-4 py-3">
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Total</p>
             <p className="text-xl font-bold tabular-nums">{events.length}</p>
           </div>
-          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-green-500/50 px-4 py-3">
+          <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-green-500/50 px-4 py-3">
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">{isCurrentYear ? 'Upcoming' : 'Confirmed'}</p>
             <p className="text-xl font-bold tabular-nums">{isCurrentYear ? upcoming : confirmed}</p>
           </div>
-          <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-[#C8973A] px-4 py-3">
+          <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3">
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Value</p>
             <p className="text-xl font-bold text-[#C8973A] tabular-nums">{formatCurrency(totalValue)}</p>
           </div>
@@ -85,7 +85,7 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
       )}
 
       {events.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/30 py-20 text-center text-gray-400">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 py-20 text-center text-gray-500">
           <p className="text-lg">No events in {year}.</p>
           {olderYear && (
             <Link href={`/events?year=${olderYear}`} className="text-sm text-[#C8973A] hover:underline mt-2 inline-block">

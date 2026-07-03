@@ -5,7 +5,8 @@ import { DEPOSIT_PCT, FINAL_PCT, DEPOSIT_DAYS_BEFORE } from './constants'
 import { subDays, addDays, format, parseISO } from 'date-fns'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
-import { generateTasksForEvent, type TaskContext } from './tasks'
+import { generateTasksForEvent, CRITICAL_DYNAMIC_TASK_KEYS, type TaskContext } from './tasks'
+import { scanEventRisks, highestRiskLevel, type RiskFlag, type RiskLevel } from './riskScanner'
 import type { EventForNotes } from './noteGenerators'
 
 declare global {
@@ -780,6 +781,16 @@ export interface OpsEventSummary {
   barImpactLevel: string
   readinessScore: number
   missingLabels: string[]
+  // Task Awareness — execution/operations tracking, kept separate from readinessScore
+  // (planning/admin). Never merge these two into a single number.
+  setupIncomplete: number
+  breakdownIncomplete: number
+  dynamicIncomplete: number
+  taskCompletionPct: number
+  needsAttention: boolean
+  setupReady: boolean
+  breakdownPending: boolean
+  operationallyReady: boolean
 }
 
 export interface OperationalDashboard {
@@ -791,10 +802,26 @@ export interface OperationalDashboard {
   awaitingInvoice: OpsEventSummary[]
   highRisk: OpsEventSummary[]
   highBarImpact: OpsEventSummary[]
+  needsAttention: OpsEventSummary[]
 }
 
 const RISK_READINESS_THRESHOLD = 70
 const RISK_WINDOW_DAYS = 14
+
+// Task Awareness thresholds — separate from the readiness-based "High Risk" bucket above.
+// "Needs Attention" flags events close to start where task execution is behind, regardless
+// of how complete the planning/admin (readiness) side is.
+const TASK_ATTENTION_WINDOW_HOURS = 24
+const TASK_ATTENTION_COMPLETION_THRESHOLD = 50
+
+// True once the event is imminent — today, or starting within the next N hours.
+function isWithinAttentionWindow(eventDate: string, eventTime: string, now: Date): boolean {
+  if (eventDate === format(now, 'yyyy-MM-dd')) return true
+  const target = new Date(`${eventDate}T${eventTime && eventTime.length >= 4 ? eventTime : '00:00'}`)
+  if (Number.isNaN(target.getTime())) return false
+  const hoursUntil = (target.getTime() - now.getTime()) / (1000 * 60 * 60)
+  return hoursUntil >= 0 && hoursUntil <= TASK_ATTENTION_WINDOW_HOURS
+}
 
 export function getOperationalDashboard(): OperationalDashboard {
   const db = getDb()
@@ -839,6 +866,7 @@ export function getOperationalDashboard(): OperationalDashboard {
   const awaitingInvoice: OpsEventSummary[] = []
   const highRisk: OpsEventSummary[] = []
   const highBarImpact: OpsEventSummary[] = []
+  const needsAttention: OpsEventSummary[] = []
 
   for (const row of rows) {
     const evForCalc: EventForNotes = {
@@ -876,6 +904,36 @@ export function getOperationalDashboard(): OperationalDashboard {
     })
     const barLevel = calcBarImpact(evForCalc).level
 
+    // Task Awareness — execution/operations. Tasks are generated once per event and persisted;
+    // read them first and only auto-generate (sync) when none exist yet, so an event nobody has
+    // opened still gets its Setup/Breakdown tasks rather than reading as falsely "complete" with
+    // zero tasks — without re-running task generation (and its own bar-impact lookup, already
+    // computed above as `barLevel`) on every dashboard load for events already synced.
+    let tasks = getEventTasks(row.id)
+    if (tasks.length === 0) tasks = syncEventTasks(row.id)
+    const setupTasks = tasks.filter(t => t.category === 'Setup')
+    const breakdownTasks = tasks.filter(t => t.category === 'Breakdown')
+    const dynamicTasks = tasks.filter(t => t.category === 'Dynamic')
+    const setupIncomplete = setupTasks.filter(t => !t.completed).length
+    const breakdownIncomplete = breakdownTasks.filter(t => !t.completed).length
+    const dynamicIncomplete = dynamicTasks.filter(t => !t.completed).length
+    const criticalDynamicIncomplete = dynamicTasks.filter(t => !t.completed && t.source_key && CRITICAL_DYNAMIC_TASK_KEYS.has(t.source_key)).length
+    const totalTasks = tasks.length
+    const completedTasks = tasks.filter(t => t.completed).length
+    const taskCompletionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+    const setupReady = setupTasks.length > 0 && setupIncomplete === 0
+    // The query only returns event_date >= today, so "has passed" can only be true for
+    // today's events once we're past their teardown (or, lacking that, start) time.
+    const eventEndTime = row.teardown_time || row.event_time
+    const eventHasPassed = row.event_date === today && !!eventEndTime
+      && new Date(`${row.event_date}T${eventEndTime}`).getTime() < now.getTime()
+    const breakdownPending = eventHasPassed && breakdownIncomplete > 0
+    const operationallyReady = setupIncomplete === 0 && breakdownIncomplete === 0 && dynamicIncomplete === 0
+    const isBooked = row.status === 'Tentative' || row.status === 'Confirmed'
+    const needsAttentionFlag = isBooked
+      && isWithinAttentionWindow(row.event_date, row.event_time, now)
+      && (taskCompletionPct < TASK_ATTENTION_COMPLETION_THRESHOLD || setupIncomplete > 0 || criticalDynamicIncomplete > 0)
+
     const summary: OpsEventSummary = {
       id: row.id,
       event_name: row.event_name,
@@ -887,11 +945,18 @@ export function getOperationalDashboard(): OperationalDashboard {
       barImpactLevel: barLevel,
       readinessScore: readiness.score,
       missingLabels: readiness.missingLabels,
+      setupIncomplete,
+      breakdownIncomplete,
+      dynamicIncomplete,
+      taskCompletionPct,
+      needsAttention: needsAttentionFlag,
+      setupReady,
+      breakdownPending,
+      operationallyReady,
     }
 
     if (row.event_date >= weekStart && row.event_date <= weekEnd) thisWeek.push(summary)
 
-    const isBooked = row.status === 'Tentative' || row.status === 'Confirmed'
     if (row.status === 'Confirmed') {
       if (!row.toast_deposit_received_date) awaitingDeposit.push(summary)
       if (!row.toast_invoice_sent_date) awaitingInvoice.push(summary)
@@ -900,10 +965,168 @@ export function getOperationalDashboard(): OperationalDashboard {
       if (!hasPackage) awaitingMenu.push(summary)
       if (row.event_date <= riskWindowEnd && readiness.score < RISK_READINESS_THRESHOLD) highRisk.push(summary)
       if (barLevel === 'High' || barLevel === 'Critical') highBarImpact.push(summary)
+      if (needsAttentionFlag) needsAttention.push(summary)
     }
   }
 
-  return { weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact }
+  return { weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact, needsAttention }
+}
+
+// ─── Event Risk Assessment ──────────────────────────────────────────────────────
+// A separate, read-only intelligence layer (see lib/riskScanner.ts for the rules).
+// It does not write anything and does not feed back into Toast, the Task system,
+// Event Readiness, or Main Bar Impact — it only reads their fields/outputs. Some
+// inputs (bar impact, task counts) are necessarily recomputed here rather than
+// shared with getOperationalDashboard(), since the two are independent read paths —
+// see the audit notes in the implementation summary for the resulting overlap.
+
+export interface EventRiskSummary {
+  id: number
+  event_name: string
+  event_date: string
+  event_time: string
+  status: string
+  client_name: string
+  guest_count: number
+  risks: RiskFlag[]
+  highestLevel: RiskLevel
+}
+
+export interface EventRiskAssessment {
+  generatedAt: string
+  scannedCount: number
+  flaggedCount: number
+  events: EventRiskSummary[]
+}
+
+export function getEventRiskAssessment(): EventRiskAssessment {
+  const db = getDb()
+
+  const now = new Date()
+  const today = format(now, 'yyyy-MM-dd')
+  const depositWindowEnd = format(addDays(now, 7), 'yyyy-MM-dd')
+  const menuDeadlineWindowEnd = format(addDays(now, 14), 'yyyy-MM-dd')
+
+  // Same-date active-event counts, for Shared Space Risk — one query up front instead
+  // of a per-row lookup.
+  const sameDateCounts = new Map<string, number>(
+    (db.prepare(`
+      SELECT event_date, COUNT(*) as cnt FROM events
+      WHERE event_date >= ? AND status != 'Closed'
+      GROUP BY event_date
+    `).all(today) as Array<{ event_date: string; cnt: number }>).map(r => [r.event_date, r.cnt])
+  )
+
+  const rows = db.prepare(`
+    SELECT e.id, e.event_name, e.event_date, e.event_time, e.teardown_time, e.space, e.status,
+           c.first_name, c.last_name, c.company,
+           ed.guest_count, ed.bar_tab_type, ed.drink_tickets,
+           ed.setup_notes, ed.floor_plan_notes, ed.staffing_notes, ed.bar_notes,
+           ed.food_notes, ed.beo_notes, ed.kitchen_notes, ed.foh_notes, ed.tab_details,
+           ed.dietary_restrictions, ed.dessert_expected, ed.kids_attending,
+           ed.toast_deposit_received_date,
+           (SELECT COUNT(*) FROM event_packages ep WHERE ep.event_id = e.id AND ep.package_id != '') AS package_count
+    FROM events e
+    LEFT JOIN clients c ON c.id = e.client_id
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.event_date >= ? AND e.status != 'Closed'
+    ORDER BY e.event_date ASC
+  `).all(today) as Array<{
+    id: number; event_name: string; event_date: string; event_time: string; teardown_time: string
+    space: string; status: string; first_name: string | null; last_name: string | null; company: string | null
+    guest_count: number | null; bar_tab_type: string | null; drink_tickets: number | null
+    setup_notes: string | null; floor_plan_notes: string | null; staffing_notes: string | null; bar_notes: string | null
+    food_notes: string | null; beo_notes: string | null; kitchen_notes: string | null; foh_notes: string | null
+    tab_details: string | null; dietary_restrictions: string | null
+    dessert_expected: number | null; kids_attending: number | null
+    toast_deposit_received_date: string | null
+    package_count: number
+  }>
+
+  const events: EventRiskSummary[] = []
+
+  for (const row of rows) {
+    const evForCalc: EventForNotes = {
+      id: row.id,
+      event_name: row.event_name,
+      event_date: row.event_date,
+      event_time: row.event_time ?? '',
+      setup_time: '',
+      decorate_time: '',
+      teardown_time: row.teardown_time ?? '',
+      production_close_time: '',
+      event_duration_mins: 180,
+      space: row.space ?? '',
+      status: row.status,
+      first_name: row.first_name ?? '',
+      last_name: row.last_name ?? '',
+      email: '',
+      company: row.company ?? '',
+      guest_count: row.guest_count ?? 0,
+      package_name: '',
+      bar_tab_type: row.bar_tab_type ?? '',
+      drink_tickets: row.drink_tickets ?? 0,
+    }
+    const barImpactLevel = calcBarImpact(evForCalc).level
+
+    // Read-only — never generates tasks. An event with no tasks yet is simply
+    // excluded from Task Completion Risk rather than treated as "complete."
+    const tasks = getEventTasks(row.id)
+    const setupIncomplete = tasks.filter(t => t.category === 'Setup' && !t.completed).length
+    const breakdownIncomplete = tasks.filter(t => t.category === 'Breakdown' && !t.completed).length
+    const dynamicIncomplete = tasks.filter(t => t.category === 'Dynamic' && !t.completed).length
+    const operationallyReady = tasks.length > 0 && setupIncomplete === 0 && breakdownIncomplete === 0 && dynamicIncomplete === 0
+
+    const noteText = [
+      row.setup_notes, row.floor_plan_notes, row.staffing_notes, row.bar_notes,
+      row.food_notes, row.beo_notes, row.kitchen_notes, row.foh_notes, row.tab_details,
+    ].filter(Boolean).join(' \n ')
+
+    const risks = scanEventRisks({
+      isBooked: row.status === 'Tentative' || row.status === 'Confirmed',
+      guestCount: row.guest_count ?? 0,
+      hasPackage: row.package_count > 0,
+      depositReceived: !!row.toast_deposit_received_date,
+      barImpactLevel,
+      floorPlanNotesPresent: !!row.floor_plan_notes?.trim(),
+      dessertExpected: !!row.dessert_expected,
+      kidsAttending: !!row.kids_attending,
+      otherActiveEventsSameDate: (sameDateCounts.get(row.event_date) ?? 1) - 1,
+      hasTaskData: tasks.length > 0,
+      setupIncomplete,
+      operationallyReady,
+      noteText,
+      withinDepositWindow: row.event_date <= depositWindowEnd,
+      withinMenuDeadlineWindow: row.event_date <= menuDeadlineWindowEnd,
+      within24Hours: isWithinAttentionWindow(row.event_date, row.event_time, now),
+    })
+
+    if (risks.length > 0) {
+      events.push({
+        id: row.id,
+        event_name: row.event_name,
+        event_date: row.event_date,
+        event_time: row.event_time ?? '',
+        status: row.status,
+        client_name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.company || '—',
+        guest_count: row.guest_count ?? 0,
+        risks,
+        highestLevel: highestRiskLevel(risks),
+      })
+    }
+  }
+
+  events.sort((a, b) => {
+    const rankDiff = { Low: 1, Moderate: 2, High: 3, Critical: 4 }[b.highestLevel] - { Low: 1, Moderate: 2, High: 3, Critical: 4 }[a.highestLevel]
+    return rankDiff !== 0 ? rankDiff : a.event_date.localeCompare(b.event_date)
+  })
+
+  return {
+    generatedAt: now.toISOString(),
+    scannedCount: rows.length,
+    flaggedCount: events.length,
+    events,
+  }
 }
 
 export function getKanbanEvents() {

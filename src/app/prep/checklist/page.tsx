@@ -15,7 +15,7 @@ export default function ChecklistPage({ searchParams }: { searchParams: { event?
   const initialChecked = eventId ? getChecklist(eventId) : {}
 
   return (
-    <div className="min-h-screen bg-[#0f1e2d]">
+    <div className="min-h-screen bg-gray-50">
       <ChecklistClient
         events={events}
         initialEventId={searchParams.event ?? ''}

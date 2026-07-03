@@ -97,6 +97,15 @@ export function generateTasksForEvent(ctx: TaskContext): TaskTemplate[] {
     .map(rule => ({ key: rule.key, category: rule.category, role: rule.role, label: rule.label(ctx) }))
 }
 
+// Dynamic task keys treated as safety/escalation-level rather than routine logistics —
+// used by the Operational Dashboard's Task Awareness "Needs Attention" flag. Keyed off
+// TaskRule.key (stored as event_tasks.source_key), so no schema change is needed.
+export const CRITICAL_DYNAMIC_TASK_KEYS: ReadonlySet<string> = new Set([
+  'dyn_over_capacity', // guest count exceeds floor plan capacity — requires owner sign-off
+  'dyn_dietary',       // dietary/allergy accommodation — guest safety
+  'dyn_kids',          // child supervision reminder — guest safety
+])
+
 // ─── Task Complexity Rating ─────────────────────────────────────────────────
 
 export type ComplexityLevel = 'Low' | 'Moderate' | 'High' | 'Heavy Reset'
@@ -141,10 +150,10 @@ export function calcTaskComplexity(ctx: TaskContext, dynamicTaskCount: number): 
 }
 
 export const COMPLEXITY_COLORS: Record<ComplexityLevel, { bg: string; text: string; border: string; dot: string }> = {
-  Low:          { bg: 'bg-green-900/30',  text: 'text-green-300',  border: 'border-green-700/50',  dot: 'bg-green-400'  },
-  Moderate:     { bg: 'bg-yellow-900/30', text: 'text-yellow-300', border: 'border-yellow-700/50', dot: 'bg-yellow-400' },
-  High:         { bg: 'bg-orange-900/30', text: 'text-orange-300', border: 'border-orange-700/50', dot: 'bg-orange-400' },
-  'Heavy Reset':{ bg: 'bg-red-900/30',    text: 'text-red-300',    border: 'border-red-700/50',    dot: 'bg-red-400'    },
+  Low:          { bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-400'  },
+  Moderate:     { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-400' },
+  High:         { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
+  'Heavy Reset':{ bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    dot: 'bg-red-400'    },
 }
 
 // For printable docs (white background) — same level → color mapping as IMPACT_PRINT_COLORS

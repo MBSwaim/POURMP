@@ -8,8 +8,8 @@ export default function StaffPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Staff Directory</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Used to assign reservation leads and route future SMS/Email alerts.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Staff Directory</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Used to assign reservation leads and route future SMS/Email alerts.</p>
       </div>
       <StaffClient initialStaff={staff} />
     </div>

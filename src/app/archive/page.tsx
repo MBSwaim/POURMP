@@ -25,7 +25,7 @@ export default function ArchivePage({ searchParams }: { searchParams: { year?: s
           <Link
             href="/archive"
             className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
-              !year ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-white/15 text-gray-400 hover:text-white hover:border-white/30'
+              !year ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-gray-300 text-gray-500 hover:text-gray-900 hover:border-gray-400'
             }`}
           >
             All
@@ -35,7 +35,7 @@ export default function ArchivePage({ searchParams }: { searchParams: { year?: s
               key={y}
               href={`/archive?year=${y}`}
               className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
-                year === y ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-white/15 text-gray-400 hover:text-white hover:border-white/30'
+                year === y ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-gray-300 text-gray-500 hover:text-gray-900 hover:border-gray-400'
               }`}
             >
               {y}
@@ -44,7 +44,7 @@ export default function ArchivePage({ searchParams }: { searchParams: { year?: s
           <Link
             href={`/archive?year=${currentYear}`}
             className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
-              year === currentYear ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-white/15 text-gray-400 hover:text-white hover:border-white/30'
+              year === currentYear ? 'bg-[#C8973A]/15 border-[#C8973A]/50 text-[#C8973A]' : 'border-gray-300 text-gray-500 hover:text-gray-900 hover:border-gray-400'
             }`}
           >
             {currentYear}
@@ -57,7 +57,7 @@ export default function ArchivePage({ searchParams }: { searchParams: { year?: s
       </p>
 
       {events.length === 0 ? (
-        <div className="rounded-xl border border-white/10 py-16 text-center">
+        <div className="rounded-xl border border-gray-200 py-16 text-center">
           <p className="text-gray-500 text-sm">No archived events found.</p>
         </div>
       ) : (

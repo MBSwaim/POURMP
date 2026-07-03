@@ -22,7 +22,7 @@ export default function SettingsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage proposal content, packages, and business info.</p>
+          <p className="text-gray-500 text-sm mt-1">Manage proposal content, packages, and business info.</p>
         </div>
         <Link href="/staff" className="text-xs text-[#C8973A] hover:underline whitespace-nowrap mt-1">
           Staff Directory →

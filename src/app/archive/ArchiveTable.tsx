@@ -61,17 +61,17 @@ export function ArchiveTable({ events }: Props) {
   }, [events, sortKey, sortDir])
 
   function thClass(col: SortKey) {
-    return `text-left px-4 py-3 cursor-pointer select-none hover:text-white transition-colors whitespace-nowrap ${
-      sortKey === col ? 'text-[#C8973A]' : 'text-gray-400'
+    return `text-left px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${
+      sortKey === col ? 'text-[#C8973A]' : 'text-gray-500'
     }`
   }
 
   return (
-    <div className="rounded-xl border border-white/10 overflow-hidden">
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest bg-[#1a2e42]/60">
+            <tr className="border-b border-gray-200 text-[10px] uppercase tracking-widest bg-white">
               <th className={thClass('event_name')} onClick={() => handleSort('event_name')}>
                 Event <SortIcon col="event_name" sortKey={sortKey} sortDir={sortDir} />
               </th>
@@ -82,13 +82,13 @@ export function ArchiveTable({ events }: Props) {
                 Date <SortIcon col="event_date" sortKey={sortKey} sortDir={sortDir} />
               </th>
               <th
-                className={`text-right px-4 py-3 cursor-pointer select-none hover:text-white transition-colors whitespace-nowrap ${sortKey === 'value' ? 'text-[#C8973A]' : 'text-gray-400'}`}
+                className={`text-right px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${sortKey === 'value' ? 'text-[#C8973A]' : 'text-gray-500'}`}
                 onClick={() => handleSort('value')}
               >
                 Value <SortIcon col="value" sortKey={sortKey} sortDir={sortDir} />
               </th>
               <th
-                className={`text-center px-4 py-3 cursor-pointer select-none hover:text-white transition-colors whitespace-nowrap ${sortKey === 'status' ? 'text-[#C8973A]' : 'text-gray-400'}`}
+                className={`text-center px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${sortKey === 'status' ? 'text-[#C8973A]' : 'text-gray-500'}`}
                 onClick={() => handleSort('status')}
               >
                 Status <SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
@@ -99,17 +99,17 @@ export function ArchiveTable({ events }: Props) {
             {sorted.map((ev) => (
               <tr
                 key={ev.id}
-                className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors"
+                className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors"
               >
                 <td className="px-4 py-3">
                   <Link href={`/events/${ev.id}`} className="font-medium hover:text-[#C8973A] transition-colors">
                     {ev.event_name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-gray-400">
+                <td className="px-4 py-3 text-gray-500">
                   {ev.first_name} {ev.last_name}
                 </td>
-                <td className="px-4 py-3 text-gray-400 tabular-nums">{ev.event_date}</td>
+                <td className="px-4 py-3 text-gray-500 tabular-nums">{ev.event_date}</td>
                 <td className="px-4 py-3 text-right text-[#C8973A] tabular-nums">
                   {ev.guest_count > 0 && ev.price_per_guest > 0
                     ? formatCurrency(ev.guest_count * ev.price_per_guest)

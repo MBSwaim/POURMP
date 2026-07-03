@@ -32,7 +32,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
   const todayFormatted = format(new Date(dateStr + 'T12:00:00'), 'EEEE, MMMM d, yyyy')
 
   return (
-    <div className="min-h-screen bg-[#0f1e2d] text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
         {/* Page header */}
@@ -40,16 +40,16 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
           <h1 className="text-xl font-bold text-[#C8973A] tracking-widest uppercase">
             {isToday ? 'Today' : 'Events'} — {todayFormatted}
           </h1>
-          <p className="text-xs text-gray-400 mt-1 tracking-wide">
+          <p className="text-xs text-gray-500 mt-1 tracking-wide">
             On-shift reference · {events.length} event{events.length !== 1 ? 's' : ''} {isToday ? 'today' : 'on this date'}
           </p>
         </div>
 
         {events.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-10 text-center">
+          <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
             <div className="text-4xl mb-4">📅</div>
-            <p className="text-lg font-semibold text-white tracking-wide">No events scheduled for today</p>
-            <p className="text-sm text-gray-400 mt-1">{todayFormatted}</p>
+            <p className="text-lg font-semibold text-gray-900 tracking-wide">No events scheduled for today</p>
+            <p className="text-sm text-gray-500 mt-1">{todayFormatted}</p>
           </div>
         ) : (
           events.map(({ event, client, details, pkg, menuItems }) => {
@@ -93,20 +93,20 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
             const staffingNotes = details?.staffing_notes?.trim()
 
             return (
-              <div key={event.id} className="rounded-xl border border-white/10 bg-[#1F3348]/50 overflow-hidden">
+              <div key={event.id} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
 
                 {/* Card header */}
-                <div className="p-5 border-b border-white/10 bg-[#1F3348]/80">
+                <div className="p-5 border-b border-gray-200 bg-white">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <h2 className="text-lg font-bold text-white tracking-wide">
+                      <h2 className="text-lg font-bold text-gray-900 tracking-wide">
                         {event.event_name || '(Unnamed Event)'}
                       </h2>
                       <p className="text-sm text-[#C8973A] mt-0.5">{clientName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{todayFormatted}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{todayFormatted}</p>
                     </div>
                     {event.space && (
-                      <span className="text-xs bg-white/10 text-gray-300 rounded-full px-3 py-1 self-start">
+                      <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-3 py-1 self-start">
                         {event.space}
                       </span>
                     )}
@@ -114,7 +114,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                 </div>
 
                 {/* Time strip */}
-                <div className="px-5 py-3 border-b border-white/10 bg-black/20 overflow-x-auto">
+                <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
                   <div className="flex items-center gap-1 min-w-max text-xs">
                     <TimeChip label="Production Closes" time={productionClose} />
                     <Divider />
@@ -129,17 +129,17 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                 </div>
 
                 {/* Two-column grid */}
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5 border-b border-white/10">
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5 border-b border-gray-200">
 
                   {/* Left: Buffet */}
                   <div>
                     <h3 className="text-xs font-bold text-[#C8973A] tracking-widest uppercase mb-3">Buffet</h3>
                     {pkg ? (
-                      <p className="text-sm font-semibold text-white mb-1">{pkg.name}</p>
+                      <p className="text-sm font-semibold text-gray-900 mb-1">{pkg.name}</p>
                     ) : (
                       <p className="text-sm text-gray-500 italic mb-1">No package selected</p>
                     )}
-                    <p className="text-xs text-gray-400 mb-3">
+                    <p className="text-xs text-gray-500 mb-3">
                       {guestCount} guests
                       {bufferPct > 0 ? ` + ${Math.round(bufferPct * 100)}% buffer` : ''}
                     </p>
@@ -148,8 +148,8 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                       <ul className="space-y-1.5">
                         {calcItems.map((item) => (
                           <li key={item.item_name} className="flex items-baseline justify-between gap-2 text-xs">
-                            <span className="text-gray-300">{item.item_name}</span>
-                            <span className="text-white font-mono font-semibold shrink-0">{item.display}</span>
+                            <span className="text-gray-700">{item.item_name}</span>
+                            <span className="text-gray-900 font-mono font-semibold shrink-0">{item.display}</span>
                           </li>
                         ))}
                       </ul>
@@ -162,7 +162,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Sauces</p>
                         <div className="flex flex-wrap gap-1.5">
                           {saucesToShow.map(s => (
-                            <span key={s.name} className="text-xs bg-white/10 text-gray-300 rounded px-2 py-0.5">
+                            <span key={s.name} className="text-xs bg-gray-100 text-gray-700 rounded px-2 py-0.5">
                               {s.name}
                             </span>
                           ))}
@@ -185,7 +185,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                       {tabDetails && (
                         <div>
                           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Tab Details</p>
-                          <p className="text-xs text-gray-300 leading-relaxed">{tabDetails}</p>
+                          <p className="text-xs text-gray-700 leading-relaxed">{tabDetails}</p>
                         </div>
                       )}
                     </div>
@@ -194,17 +194,17 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
 
                 {/* Dietary Alerts */}
                 {dietaryRestrictions && (
-                  <div className="px-5 py-3 border-b border-white/10 bg-red-900/30">
-                    <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">
+                  <div className="px-5 py-3 border-b border-gray-200 bg-red-50">
+                    <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-1">
                       ⚠ Dietary Restrictions
                     </p>
-                    <p className="text-sm text-red-200">{dietaryRestrictions}</p>
+                    <p className="text-sm text-red-700">{dietaryRestrictions}</p>
                   </div>
                 )}
 
                 {/* Staff Notes */}
                 {(foodNotes || setupNotes || staffingNotes) && (
-                  <div className="px-5 py-3 border-b border-white/10 space-y-3">
+                  <div className="px-5 py-3 border-b border-gray-200 space-y-3">
                     <p className="text-xs font-bold text-[#C8973A] uppercase tracking-widest">Staff Notes</p>
                     {foodNotes && <NoteBlock label="Food" note={foodNotes} />}
                     {setupNotes && <NoteBlock label="Setup" note={setupNotes} />}
@@ -213,10 +213,10 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                 )}
 
                 {/* Quick links */}
-                <div className="px-5 py-4 flex flex-wrap gap-4 bg-black/10">
+                <div className="px-5 py-4 flex flex-wrap gap-4 bg-gray-50">
                   <Link
                     href={`/prep/checklist?event=${event.id}`}
-                    className="text-xs font-semibold text-green-400 hover:text-green-300 transition-colors"
+                    className="text-xs font-semibold text-green-600 hover:text-green-700 transition-colors"
                   >
                     ✓ Setup Checklist →
                   </Link>
@@ -228,13 +228,13 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                   </Link>
                   <Link
                     href={`/prep/kitchen-sheet?event=${event.id}`}
-                    className="text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+                    className="text-xs font-semibold text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     Kitchen Sheet →
                   </Link>
                   <Link
                     href={`/prep/beo?event=${event.id}`}
-                    className="text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+                    className="text-xs font-semibold text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     BEO →
                   </Link>
@@ -263,8 +263,8 @@ function TimeChip({
     highlight === 'amber'
       ? 'text-[#C8973A] font-bold'
       : highlight === 'green'
-      ? 'text-green-400 font-bold'
-      : 'text-gray-400'
+      ? 'text-green-600 font-bold'
+      : 'text-gray-500'
 
   return (
     <div className="flex flex-col items-center px-2 py-1">
@@ -284,7 +284,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span className="text-[10px] text-gray-500 uppercase tracking-wider shrink-0">{label}</span>
-      <span className="text-xs text-white text-right">{value}</span>
+      <span className="text-xs text-gray-900 text-right">{value}</span>
     </div>
   )
 }
@@ -293,7 +293,7 @@ function NoteBlock({ label, note }: { label: string; note: string }) {
   return (
     <div>
       <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="text-xs text-gray-300 leading-relaxed">{note}</p>
+      <p className="text-xs text-gray-700 leading-relaxed">{note}</p>
     </div>
   )
 }

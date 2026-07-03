@@ -25,10 +25,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${josefin.variable} ${crimson.variable} font-sans bg-[#0f1e2d] text-white min-h-screen`}>
+    <html lang="en">
+      <body className={`${josefin.variable} ${crimson.variable} font-sans bg-gray-50 text-gray-900 min-h-screen`}>
         <AppShell>{children}</AppShell>
-        <Toaster richColors theme="dark" />
+        <Toaster richColors theme="light" />
       </body>
     </html>
   )

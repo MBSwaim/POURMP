@@ -19,24 +19,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:block print:hidden">
-        <Suspense fallback={<nav className="w-56 shrink-0 bg-[#1F3348] border-r border-white/10" />}>
+        <Suspense fallback={<nav className="w-56 shrink-0 bg-gray-50 border-r border-gray-200" />}>
           <SideNav />
         </Suspense>
       </div>
 
       {/* Mobile top bar — hidden on md+ */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-[#1a2e42] border-b border-[#C8973A]/30 flex items-center justify-between px-4 print:hidden shadow-[0_1px_12px_rgba(0,0,0,0.4)]">
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-white border-b border-[#C8973A]/30 flex items-center justify-between px-4 print:hidden shadow-sm">
         <div className="flex items-center gap-2">
           <Logo className="w-7 h-7 shrink-0" color="gold" />
           <div>
             <div className="text-sm font-bold text-[#C8973A] tracking-widest uppercase leading-none">Manhattan Project</div>
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase leading-none mt-0.5">Beer Co. · Events</div>
+            <div className="text-[9px] text-gray-500 tracking-widest uppercase leading-none mt-0.5">Beer Co. · Events</div>
           </div>
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Open navigation"
-          className="text-gray-300 hover:text-white text-xl p-1"
+          className="text-gray-500 hover:text-gray-900 text-xl p-1"
         >
           ☰
         </button>
@@ -51,13 +51,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setDrawerOpen(false)}
           />
           {/* Drawer panel */}
-          <div className="relative flex flex-col w-64 max-w-[85vw] h-full bg-[#0f1e2d] shadow-2xl animate-slide-in-left overflow-y-auto">
+          <div className="relative flex flex-col w-64 max-w-[85vw] h-full bg-gray-50 shadow-2xl animate-slide-in-left overflow-y-auto">
             {/* Close button */}
-            <div className="flex items-center justify-end p-3 border-b border-white/10">
+            <div className="flex items-center justify-end p-3 border-b border-gray-200">
               <button
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close navigation"
-                className="text-gray-400 hover:text-white text-lg p-1"
+                className="text-gray-500 hover:text-gray-900 text-lg p-1"
               >
                 ✕
               </button>

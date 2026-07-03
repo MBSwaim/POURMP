@@ -69,41 +69,41 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">Post-Event Debrief</p>
+      <div className="rounded-xl bg-white border border-gray-200 p-4">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1">Post-Event Debrief</p>
         <p className="text-xs text-gray-500 leading-relaxed">
           Internal review for repeat-event intelligence — capture what happened so the next similar event benefits. Not visible to the client.
         </p>
       </div>
 
       {clientHistory.length > 0 && (
-        <div className="rounded-xl bg-[#1F3348] border border-[#C8973A]/30 overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10">
+        <div className="rounded-xl bg-white border border-[#C8973A]/30 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200">
             <p className="text-[10px] font-bold tracking-widest uppercase text-[#C8973A]">
               Repeat Client — {clientHistory.length} Past Debrief{clientHistory.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-200">
             {clientHistory.map(h => (
               <div key={h.id} className="px-4 py-3 space-y-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">{h.event_name}</p>
+                  <p className="text-sm font-semibold text-gray-900">{h.event_name}</p>
                   <p className="text-xs text-gray-500">{h.event_date}</p>
                 </div>
-                {h.recommendations && <p className="text-xs text-gray-300"><span className="text-gray-500">Recommended:</span> {h.recommendations}</p>}
-                {h.issues && <p className="text-xs text-gray-300"><span className="text-gray-500">Issues:</span> {h.issues}</p>}
-                {h.would_repeat_client && <p className="text-xs text-gray-300"><span className="text-gray-500">Would repeat:</span> {h.would_repeat_client}</p>}
+                {h.recommendations && <p className="text-xs text-gray-700"><span className="text-gray-500">Recommended:</span> {h.recommendations}</p>}
+                {h.issues && <p className="text-xs text-gray-700"><span className="text-gray-500">Issues:</span> {h.issues}</p>}
+                {h.would_repeat_client && <p className="text-xs text-gray-700"><span className="text-gray-500">Would repeat:</span> {h.would_repeat_client}</p>}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4 space-y-4">
+      <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-500">Planned Guest Count</label>
-            <p className="text-sm text-gray-300 py-2">{ev.guest_count > 0 ? ev.guest_count : '—'}</p>
+            <p className="text-sm text-gray-700 py-2">{ev.guest_count > 0 ? ev.guest_count : '—'}</p>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-500">Actual Guest Count</label>
@@ -111,12 +111,12 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
               type="number" min="0"
               value={actualGuestCount}
               onChange={e => setActualGuestCount(e.target.value)}
-              className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
             />
           </div>
         </div>
         {guestDelta !== null && guestDelta !== 0 && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             {guestDelta > 0 ? `${guestDelta} more guests than planned` : `${Math.abs(guestDelta)} fewer guests than planned`}
           </p>
         )}
@@ -124,14 +124,14 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-500">Predicted Bar Impact</label>
-            <p className="text-sm text-gray-300 py-2">{predictedImpact}</p>
+            <p className="text-sm text-gray-700 py-2">{predictedImpact}</p>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-500">Actual Bar Impact</label>
             <select
               value={barImpactAccuracy}
               onChange={e => setBarImpactAccuracy(e.target.value)}
-              className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
             >
               {BAR_IMPACT_OPTIONS.map(o => <option key={o} value={o}>{o || 'Select…'}</option>)}
             </select>
@@ -143,7 +143,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
           <select
             value={cateringAccuracy}
             onChange={e => setCateringAccuracy(e.target.value)}
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
           >
             {CATERING_OPTIONS.map(o => <option key={o} value={o}>{o || 'Select…'}</option>)}
           </select>
@@ -155,7 +155,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
             rows={2}
             value={wentWell}
             onChange={e => setWentWell(e.target.value)}
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-[#C8973A]/50 resize-none"
           />
         </div>
 
@@ -165,7 +165,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
             rows={2}
             value={issues}
             onChange={e => setIssues(e.target.value)}
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-[#C8973A]/50 resize-none"
           />
         </div>
 
@@ -176,7 +176,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
             value={staffingNotes}
             onChange={e => setStaffingNotes(e.target.value)}
             placeholder="Coverage, floor staff, coordinator notes…"
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
           />
         </div>
 
@@ -185,7 +185,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
           <select
             value={wouldRepeat}
             onChange={e => setWouldRepeat(e.target.value)}
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
           >
             {REPEAT_OPTIONS.map(o => <option key={o} value={o}>{o || 'Select…'}</option>)}
           </select>
@@ -198,7 +198,7 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
             value={recommendations}
             onChange={e => setRecommendations(e.target.value)}
             placeholder="e.g. Order fewer sliders, add a second staging table…"
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
           />
         </div>
 

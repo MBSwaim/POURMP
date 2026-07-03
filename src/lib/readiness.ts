@@ -49,8 +49,8 @@ export function calcReadiness(input: ReadinessInput): ReadinessResult {
 }
 
 export function readinessColor(score: number): { bg: string; text: string; border: string; dot: string } {
-  if (score >= 90) return { bg: 'bg-green-900/30',  text: 'text-green-300',  border: 'border-green-700/50',  dot: 'bg-green-400'  }
-  if (score >= 70) return { bg: 'bg-yellow-900/30', text: 'text-yellow-300', border: 'border-yellow-700/50', dot: 'bg-yellow-400' }
-  if (score >= 50) return { bg: 'bg-orange-900/30', text: 'text-orange-300', border: 'border-orange-700/50', dot: 'bg-orange-400' }
-  return { bg: 'bg-red-900/30', text: 'text-red-300', border: 'border-red-700/50', dot: 'bg-red-400' }
+  if (score >= 90) return { bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-400'  }
+  if (score >= 70) return { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-400' }
+  if (score >= 50) return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' }
+  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-400' }
 }

@@ -72,7 +72,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
   }, [packageId])
 
   if (!packageId || !guestCount) {
-    return <p className="text-sm text-gray-400">Select a package and enter guest count to see quantities.</p>
+    return <p className="text-sm text-gray-500">Select a package and enter guest count to see quantities.</p>
   }
 
   const effGuests = effectiveGuests(guestCount, bufferPct)
@@ -88,13 +88,13 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-4 text-sm text-gray-400">
+      <div className="flex gap-4 text-sm text-gray-500">
         <span>Guests: {guestCount}</span>
         {bufferPct > 0 && <span>Effective (w/ {(bufferPct * 100).toFixed(0)}% buffer): {effGuests}</span>}
         {pricePerGuest > 0 && <span className="ml-auto font-semibold text-[#C8973A]">Subtotal: {formatCurrency(subtotal)}</span>}
       </div>
       {selectableSauces.length > 0 && (
-        <div className="rounded-lg bg-white/5 border border-white/10 px-4 py-3 space-y-2">
+        <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 space-y-2">
           <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Sauce Selection</p>
           <div className="flex gap-6">
             {selectableSauces.map(sauce => (
@@ -105,7 +105,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
                   onChange={() => toggleSauce(sauce.name)}
                   className="rounded accent-[#C8973A] w-4 h-4"
                 />
-                <span className="text-sm text-white">{sauce.name}</span>
+                <span className="text-sm text-gray-900">{sauce.name}</span>
               </label>
             ))}
           </div>
@@ -113,7 +113,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
       )}
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 text-gray-400">
+          <tr className="border-b border-gray-200 text-gray-500">
             <th className="text-left py-1.5">Item</th>
             <th className="text-left py-1.5">Serve</th>
             <th className="text-right py-1.5">Qty</th>
@@ -123,13 +123,13 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
         <tbody>
           {calculated.map((item, i) => (
             <React.Fragment key={i}>
-              <tr className="border-b border-white/5 hover:bg-white/5">
+              <tr className="border-b border-gray-200 hover:bg-gray-50">
                 <td className="py-1.5">
                   <span className="inline-flex items-center gap-1.5">
                     {item.item_name}
                     {item.piece_count !== undefined && (
                       <span className="inline-flex items-center gap-1">
-                        <span className="text-xs text-gray-400">(</span>
+                        <span className="text-xs text-gray-500">(</span>
                         <input
                           key={`${item.item_name}-${item.piece_count}`}
                           type="number"
@@ -140,15 +140,15 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
                             if (!Number.isFinite(val) || val < 0) return
                             setOverride(item.item_name, val)
                           }}
-                          className={`w-12 bg-white/5 border rounded px-1 py-0 text-xs text-right focus:outline-none ${
-                            item.is_override ? 'border-[#C8973A]/60 text-[#C8973A]' : 'border-white/20 text-gray-300 focus:border-[#C8973A]'
+                          className={`w-12 bg-white border rounded px-1 py-0 text-xs text-right focus:outline-none ${
+                            item.is_override ? 'border-[#C8973A]/60 text-[#C8973A]' : 'border-gray-300 text-gray-700 focus:border-[#C8973A]'
                           }`}
                         />
-                        <span className="text-xs text-gray-400">pcs)</span>
+                        <span className="text-xs text-gray-500">pcs)</span>
                         {item.is_override && (
                           <button
                             onClick={() => clearOverride(item.item_name)}
-                            className="text-[10px] text-gray-400 hover:text-[#C8973A] underline decoration-dotted"
+                            className="text-[10px] text-gray-500 hover:text-[#C8973A] underline decoration-dotted"
                             title="Reset to automatic even split"
                           >
                             Reset
@@ -168,7 +168,7 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
                           className={`w-[76px] px-2 py-0.5 rounded text-xs text-center transition-colors ${
                             (serveStyle[item.item_name] ?? 'all') === opt
                               ? 'bg-[#C8973A] text-white'
-                              : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                           }`}
                         >
                           {opt === 'all' ? 'All at once' : '1 @ a time'}
@@ -180,21 +180,21 @@ export function CateringCalculator({ packageId, guestCount, bufferPct = 0, price
                 <td className="text-right py-1.5 tabular-nums">
                   {typeof item.total_qty === 'string' ? item.total_qty : String(item.total_qty)}
                 </td>
-                <td className="text-right py-1.5 text-gray-400">{item.unit_name}</td>
+                <td className="text-right py-1.5 text-gray-500">{item.unit_name}</td>
               </tr>
               {saucesForItem(item.item_name).map(sauce => (
-                <tr key={`${i}-${sauce}`} className="border-b border-white/5">
-                  <td className="py-1 pl-4 text-gray-400 italic">↳ {sauce}</td>
+                <tr key={`${i}-${sauce}`} className="border-b border-gray-200">
+                  <td className="py-1 pl-4 text-gray-500 italic">↳ {sauce}</td>
                   <td />
                   <td />
                   <td className="text-right py-1 text-gray-500 italic">Sauce</td>
                 </tr>
               ))}
               {item.half_pan_qty ? (
-                <tr key={`${i}-halfpan`} className="border-b border-white/5">
-                  <td className="py-1 pl-4 text-gray-400 italic">↳ remainder</td>
+                <tr key={`${i}-halfpan`} className="border-b border-gray-200">
+                  <td className="py-1 pl-4 text-gray-500 italic">↳ remainder</td>
                   <td />
-                  <td className="text-right py-1 text-gray-400 tabular-nums">{item.half_pan_qty}</td>
+                  <td className="text-right py-1 text-gray-500 tabular-nums">{item.half_pan_qty}</td>
                   <td className="text-right py-1 text-gray-500 italic">1/2 Chafer</td>
                 </tr>
               ) : null}

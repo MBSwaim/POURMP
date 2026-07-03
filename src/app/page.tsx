@@ -19,12 +19,12 @@ export default function Dashboard() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] text-gray-500 tracking-[0.2em] uppercase mb-1">{dateLabel}</p>
-          <h1 className="text-xl font-bold tracking-widest uppercase text-white leading-none">Dashboard</h1>
+          <h1 className="text-xl font-bold tracking-widest uppercase text-gray-900 leading-none">Dashboard</h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/today"
-            className="px-3 py-1.5 rounded-lg bg-white/6 border border-white/10 text-gray-300 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors tracking-wide"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-200 hover:text-gray-900 transition-colors tracking-wide"
           >
             Today
           </Link>
@@ -53,7 +53,7 @@ export default function Dashboard() {
       <section className="space-y-2">
         <div className="flex items-center gap-3">
           <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">Pipeline</p>
-          <div className="flex-1 border-t border-white/5" />
+          <div className="flex-1 border-t border-gray-200" />
         </div>
         <KanbanBoard initialEvents={kanban} />
       </section>
@@ -64,9 +64,9 @@ export default function Dashboard() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-[#1F3348] border border-white/10 border-l-2 border-l-[#C8973A] px-4 py-3.5">
+    <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3.5">
       <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 leading-none mb-2">{label}</p>
-      <p className="text-2xl font-bold leading-none text-white tabular-nums">{value}</p>
+      <p className="text-2xl font-bold leading-none text-gray-900 tabular-nums">{value}</p>
     </div>
   )
 }

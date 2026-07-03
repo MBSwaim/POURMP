@@ -50,14 +50,14 @@ export function NotificationsClient() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-[#1F3348] border border-white/10 overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/8">
+      <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200">
           <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">Pending ({pending.length})</p>
         </div>
         {pending.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-gray-500">No pending alerts</div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-200">
             {pending.map((item) => (
               <NotificationRow key={item.id} item={item} onComplete={complete} onMarkReserved={markReserved} />
             ))}
@@ -65,7 +65,7 @@ export function NotificationsClient() {
         )}
       </div>
 
-      <div className="rounded-xl bg-[#1F3348]/50 border border-white/10 overflow-hidden">
+      <div className="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden">
         <button
           onClick={() => setShowCompleted((v) => !v)}
           className="w-full flex items-center justify-between px-4 py-3 text-left"
@@ -77,9 +77,9 @@ export function NotificationsClient() {
         </button>
         {showCompleted && (
           completed.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-500 border-t border-white/8">Nothing completed yet</div>
+            <div className="px-4 py-6 text-center text-sm text-gray-500 border-t border-gray-200">Nothing completed yet</div>
           ) : (
-            <div className="divide-y divide-white/5 border-t border-white/8">
+            <div className="divide-y divide-gray-200 border-t border-gray-200">
               {completed.map((item) => (
                 <NotificationRow key={item.id} item={item} />
               ))}

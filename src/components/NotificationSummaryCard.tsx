@@ -47,8 +47,8 @@ export function NotificationSummaryCard() {
 
   if (!loaded || pending.length === 0) {
     return (
-      <div className="rounded-xl bg-[#1F3348] border border-white/10 px-4 py-3.5 flex items-center justify-between">
-        <p className="text-sm text-gray-400">{loaded ? 'No pending alerts' : 'Loading alerts…'}</p>
+      <div className="rounded-xl bg-white border border-gray-200 px-4 py-3.5 flex items-center justify-between">
+        <p className="text-sm text-gray-500">{loaded ? 'No pending alerts' : 'Loading alerts…'}</p>
         <Link href="/notifications" className="text-xs text-[#C8973A] hover:underline shrink-0">
           Notification Center →
         </Link>
@@ -57,16 +57,16 @@ export function NotificationSummaryCard() {
   }
 
   return (
-    <div className="rounded-xl bg-[#1F3348] border border-[#C8973A]/40 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+    <div className="rounded-xl bg-white border border-[#C8973A]/40 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#C8973A]">
           {pending.length} Pending Alert{pending.length === 1 ? '' : 's'}
         </p>
-        <Link href="/notifications" className="text-xs text-gray-400 hover:text-white transition-colors">
+        <Link href="/notifications" className="text-xs text-gray-500 hover:text-gray-900 transition-colors">
           View All →
         </Link>
       </div>
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-gray-200">
         {pending.slice(0, 3).map((item) => (
           <NotificationRow key={item.id} item={item} onComplete={complete} onMarkReserved={markReserved} />
         ))}

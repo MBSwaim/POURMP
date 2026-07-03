@@ -28,7 +28,7 @@ function SubLink({ href, pathname, label, icon, onClose }: { href: string; pathn
       href={href}
       onClick={onClose}
       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium transition-colors
-        ${isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+        ${isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
     >
       <span className="text-sm leading-none">{icon}</span>
       {label}
@@ -81,7 +81,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
     const active = pathname === href && !activeStatus
     return active
       ? 'flex items-center gap-2 pl-[10px] pr-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium border-l-2 border-[#C8973A] bg-[#C8973A]/10 text-[#C8973A] transition-colors'
-      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-gray-400 hover:bg-white/8 hover:text-white transition-colors'
+      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors'
   }
 
   function todayClass() {
@@ -92,9 +92,9 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <nav className="w-56 shrink-0 bg-[#172c3f] border-r border-white/8 flex flex-col print:hidden">
+    <nav className="w-56 shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col print:hidden">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-white/8 flex items-center gap-3">
+      <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
         <Logo className="w-9 h-9 shrink-0" color="gold" />
         <div>
           <div className="text-xs font-bold text-[#C8973A] tracking-[0.18em] uppercase leading-tight">Manhattan Project</div>
@@ -117,13 +117,13 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
             type="date"
             value={pickerDate}
             onChange={handleDateChange}
-            className="w-full bg-[#0f1e2d] border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-gray-400
-              focus:outline-none focus:border-[#C8973A]/50 focus:text-gray-200 transition-colors cursor-pointer"
+            className="w-full bg-white border border-gray-300 rounded-md px-2.5 py-1.5 text-xs text-gray-700
+              focus:outline-none focus:border-[#C8973A]/50 focus:text-gray-900 transition-colors cursor-pointer"
           />
         </div>
 
         {/* Divider */}
-        <div className="border-t border-white/5 my-1" />
+        <div className="border-t border-gray-200 my-1" />
 
         <Link href="/" onClick={onClose} className={navClass('/')}>Dashboard</Link>
         <Link href="/operations" onClick={onClose} className={navClass('/operations')}>Operations</Link>
@@ -133,23 +133,23 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
           <button
             onClick={() => setEventsOpen(v => !v)}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onEvents ? 'text-[#C8973A]' : 'text-gray-400 hover:bg-white/8 hover:text-white'}`}
+              ${onEvents ? 'text-[#C8973A]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <span>Events</span>
             <span className={`text-[10px] transition-transform duration-150 ${eventsOpen ? 'rotate-90' : ''}`}>▶</span>
           </button>
 
           {eventsOpen && (
-            <div className="mt-0.5 ml-3 border-l border-white/8 pl-3 space-y-0.5">
+            <div className="mt-0.5 ml-3 border-l border-gray-200 pl-3 space-y-0.5">
               <Link
                 href="/events"
                 onClick={onClose}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
                   ${pathname === '/events' && !activeStatus
-                    ? 'text-white bg-white/8'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+                    ? 'text-gray-900 bg-gray-100'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white/25 inline-block shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block shrink-0" />
                 All Events
               </Link>
 
@@ -161,7 +161,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
                     href={`/events?status=${s}`}
                     onClick={onClose}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
-                      ${isActive ? 'text-white bg-white/8' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+                      ${isActive ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${STATUS_DOT[s]}`} />
                     {s}
@@ -196,22 +196,22 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </Link>
 
         {/* Divider before prep tools */}
-        <div className="border-t border-white/5 my-1" />
+        <div className="border-t border-gray-200 my-1" />
 
         {/* Prep Tools submenu */}
         <div>
           <button
             onClick={() => setPrepOpen(v => !v)}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onPrepTools ? 'text-[#C8973A]' : 'text-gray-400 hover:bg-white/8 hover:text-white'}`}
+              ${onPrepTools ? 'text-[#C8973A]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <span>Prep & Docs</span>
             <span className={`text-[10px] transition-transform ${prepOpen ? 'rotate-90' : ''}`}>▶</span>
           </button>
 
           {prepOpen && (
-            <div className="mt-0.5 ml-3 border-l border-white/10 pl-3 space-y-0.5">
-              <p className="px-2.5 py-2 text-xs text-gray-400 leading-relaxed">
+            <div className="mt-0.5 ml-3 border-l border-gray-200 pl-3 space-y-0.5">
+              <p className="px-2.5 py-2 text-xs text-gray-500 leading-relaxed">
                 Open an event and click "Generate Outputs" to build Toast Notes, Kitchen Sheet, FOH, Bar &amp; Run of Show.
               </p>
               <Link
@@ -227,13 +227,13 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </div>
 
         {/* Divider before settings */}
-        <div className="border-t border-white/5 my-1" />
+        <div className="border-t border-gray-200 my-1" />
 
         <Link href="/settings" onClick={onClose} className={navClass('/settings')}>Settings</Link>
       </div>
 
       {/* Sidebar footer */}
-      <div className="px-4 py-3 border-t border-white/5">
+      <div className="px-4 py-3 border-t border-gray-200">
         <p className="text-[9px] text-gray-600 tracking-widest uppercase">Internal Use Only</p>
       </div>
     </nav>

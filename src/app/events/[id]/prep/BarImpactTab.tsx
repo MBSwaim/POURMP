@@ -30,7 +30,7 @@ export function BarImpactTab({ ev, initialLog, tasks }: Props) {
       <div className={`rounded-xl border px-5 py-4 ${colors.bg} ${colors.border}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">Main Bar Impact Level</p>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1">Main Bar Impact Level</p>
             <div className="flex items-center gap-2.5">
               <span className={`w-3 h-3 rounded-full shrink-0 ${colors.dot}`} />
               <span className={`text-2xl font-bold tracking-wide ${colors.text}`}>{impact.level.toUpperCase()}</span>
@@ -40,7 +40,7 @@ export function BarImpactTab({ ev, initialLog, tasks }: Props) {
           <div className="text-right shrink-0">
             <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Contributing Factors</p>
             {impact.factors.map((f, i) => (
-              <p key={i} className="text-xs text-gray-400">{f}</p>
+              <p key={i} className="text-xs text-gray-500">{f}</p>
             ))}
           </div>
         </div>
@@ -49,26 +49,26 @@ export function BarImpactTab({ ev, initialLog, tasks }: Props) {
       {/* Two-col: Congestion Notes + Guest Flow */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bar Congestion Notes */}
-        <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4 space-y-3">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Bar Congestion Notes</p>
+        <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-3">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Bar Congestion Notes</p>
           <div className="space-y-2">
             {impact.congestionNotes.map((note, i) => (
               <div key={i} className="flex gap-2.5">
                 <span className="text-[#C8973A] shrink-0 mt-0.5">•</span>
-                <p className="text-sm text-gray-300 leading-snug">{note}</p>
+                <p className="text-sm text-gray-700 leading-snug">{note}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Guest Flow Notes */}
-        <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4 space-y-3">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Guest Flow Notes</p>
+        <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-3">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Guest Flow Notes</p>
           <div className="space-y-2">
             {impact.guestFlowNotes.map((note, i) => (
               <div key={i} className="flex gap-2.5">
                 <span className="text-[#C8973A] shrink-0 mt-0.5">•</span>
-                <p className="text-sm text-gray-300 leading-snug">{note}</p>
+                <p className="text-sm text-gray-700 leading-snug">{note}</p>
               </div>
             ))}
           </div>
@@ -76,9 +76,9 @@ export function BarImpactTab({ ev, initialLog, tasks }: Props) {
       </div>
 
       {/* Main Bar Event Alert */}
-      <div className="rounded-xl bg-[#1F3348] border border-white/10 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+      <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">
             Main Bar Event Alert — Copy for Taproom Lead
           </p>
           <button
@@ -92,21 +92,21 @@ export function BarImpactTab({ ev, initialLog, tasks }: Props) {
             {copied ? '✓ Copied' : 'Copy Alert'}
           </button>
         </div>
-        <pre className="p-4 text-xs text-gray-300 leading-relaxed font-mono whitespace-pre-wrap">
+        <pre className="p-4 text-xs text-gray-700 leading-relaxed font-mono whitespace-pre-wrap">
           {impact.alertText}
         </pre>
       </div>
 
       {/* Bar Tasks */}
       {tasks && (
-        <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4 space-y-2">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Bar Tasks</p>
+        <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-2">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Bar Tasks</p>
           {tasks.filter(t => t.role === 'Bar' && !t.completed).length === 0 ? (
             <p className="text-sm text-gray-500 italic">No open bar tasks.</p>
           ) : (
             <div className="space-y-1.5">
               {tasks.filter(t => t.role === 'Bar' && !t.completed).map(t => (
-                <div key={t.id} className="flex items-start gap-2.5 text-sm text-gray-300">
+                <div key={t.id} className="flex items-start gap-2.5 text-sm text-gray-700">
                   <span className="w-4 h-4 mt-0.5 shrink-0 border border-gray-500 rounded-sm inline-block" />
                   {t.label}
                 </div>
@@ -158,9 +158,9 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
   }
 
   return (
-    <div className="rounded-xl bg-[#1F3348] border border-white/10 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+    <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">
           Drink Ticket Efficiency Tracker
         </p>
         {initialLog && (
@@ -177,7 +177,7 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
               type="number" min="0"
               value={issued}
               onChange={e => setIssued(e.target.value)}
-              className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
             />
           </div>
           <div className="space-y-1">
@@ -186,7 +186,7 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
               type="number" min="0"
               value={redeemed}
               onChange={e => setRedeemed(e.target.value)}
-              className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C8973A]/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
             />
           </div>
         </div>
@@ -203,9 +203,9 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
         {/* Recommendation based on redemption */}
         {issuedNum > 0 && redeemedNum > 0 && (
           <div className={`rounded-lg px-3 py-2 text-xs ${
-            redemptionPct >= 90 ? 'bg-green-900/20 text-green-300 border border-green-700/30' :
-            redemptionPct >= 70 ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-700/30' :
-            'bg-blue-900/20 text-blue-300 border border-blue-700/30'
+            redemptionPct >= 90 ? 'bg-green-50 text-green-700 border border-green-200' :
+            redemptionPct >= 70 ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+            'bg-blue-50 text-blue-700 border border-blue-200'
           }`}>
             {redemptionPct >= 90 && `Strong redemption (${redemptionPct}%) — consider offering slightly more tickets per guest at future events of this size.`}
             {redemptionPct >= 70 && redemptionPct < 90 && `Good redemption rate (${redemptionPct}%) — ticket quantity was well-calibrated for this event.`}
@@ -221,7 +221,7 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="e.g. Guests wanted more tickets, redemption happened in first 20 min..."
-            className="w-full bg-[#162840] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
           />
         </div>
 
@@ -243,9 +243,9 @@ function TicketTracker({ ev, initialLog }: { ev: EventForNotes; initialLog: Drin
 
 function StatChip({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="rounded-lg bg-[#162840] border border-white/10 px-3 py-2 text-center">
+    <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-center">
       <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">{label}</p>
-      <p className={`text-lg font-bold leading-none ${highlight ? 'text-[#C8973A]' : 'text-white'}`}>{value}</p>
+      <p className={`text-lg font-bold leading-none ${highlight ? 'text-[#C8973A]' : 'text-gray-900'}`}>{value}</p>
     </div>
   )
 }

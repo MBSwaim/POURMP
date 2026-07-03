@@ -53,13 +53,13 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">{year} Analytics</h1>
-          {hasPrev && <p className="text-sm text-gray-400 mt-0.5">Compared to {prevYear}</p>}
+          {hasPrev && <p className="text-sm text-gray-500 mt-0.5">Compared to {prevYear}</p>}
         </div>
         <div className="flex items-center gap-2">
           {olderYear && (
             <Link
               href={`/analytics?year=${olderYear}`}
-              className="px-3 py-1.5 rounded-lg border border-white/20 bg-[#1F3348] text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             >
               ← {olderYear}
             </Link>
@@ -70,7 +70,7 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
           {newerYear && (
             <Link
               href={`/analytics?year=${newerYear}`}
-              className="px-3 py-1.5 rounded-lg border border-white/20 bg-[#1F3348] text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             >
               {newerYear} →
             </Link>
@@ -88,7 +88,7 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
       {/* Bar Chart */}
       <section>
         <h2 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-4">Collected by Month</h2>
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="flex items-end gap-1.5 h-44">
             {MONTHS.map((name, i) => {
               const m = i + 1
@@ -100,7 +100,7 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
                 <div key={m} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end gap-0.5 h-36">
                     {hasPrev && (
-                      <div className="flex-1 bg-white/15 rounded-t" style={{ height: `${hPrev}%` }}
+                      <div className="flex-1 bg-gray-300 rounded-t" style={{ height: `${hPrev}%` }}
                         title={`${prevYear} ${name}: ${formatCurrency(prevVal)}`} />
                     )}
                     <div className="flex-1 bg-[#C8973A]/80 rounded-t" style={{ height: `${h}%` }}
@@ -113,8 +113,8 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
           </div>
           {hasPrev && (
             <div className="flex items-center gap-4 mt-3 justify-end">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-white/15 inline-block"/><span className="text-xs text-gray-400">{prevYear}</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C8973A]/80 inline-block"/><span className="text-xs text-gray-400">{year}</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gray-300 inline-block"/><span className="text-xs text-gray-500">{prevYear}</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C8973A]/80 inline-block"/><span className="text-xs text-gray-500">{year}</span></span>
             </div>
           )}
         </div>
@@ -123,18 +123,18 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
       {/* Monthly Breakdown Table */}
       <section>
         <h2 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-4">Monthly Breakdown</h2>
-        <div className="rounded-xl border border-white/10 overflow-hidden">
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#1F3348] border-b border-white/10">
+            <thead className="bg-white border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Month</th>
-                <th className="text-right px-4 py-3 text-gray-400 font-medium">Events</th>
-                <th className="text-right px-4 py-3 text-gray-400 font-medium">Invoiced</th>
-                <th className="text-right px-4 py-3 text-gray-400 font-medium">Collected</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Month</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Events</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Invoiced</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Collected</th>
                 {hasPrev && (
                   <>
                     <th className="text-right px-4 py-3 text-gray-500 font-medium">{prevYear}</th>
-                    <th className="text-right px-4 py-3 text-gray-400 font-medium">vs {prevYear}</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">vs {prevYear}</th>
                   </>
                 )}
               </tr>
@@ -147,14 +147,14 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
                 const mPct = hasPrev ? pct(prevRow?.collected ?? 0, row?.collected ?? 0) : null
                 const isCurrent = now.getFullYear() === year && now.getMonth() + 1 === m
                 return (
-                  <tr key={m} className={`border-b border-white/5 ${i % 2 !== 0 ? 'bg-white/[0.02]' : ''} ${isCurrent ? 'bg-[#C8973A]/5' : ''}`}>
+                  <tr key={m} className={`border-b border-gray-200 ${i % 2 !== 0 ? 'bg-gray-50' : ''} ${isCurrent ? 'bg-[#C8973A]/5' : ''}`}>
                     <td className={`px-4 py-2.5 font-medium ${isCurrent ? 'text-[#C8973A]' : ''}`}>
                       {name}
                       {isCurrent && <span className="ml-2 text-[10px] text-[#C8973A]/60 uppercase tracking-widest">Now</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-gray-300">{row ? row.event_count : <span className="text-gray-600">—</span>}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-300">{row ? formatCurrency(row.invoiced) : <span className="text-gray-600">—</span>}</td>
-                    <td className="px-4 py-2.5 text-right font-medium text-white">{row ? formatCurrency(row.collected) : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-700">{row ? row.event_count : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-700">{row ? formatCurrency(row.invoiced) : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-gray-900">{row ? formatCurrency(row.collected) : <span className="text-gray-600">—</span>}</td>
                     {hasPrev && (
                       <>
                         <td className="px-4 py-2.5 text-right text-gray-500">{prevRow ? formatCurrency(prevRow.collected) : <span className="text-gray-600">—</span>}</td>
@@ -165,7 +165,7 @@ export default function AnalyticsPage({ searchParams }: { searchParams: { year?:
                 )
               })}
             </tbody>
-            <tfoot className="bg-[#1F3348] border-t border-white/20">
+            <tfoot className="bg-white border-t border-gray-300">
               <tr>
                 <td className="px-4 py-3 font-bold text-[#C8973A]">Total</td>
                 <td className="px-4 py-3 text-right font-bold">{totals.event_count}</td>
@@ -190,11 +190,11 @@ function StatCard({ label, value, prev, prevYear, pctVal }: {
   label: string; value: string; prev: string | null; prevYear: number; pctVal: number | null
 }) {
   return (
-    <div className="rounded-xl bg-[#1F3348] border border-white/10 p-5 space-y-3">
-      <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">{label}</p>
+    <div className="rounded-xl bg-white border border-gray-200 p-5 space-y-3">
+      <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">{label}</p>
       <p className="text-2xl font-bold text-[#C8973A]">{value}</p>
       {prev !== null && (
-        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
           <span className="text-xs text-gray-500">{prevYear}: {prev}</span>
           <PctBadge value={pctVal} />
         </div>

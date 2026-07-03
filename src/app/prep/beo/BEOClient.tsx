@@ -53,7 +53,7 @@ export function BEOClient({ events, initialEventId = '' }: { events: EventWithCl
           </button>
         )}
         {events.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-8 text-center text-gray-500 text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500 text-sm">
             No confirmed upcoming events found.
           </div>
         ) : (
@@ -61,7 +61,7 @@ export function BEOClient({ events, initialEventId = '' }: { events: EventWithCl
             <select
               value={selectedId}
               onChange={e => loadEvent(e.target.value)}
-              className="flex-1 min-w-64 bg-[#1F3348] border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="flex-1 min-w-64 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               <option value="">— Select a confirmed event —</option>
               {events.map(e => (
@@ -82,7 +82,7 @@ export function BEOClient({ events, initialEventId = '' }: { events: EventWithCl
             )}
           </div>
         )}
-        {loading && <p className="text-sm text-gray-400">Loading…</p>}
+        {loading && <p className="text-sm text-gray-500">Loading…</p>}
       </div>
 
       {beoData && !loading && <BEODocument data={beoData} />}
@@ -134,7 +134,7 @@ function BEODocument({ data }: { data: FullData }) {
 
   return (
     <div className="
-      rounded-xl border border-white/10 bg-[#1F3348]/50 p-6 space-y-4
+      rounded-xl border border-gray-200 bg-white p-6 space-y-4
       print:rounded-none print:border-0 print:bg-white print:p-0 print:space-y-3 print:text-black
     ">
 
@@ -147,14 +147,14 @@ function BEODocument({ data }: { data: FullData }) {
               <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500">
                 Manhattan Project Beer Co.
               </p>
-              <h2 className="text-xl font-bold text-white print:text-black mt-0.5">BANQUET EVENT ORDER</h2>
-              <p className="text-base font-semibold text-gray-300 print:text-gray-700 mt-0.5">{event.event_name}</p>
+              <h2 className="text-xl font-bold text-gray-900 print:text-black mt-0.5">BANQUET EVENT ORDER</h2>
+              <p className="text-base font-semibold text-gray-700 print:text-gray-700 mt-0.5">{event.event_name}</p>
             </div>
           </div>
           <div className="text-right text-sm space-y-0.5">
             <p className="font-bold text-[#C8973A] print:text-gray-800 tracking-wider">{beoRef}</p>
-            <p className="text-gray-400 print:text-gray-500 font-semibold">{event.status}</p>
-            <p className="text-xs text-gray-500 print:text-gray-400">Generated {generatedAt}</p>
+            <p className="text-gray-500 print:text-gray-500 font-semibold">{event.status}</p>
+            <p className="text-xs text-gray-500 print:text-gray-500">Generated {generatedAt}</p>
           </div>
         </div>
       </div>
@@ -202,15 +202,15 @@ function BEODocument({ data }: { data: FullData }) {
                 key={label}
                 className={`flex items-center gap-4 px-2 py-1 rounded
                   ${highlight ? 'bg-[#C8973A]/15 print:bg-transparent print:font-bold' : 'print:bg-transparent'}
-                  border-b border-white/5 print:border-gray-200 last:border-0`}
+                  border-b border-gray-200 print:border-gray-200 last:border-0`}
               >
                 <span className={`font-mono tabular-nums text-sm w-18 shrink-0
-                  ${highlight ? 'text-[#C8973A] print:text-black font-bold' : 'text-gray-300 print:text-black'}`}>
+                  ${highlight ? 'text-[#C8973A] print:text-black font-bold' : 'text-gray-700 print:text-black'}`}>
                   {to12Hour(time)}
                 </span>
-                <span className={`text-sm ${highlight ? 'text-white print:text-black font-semibold' : 'text-gray-400 print:text-gray-600'}`}>
+                <span className={`text-sm ${highlight ? 'text-gray-900 print:text-black font-semibold' : 'text-gray-500 print:text-gray-600'}`}>
                   {label}
-                  {note && <span className="ml-2 text-xs text-gray-500 print:text-gray-400 italic">{note}</span>}
+                  {note && <span className="ml-2 text-xs text-gray-500 print:text-gray-500 italic">{note}</span>}
                 </span>
               </div>
             ))}
@@ -226,43 +226,43 @@ function BEODocument({ data }: { data: FullData }) {
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-white/20 print:border-gray-300">
-                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Item</th>
-                <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-16">Qty</th>
-                <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-28 pl-3">Unit</th>
+              <tr className="border-b border-gray-300 print:border-gray-300">
+                <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold">Item</th>
+                <th className="text-right py-1 text-gray-500 print:text-gray-600 font-semibold w-16">Qty</th>
+                <th className="text-right py-1 text-gray-500 print:text-gray-600 font-semibold w-28 pl-3">Unit</th>
               </tr>
             </thead>
             <tbody>
               {cateringItems.map((item, i) => (
                 <React.Fragment key={i}>
-                  <tr className="border-b border-white/5 print:border-gray-100">
-                    <td className="py-1 text-white print:text-black">
+                  <tr className="border-b border-gray-200 print:border-gray-100">
+                    <td className="py-1 text-gray-900 print:text-black">
                       {item.item_name}
                       {typeof item.total_qty === 'number' && item.total_qty > 1 && (
-                        <span className="ml-2 text-xs text-gray-400 print:text-gray-500 italic font-normal">
+                        <span className="ml-2 text-xs text-gray-500 print:text-gray-500 italic font-normal">
                           ({(serveStyle[item.item_name] ?? 'all') === 'staggered' ? '1 @ a time' : 'all at once'})
                         </span>
                       )}
                     </td>
-                    <td className="py-1 text-right tabular-nums text-white print:text-black font-medium">
+                    <td className="py-1 text-right tabular-nums text-gray-900 print:text-black font-medium">
                       {typeof item.total_qty === 'string' ? '—' : item.total_qty}
                     </td>
-                    <td className="py-1 text-right text-gray-400 print:text-gray-600 pl-3">
+                    <td className="py-1 text-right text-gray-500 print:text-gray-600 pl-3">
                       {typeof item.total_qty === 'string' ? item.total_qty : (item.unit_name ?? '')}
                     </td>
                   </tr>
                   {saucesForItem(item.item_name).map(sauce => (
-                    <tr key={`${i}-${sauce}`} className="border-b border-white/5 print:border-gray-100">
-                      <td className="py-0.5 pl-5 text-gray-400 print:text-gray-500 italic text-xs">↳ {sauce}</td>
+                    <tr key={`${i}-${sauce}`} className="border-b border-gray-200 print:border-gray-100">
+                      <td className="py-0.5 pl-5 text-gray-500 print:text-gray-500 italic text-xs">↳ {sauce}</td>
                       <td />
-                      <td className="py-0.5 text-right text-gray-500 print:text-gray-400 italic text-xs pl-3">Sauce</td>
+                      <td className="py-0.5 text-right text-gray-500 print:text-gray-500 italic text-xs pl-3">Sauce</td>
                     </tr>
                   ))}
                   {item.half_pan_qty ? (
-                    <tr key={`${i}-halfpan`} className="border-b border-white/5 print:border-gray-100">
-                      <td className="py-0.5 pl-5 text-gray-400 print:text-gray-500 italic text-xs">↳ remainder</td>
-                      <td className="py-0.5 text-right tabular-nums text-gray-400 print:text-gray-500 text-xs">{item.half_pan_qty}</td>
-                      <td className="py-0.5 text-right text-gray-500 print:text-gray-400 italic text-xs pl-3">1/2 Chafer</td>
+                    <tr key={`${i}-halfpan`} className="border-b border-gray-200 print:border-gray-100">
+                      <td className="py-0.5 pl-5 text-gray-500 print:text-gray-500 italic text-xs">↳ remainder</td>
+                      <td className="py-0.5 text-right tabular-nums text-gray-500 print:text-gray-500 text-xs">{item.half_pan_qty}</td>
+                      <td className="py-0.5 text-right text-gray-500 print:text-gray-500 italic text-xs pl-3">1/2 Chafer</td>
                     </tr>
                   ) : null}
                 </React.Fragment>
@@ -278,11 +278,11 @@ function BEODocument({ data }: { data: FullData }) {
           <SectionHeader>Equipment Required</SectionHeader>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-white/20 print:border-gray-300">
-                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold pr-4">Food Item</th>
-                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold w-36">Utensil</th>
-                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold w-40">Servingware</th>
-                <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Notes</th>
+              <tr className="border-b border-gray-300 print:border-gray-300">
+                <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold pr-4">Food Item</th>
+                <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold w-36">Utensil</th>
+                <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold w-40">Servingware</th>
+                <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -290,11 +290,11 @@ function BEODocument({ data }: { data: FullData }) {
                 const sw = getServingware(item.item_name)
                 if (!sw) return null
                 return (
-                  <tr key={i} className="border-b border-white/5 print:border-gray-100">
-                    <td className="py-1 text-white print:text-black pr-4">{item.item_name}</td>
-                    <td className="py-1 text-gray-300 print:text-gray-700 w-36">{sw.utensil}</td>
-                    <td className="py-1 text-gray-300 print:text-gray-700 w-40">{sw.vessel}</td>
-                    <td className="py-1 text-gray-500 print:text-gray-400 italic text-xs">{sw.altNote ?? ''}</td>
+                  <tr key={i} className="border-b border-gray-200 print:border-gray-100">
+                    <td className="py-1 text-gray-900 print:text-black pr-4">{item.item_name}</td>
+                    <td className="py-1 text-gray-700 print:text-gray-700 w-36">{sw.utensil}</td>
+                    <td className="py-1 text-gray-700 print:text-gray-700 w-40">{sw.vessel}</td>
+                    <td className="py-1 text-gray-500 print:text-gray-500 italic text-xs">{sw.altNote ?? ''}</td>
                   </tr>
                 )
               })}
@@ -310,10 +310,10 @@ function BEODocument({ data }: { data: FullData }) {
                   }
                 }
                 return saucesToShow.map(sauce => (
-                  <tr key={`sw-sauce-${sauce}`} className="border-b border-white/5 print:border-gray-100">
-                    <td className="py-1 text-gray-400 print:text-gray-600 pr-4 italic">{sauce}</td>
-                    <td className="py-1 text-gray-300 print:text-gray-700 w-36">Small Ladle</td>
-                    <td className="py-1 text-gray-300 print:text-gray-700 w-40">1 per bowl</td>
+                  <tr key={`sw-sauce-${sauce}`} className="border-b border-gray-200 print:border-gray-100">
+                    <td className="py-1 text-gray-500 print:text-gray-600 pr-4 italic">{sauce}</td>
+                    <td className="py-1 text-gray-700 print:text-gray-700 w-36">Small Ladle</td>
+                    <td className="py-1 text-gray-700 print:text-gray-700 w-40">1 per bowl</td>
                     <td />
                   </tr>
                 ))
@@ -326,8 +326,8 @@ function BEODocument({ data }: { data: FullData }) {
                     <td colSpan={4} className="py-2 px-1">
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-[#C8973A] print:text-black tabular-nums">{c.total}</span>
-                        <span className="text-sm font-semibold text-white print:text-black">Chafing {c.total === 1 ? 'Dish' : 'Dishes'} Needed</span>
-                        <span className="text-xs text-gray-400 print:text-gray-600 ml-1">
+                        <span className="text-sm font-semibold text-gray-900 print:text-black">Chafing {c.total === 1 ? 'Dish' : 'Dishes'} Needed</span>
+                        <span className="text-xs text-gray-500 print:text-gray-600 ml-1">
                           {[
                             c.fullSize > 0 ? `${c.fullSize} × full-size (200 pan)` : '',
                             c.halfSize > 0 ? `${c.halfSize} × half-size (1/2 pan)` : '',
@@ -399,7 +399,7 @@ function BEODocument({ data }: { data: FullData }) {
                   ? <Row label="Drink Tickets" value={`${details.drink_tickets} tickets`} /> : null}
                 {details.bar_tab_limit ? <Row label="Tab Limit" value={formatCurrency(details.bar_tab_limit)} /> : null}
                 {details.tab_details && (
-                  <p className="text-sm text-gray-300 print:text-gray-700 leading-relaxed whitespace-pre-wrap mt-1 text-xs">
+                  <p className="text-sm text-gray-700 print:text-gray-700 leading-relaxed whitespace-pre-wrap mt-1 text-xs">
                     {details.tab_details}
                   </p>
                 )}
@@ -412,18 +412,18 @@ function BEODocument({ data }: { data: FullData }) {
               <SectionHeader>Add-ons & Extras</SectionHeader>
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-white/20 print:border-gray-300">
-                    <th className="text-left py-1 text-gray-400 print:text-gray-600 font-semibold">Item</th>
-                    <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-12">Qty</th>
-                    <th className="text-right py-1 text-gray-400 print:text-gray-600 font-semibold w-20 pl-2">Unit</th>
+                  <tr className="border-b border-gray-300 print:border-gray-300">
+                    <th className="text-left py-1 text-gray-500 print:text-gray-600 font-semibold">Item</th>
+                    <th className="text-right py-1 text-gray-500 print:text-gray-600 font-semibold w-12">Qty</th>
+                    <th className="text-right py-1 text-gray-500 print:text-gray-600 font-semibold w-20 pl-2">Unit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {addOns.map(a => (
-                    <tr key={a.id} className="border-b border-white/5 print:border-gray-100">
-                      <td className="py-1 text-white print:text-black">{a.item_name}</td>
-                      <td className="py-1 text-right tabular-nums text-white print:text-black font-medium">{a.qty}</td>
-                      <td className="py-1 text-right text-gray-400 print:text-gray-600 pl-2">{a.unit}</td>
+                    <tr key={a.id} className="border-b border-gray-200 print:border-gray-100">
+                      <td className="py-1 text-gray-900 print:text-black">{a.item_name}</td>
+                      <td className="py-1 text-right tabular-nums text-gray-900 print:text-black font-medium">{a.qty}</td>
+                      <td className="py-1 text-right text-gray-500 print:text-gray-600 pl-2">{a.unit}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -452,14 +452,14 @@ function BEODocument({ data }: { data: FullData }) {
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 print:text-gray-400 uppercase tracking-wide font-semibold mb-1">Setup Checklist</p>
-                  <ul className="text-xs space-y-0.5 text-gray-300 print:text-gray-700">
+                  <p className="text-xs text-gray-500 print:text-gray-500 uppercase tracking-wide font-semibold mb-1">Setup Checklist</p>
+                  <ul className="text-xs space-y-0.5 text-gray-700 print:text-gray-700">
                     <li>☐ Black tablecloths on all tables</li>
                     <li>☐ Beer list &amp; wine list on each table</li>
                     <li>☐ Black velvet ropes at marked positions</li>
                     <li>☐ Lights dimmed · Music on Source 2, vol ≥ 90</li>
                     <li>☐ Garage door: open only if 65°–75°</li>
-                    <li className={tvOn ? 'font-semibold text-white print:text-black' : 'text-gray-500 print:text-gray-400'}>
+                    <li className={tvOn ? 'font-semibold text-gray-900 print:text-black' : 'text-gray-500 print:text-gray-500'}>
                       ☐ Big Screen TV: {tvOn ? 'YES — set up and test' : 'N/A'}
                     </li>
                     <li>☐ Post-event: linens in washing machine immediately</li>
@@ -468,9 +468,9 @@ function BEODocument({ data }: { data: FullData }) {
               </div>
               {rec.warning && (
                 <div className={`rounded-lg px-3 py-1.5 text-sm print:rounded-none print:px-0 print:border-l-4 print:pl-3
-                  ${rec.warningLevel === 'danger'  ? 'bg-red-900/20 border border-red-500/30 text-red-300 print:border-red-600 print:text-red-700' :
-                    rec.warningLevel === 'caution' ? 'bg-yellow-900/20 border border-yellow-500/30 text-yellow-300 print:border-yellow-600 print:text-yellow-800' :
-                    'bg-blue-900/20 border border-blue-500/30 text-blue-300 print:border-blue-600 print:text-blue-800'}`}>
+                  ${rec.warningLevel === 'danger'  ? 'bg-red-50 border border-red-200 text-red-700 print:border-red-600 print:text-red-700' :
+                    rec.warningLevel === 'caution' ? 'bg-yellow-50 border border-yellow-200 text-yellow-700 print:border-yellow-600 print:text-yellow-800' :
+                    'bg-blue-50 border border-blue-200 text-blue-700 print:border-blue-600 print:text-blue-800'}`}>
                   {rec.warning}
                 </div>
               )}
@@ -502,7 +502,7 @@ function BEODocument({ data }: { data: FullData }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-1.5 pb-0.5 border-b border-white/10 print:border-gray-300">
+    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-1.5 pb-0.5 border-b border-gray-200 print:border-gray-300">
       {children}
     </h3>
   )
@@ -511,8 +511,8 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 function Row({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="flex gap-2 text-sm py-0.5">
-      <span className="text-gray-400 print:text-gray-500 shrink-0 w-24">{label}</span>
-      <span className={`font-medium ${alert ? 'text-red-400 print:text-red-700' : 'text-white print:text-black'}`}>
+      <span className="text-gray-500 print:text-gray-500 shrink-0 w-24">{label}</span>
+      <span className={`font-medium ${alert ? 'text-red-400 print:text-red-700' : 'text-gray-900 print:text-black'}`}>
         {value}
       </span>
     </div>
@@ -522,12 +522,12 @@ function Row({ label, value, alert }: { label: string; value: string; alert?: bo
 function NoteBlock({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className={`rounded-lg px-3 py-2 print:rounded-none print:px-0 print:bg-transparent
-      ${alert ? 'bg-red-900/20 border border-red-500/30 print:border-l-4 print:border-red-600 print:pl-3' : 'bg-white/5'}`}>
+      ${alert ? 'bg-red-50 border border-red-200 print:border-l-4 print:border-red-600 print:pl-3' : 'bg-gray-50'}`}>
       <p className={`text-xs font-bold uppercase tracking-wide mb-0.5
-        ${alert ? 'text-red-400 print:text-red-700' : 'text-gray-400 print:text-gray-500'}`}>
+        ${alert ? 'text-red-400 print:text-red-700' : 'text-gray-500 print:text-gray-500'}`}>
         {label}
       </p>
-      <p className="text-sm text-white print:text-black leading-relaxed whitespace-pre-wrap">{value}</p>
+      <p className="text-sm text-gray-900 print:text-black leading-relaxed whitespace-pre-wrap">{value}</p>
     </div>
   )
 }

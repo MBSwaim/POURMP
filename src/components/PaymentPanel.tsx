@@ -134,10 +134,10 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
     <div className="space-y-5">
 
       {/* Charges Summary */}
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Charges Summary</h3>
         {!hasPackage ? (
-          <p className="text-sm text-gray-400">No package or guest count set — add those in the Overview tab to see a summary.</p>
+          <p className="text-sm text-gray-500">No package or guest count set — add those in the Overview tab to see a summary.</p>
         ) : (
           <div className="space-y-1">
             <SummaryRow label="Food Subtotal" value={formatCurrency(foodSub)} />
@@ -156,7 +156,7 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
                 value={formatCurrency(gratuityAmt)}
               />
             )}
-            <div className="border-t border-white/10 mt-2 pt-2 space-y-1">
+            <div className="border-t border-gray-200 mt-2 pt-2 space-y-1">
               <SummaryRow label="Grand Total" value={formatCurrency(grandTotal)} bold />
               <SummaryRow label="Total Collected" value={formatCurrency(totalCollected)} highlight="green" />
               <SummaryRow
@@ -171,12 +171,12 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
       </div>
 
       {/* Deposit */}
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Deposit</h3>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Amount ($)</label>
+              <label className="text-xs text-gray-500">Amount ($)</label>
               <Input
                 type="number"
                 min="0"
@@ -188,11 +188,11 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Status</label>
+              <label className="text-xs text-gray-500">Status</label>
               <select
                 value={depositForm.status}
                 onChange={e => setDepositForm(f => ({ ...f, status: e.target.value }))}
-                className="w-full h-8 bg-[#0f1e2d] border border-white/20 rounded-md px-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+                className="w-full h-8 bg-white border border-gray-300 rounded-md px-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
               >
                 <option value="pending">Pending</option>
                 <option value="paid">Paid</option>
@@ -200,7 +200,7 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Due Date</label>
+              <label className="text-xs text-gray-500">Due Date</label>
               <Input
                 type="date"
                 value={depositForm.due_date}
@@ -209,7 +209,7 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Paid Date</label>
+              <label className="text-xs text-gray-500">Paid Date</label>
               <Input
                 type="date"
                 value={depositForm.paid_date}
@@ -243,15 +243,15 @@ export function PaymentPanel({ eventId, payments, details, addOns, pkg, onUpdate
       </div>
 
       {/* Payment Records */}
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Payment Records</h3>
         {payments.length === 0 ? (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500">
             No payments on file. Confirm the event to auto-generate deposit and final payment, or add a deposit above.
           </p>
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-3 pb-1 border-b border-white/10 text-xs font-medium tracking-widest uppercase text-gray-500">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-3 pb-1 border-b border-gray-200 text-xs font-medium tracking-widest uppercase text-gray-500">
               <span>Type</span>
               <span className="text-right">Amount</span>
               <span className="text-right">Due</span>
@@ -278,11 +278,11 @@ function PaymentRow({ payment: p, onMarkPaid, loading }: {
 }) {
   const isPaid = p.status === 'paid'
   return (
-    <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5">
+    <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5">
       <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 items-center">
-        <span className="text-sm font-medium capitalize text-white">{p.payment_type}</span>
-        <span className="text-sm text-white text-right tabular-nums">{formatCurrency(p.amount_due)}</span>
-        <span className="text-sm text-gray-400 text-right whitespace-nowrap">{p.due_date || '—'}</span>
+        <span className="text-sm font-medium capitalize text-gray-900">{p.payment_type}</span>
+        <span className="text-sm text-gray-900 text-right tabular-nums">{formatCurrency(p.amount_due)}</span>
+        <span className="text-sm text-gray-500 text-right whitespace-nowrap">{p.due_date || '—'}</span>
         <span className={`text-sm text-right whitespace-nowrap ${isPaid ? 'text-green-400' : 'text-gray-500'}`}>
           {p.paid_date || '—'}
         </span>
@@ -317,11 +317,11 @@ function SummaryRow({ label, value, bold, highlight }: {
   const valueColor =
     highlight === 'green' ? 'text-green-400' :
     highlight === 'amber' ? 'text-[#C8973A]' :
-    'text-white'
+    'text-gray-900'
 
   return (
     <div className={`flex justify-between text-sm ${bold ? 'font-semibold' : ''}`}>
-      <span className="text-gray-400">{label}</span>
+      <span className="text-gray-500">{label}</span>
       <span className={`tabular-nums ${valueColor}`}>{value}</span>
     </div>
   )

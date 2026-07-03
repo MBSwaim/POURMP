@@ -157,10 +157,10 @@ export function calcBarImpact(ev: EventForNotes): BarImpactResult {
 // ─── Impact level display helpers ─────────────────────────────────────────────
 
 export const IMPACT_COLORS: Record<ImpactLevel, { bg: string; text: string; border: string; dot: string }> = {
-  Low:      { bg: 'bg-green-900/30',  text: 'text-green-300',  border: 'border-green-700/50',  dot: 'bg-green-400'  },
-  Moderate: { bg: 'bg-yellow-900/30', text: 'text-yellow-300', border: 'border-yellow-700/50', dot: 'bg-yellow-400' },
-  High:     { bg: 'bg-orange-900/30', text: 'text-orange-300', border: 'border-orange-700/50', dot: 'bg-orange-400' },
-  Critical: { bg: 'bg-red-900/30',    text: 'text-red-300',    border: 'border-red-700/50',    dot: 'bg-red-400'    },
+  Low:      { bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-400'  },
+  Moderate: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-400' },
+  High:     { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
+  Critical: { bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    dot: 'bg-red-400'    },
 }
 
 export const IMPACT_PRINT_COLORS: Record<ImpactLevel, string> = {

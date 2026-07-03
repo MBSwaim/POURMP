@@ -101,14 +101,14 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
       {/* Header */}
       <div>
         <h1 className="text-lg font-bold text-[#C8973A] tracking-widest uppercase">Setup Checklist</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Tap each item to check it off</p>
+        <p className="text-xs text-gray-500 mt-0.5">Tap each item to check it off</p>
       </div>
 
       {/* Event selector */}
       <select
         value={selectedId}
         onChange={e => loadEvent(e.target.value)}
-        className="w-full bg-[#1F3348] border border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
       >
         <option value="">— Select an event —</option>
         {events.map(e => (
@@ -122,15 +122,15 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
       {selectedId && event && (
         <>
           {/* Event summary */}
-          <div className="rounded-xl bg-[#1F3348]/60 border border-white/10 px-4 py-3">
+          <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-white text-sm">{event.event_name}</p>
+                <p className="font-semibold text-gray-900 text-sm">{event.event_name}</p>
                 {clientName && <p className="text-xs text-[#C8973A] mt-0.5">{clientName}</p>}
               </div>
-              <div className="text-right text-xs text-gray-400 shrink-0">
+              <div className="text-right text-xs text-gray-500 shrink-0">
                 {event.event_time && (
-                  <p className="font-semibold text-white">{to12Hour(event.event_time)}</p>
+                  <p className="font-semibold text-gray-900">{to12Hour(event.event_time)}</p>
                 )}
                 {eventFull?.details?.guest_count ? (
                   <p>{eventFull.details.guest_count} guests</p>
@@ -142,14 +142,14 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
           {/* Progress bar */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className={`font-semibold ${allDone ? 'text-green-400' : 'text-gray-300'}`}>
+              <span className={`font-semibold ${allDone ? 'text-green-400' : 'text-gray-700'}`}>
                 {allDone ? '✓ All done!' : `${doneCount} / ${totalCount} complete`}
               </span>
               <span className={`font-bold tabular-nums ${allDone ? 'text-green-400' : 'text-[#C8973A]'}`}>
                 {pct}%
               </span>
             </div>
-            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${allDone ? 'bg-green-500' : 'bg-[#C8973A]'}`}
                 style={{ width: `${pct}%` }}
@@ -170,13 +170,13 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
                       onClick={() => toggle(item.key)}
                       className={`w-full text-left flex items-start gap-3 px-4 py-4 rounded-xl border transition-all active:scale-[0.98]
                         ${isChecked
-                          ? 'bg-green-900/30 border-green-500/40 text-green-200'
-                          : 'bg-[#1F3348]/60 border-white/10 text-white hover:border-white/20'
+                          ? 'bg-green-50 border-green-200 text-green-800'
+                          : 'bg-gray-50 border-gray-200 text-gray-900 hover:border-gray-300'
                         }`}
                     >
                       {/* Checkbox circle */}
                       <div className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all
-                        ${isChecked ? 'bg-green-500 border-green-500' : 'border-white/30'}`}
+                        ${isChecked ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}
                       >
                         {isChecked && <span className="text-white text-xs font-bold">✓</span>}
                       </div>
@@ -185,7 +185,7 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
                           {item.label}
                         </p>
                         {item.note && !isChecked && (
-                          <p className="text-xs text-gray-400 mt-0.5 leading-snug">{item.note}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-snug">{item.note}</p>
                         )}
                       </div>
                     </button>
@@ -199,15 +199,15 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
           {(eventFull?.details?.beo_notes || eventFull?.details?.kitchen_notes) && (
             <div className="space-y-3">
               {eventFull.details?.beo_notes && (
-                <div className="rounded-xl bg-[#1F3348]/60 border border-white/10 px-4 py-3">
+                <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
                   <p className="text-[10px] font-bold tracking-widest uppercase text-[#C8973A] mb-1">BEO Notes</p>
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{eventFull.details.beo_notes}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{eventFull.details.beo_notes}</p>
                 </div>
               )}
               {eventFull.details?.kitchen_notes && (
-                <div className="rounded-xl bg-[#1F3348]/60 border border-white/10 px-4 py-3">
+                <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
                   <p className="text-[10px] font-bold tracking-widest uppercase text-[#C8973A] mb-1">Kitchen Notes</p>
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{eventFull.details.kitchen_notes}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{eventFull.details.kitchen_notes}</p>
                 </div>
               )}
             </div>
@@ -215,7 +215,7 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
 
           {/* Reset */}
           <div className="text-center pt-2">
-            <button onClick={resetAll} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+            <button onClick={resetAll} className="text-xs text-gray-600 hover:text-gray-500 transition-colors">
               Reset checklist
             </button>
           </div>

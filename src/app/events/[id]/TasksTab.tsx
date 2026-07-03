@@ -23,9 +23,9 @@ const CATEGORY_HINTS: Record<TaskCategory, string> = {
 
 const ROLE_COLORS: Record<TaskRole, string> = {
   Lead:    'bg-[#C8973A]/20 text-[#C8973A] border-[#C8973A]/40',
-  FOH:     'bg-blue-900/30 text-blue-300 border-blue-700/40',
-  Kitchen: 'bg-green-900/30 text-green-300 border-green-700/40',
-  Bar:     'bg-purple-900/30 text-purple-300 border-purple-700/40',
+  FOH:     'bg-blue-50 text-blue-700 border-blue-200',
+  Kitchen: 'bg-green-50 text-green-700 border-green-200',
+  Bar:     'bg-purple-50 text-purple-700 border-purple-200',
 }
 
 export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
@@ -90,16 +90,16 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
   return (
     <div className="space-y-4">
       {/* Event Milestone Tracker */}
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Event Milestone Tracker</h3>
         <div className="grid grid-cols-3 gap-4">
           {milestones.map(m => (
             <div key={m.category}>
-              <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
                 <span className="font-medium">{m.category}</span>
                 <span className="tabular-nums">{m.completed}/{m.total}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                 <div
                   className={`h-full transition-all ${m.pct === 100 ? 'bg-green-500' : 'bg-[#C8973A]'}`}
                   style={{ width: `${m.pct}%` }}
@@ -113,7 +113,7 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
       {/* Task Complexity Rating */}
       <div className={`rounded-xl border px-4 py-3.5 flex items-center justify-between gap-4 ${complexityColors.bg} ${complexityColors.border}`}>
         <div className="shrink-0">
-          <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Task Complexity Rating</p>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Task Complexity Rating</p>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${complexityColors.dot}`} />
             <span className={`text-xl font-bold ${complexityColors.text}`}>{complexity.level}</span>
@@ -121,7 +121,7 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
         </div>
         <div className="text-right">
           {complexity.factors.length > 0 ? complexity.factors.map((f, i) => (
-            <p key={i} className="text-xs text-gray-400">{f}</p>
+            <p key={i} className="text-xs text-gray-500">{f}</p>
           )) : <p className="text-xs text-gray-500">No complexity factors — straightforward event</p>}
         </div>
       </div>
@@ -130,8 +130,8 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
       {CATEGORIES.map(category => {
         const inCategory = tasks.filter(t => t.category === category)
         return (
-          <div key={category} className="rounded-xl border border-white/10 bg-[#1F3348]/50 overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
+          <div key={category} className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{category} Tasks</h3>
                 <span className="text-xs text-gray-500 tabular-nums">
@@ -143,7 +143,7 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
             {inCategory.length === 0 ? (
               <p className="px-4 py-4 text-sm text-gray-500 italic">No {category.toLowerCase()} tasks for this event.</p>
             ) : (
-              <div className="divide-y divide-white/5">
+              <div className="divide-y divide-gray-200">
                 {inCategory.map(task => (
                   <div key={task.id} className="px-4 py-2.5">
                     <div className="flex items-start gap-3">
@@ -155,7 +155,7 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={task.completed ? 'text-sm text-gray-500 line-through' : 'text-sm text-white'}>
+                          <span className={task.completed ? 'text-sm text-gray-500 line-through' : 'text-sm text-gray-900'}>
                             {task.label}
                           </span>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide border shrink-0 ${ROLE_COLORS[task.role as TaskRole] ?? ROLE_COLORS.Lead}`}>
@@ -174,10 +174,10 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
                             placeholder="Add a note…"
                             rows={2}
                             autoFocus
-                            className="mt-1.5 w-full bg-[#162840] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
+                            className="mt-1.5 w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50 resize-none"
                           />
                         ) : task.notes ? (
-                          <p className="text-xs text-gray-400 mt-1 italic">&ldquo;{task.notes}&rdquo;</p>
+                          <p className="text-xs text-gray-500 mt-1 italic">&ldquo;{task.notes}&rdquo;</p>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -205,13 +205,13 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
       })}
 
       {/* Add manual task */}
-      <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4 space-y-2">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Add Task</h3>
         <div className="flex flex-wrap gap-2">
           <select
             value={newTask.category}
             onChange={e => setNewTask(n => ({ ...n, category: e.target.value as TaskCategory }))}
-            className="bg-[#162840] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#C8973A]/50"
+            className="bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
           >
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -220,12 +220,12 @@ export function TasksTab({ eventId, initialTasks, taskContext }: Props) {
             onChange={e => setNewTask(n => ({ ...n, label: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && addTask()}
             placeholder="Task description"
-            className="flex-1 min-w-40 bg-[#162840] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50"
+            className="flex-1 min-w-40 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-600 focus:outline-none focus:border-[#C8973A]/50"
           />
           <select
             value={newTask.role}
             onChange={e => setNewTask(n => ({ ...n, role: e.target.value as TaskRole }))}
-            className="bg-[#162840] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#C8973A]/50"
+            className="bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-[#C8973A]/50"
           >
             {TASK_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </select>

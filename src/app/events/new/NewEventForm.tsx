@@ -152,7 +152,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             <select
               value={form.status}
               onChange={(e) => set('status', e.target.value)}
-              className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               {EVENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -182,7 +182,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
                 checked={form.date_flexible as boolean}
                 onCheckedChange={(v) => set('date_flexible', Boolean(v))}
               />
-              <Label htmlFor="date_flexible" className="text-xs text-gray-400 cursor-pointer">My date is flexible</Label>
+              <Label htmlFor="date_flexible" className="text-xs text-gray-500 cursor-pointer">My date is flexible</Label>
             </div>
           </Field>
           <Field label={hours ? `Event Start Time (${to12Hour(hours.minStart)} – ${to12Hour(hours.close)})` : 'Event Start Time'} required>
@@ -208,7 +208,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                     form.event_duration_mins === val
                       ? 'bg-[#C8973A]/20 border-[#C8973A]/60 text-[#C8973A]'
-                      : 'bg-white/5 border-white/20 text-gray-400 hover:border-white/40 hover:text-gray-200'
+                      : 'bg-gray-50 border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
                   }`}
                 >
                   {label}
@@ -248,7 +248,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             <select
               value={form.client_id}
               onChange={(e) => set('client_id', e.target.value)}
-              className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               <option value="">— select —</option>
               {clients.map((c) => (
@@ -287,7 +287,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             <select
               value={form.package_id}
               onChange={(e) => set('package_id', e.target.value)}
-              className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               <option value="">— select package —</option>
               {packages.map((p) => (
@@ -304,11 +304,11 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             />
           </Field>
           {Number(form.guest_count) > 0 && Number(form.guest_count) < 20 && (
-            <div className="col-span-2 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <div className="col-span-2 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <span className="text-lg leading-none mt-0.5">💡</span>
               <span>
                 For parties under 20 guests, a{' '}
-                <Link href="/reservations" className="underline underline-offset-2 hover:text-amber-100 font-medium">
+                <Link href="/reservations" className="underline underline-offset-2 hover:text-amber-900 font-medium">
                   table reservation
                 </Link>
                 {' '}may be a better fit than a private event booking.
@@ -333,7 +333,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
           </Field>
         </div>
         {form.package_id && Number(form.guest_count) > 0 && (
-          <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
+          <div className="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
             <p className="text-sm font-medium mb-3 text-[#C8973A]">Live Quantity Preview</p>
             <CateringCalculator
               packageId={form.package_id}
@@ -352,7 +352,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             <select
               value={form.bar_tab_type}
               onChange={(e) => set('bar_tab_type', e.target.value)}
-              className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               <option value="">— no bar tab —</option>
               <option value="Pre-Paid Drink Ticket(s)">BAR TAB | Pre-Paid Drink Ticket(s)</option>
@@ -431,7 +431,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-5 space-y-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
       <h2 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{title}</h2>
       {children}
     </div>
@@ -440,7 +440,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function AutoTimeCard({ label, time, note }: { label: string; time: string; note: string }) {
   return (
-    <div className="rounded-lg bg-[#0f1e2d]/60 border border-white/10 px-3 py-2.5 text-center">
+    <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-center">
       <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">{label}</p>
       <p className="text-base font-semibold text-[#C8973A]">{to12Hour(time)}</p>
       <p className="text-[10px] text-gray-600 mt-0.5">{note}</p>
@@ -450,7 +450,7 @@ function AutoTimeCard({ label, time, note }: { label: string; time: string; note
 
 function BarTabInfo({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-[#C8973A]/30 bg-[#C8973A]/5 px-4 py-3 text-gray-300 leading-relaxed font-crimson text-base italic">
+    <div className="rounded-lg border border-[#C8973A]/30 bg-[#C8973A]/5 px-4 py-3 text-gray-700 leading-relaxed font-crimson text-base italic">
       {children}
     </div>
   )
@@ -459,7 +459,7 @@ function BarTabInfo({ children }: { children: React.ReactNode }) {
 function Field({ label, children, required, className }: { label: string; children: React.ReactNode; required?: boolean; className?: string }) {
   return (
     <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label className="text-gray-300 text-sm">
+      <Label className="text-gray-700 text-sm">
         {label}{required && <span className="text-red-400 ml-1">*</span>}
       </Label>
       {children}

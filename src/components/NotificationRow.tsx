@@ -28,7 +28,7 @@ export function NotificationRow({ item, onComplete, onMarkReserved }: {
   onMarkReserved?: (entityId: number) => void
 }) {
   return (
-    <div className="px-4 py-3 hover:bg-white/[0.03] transition-colors">
+    <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -36,16 +36,16 @@ export function NotificationRow({ item, onComplete, onMarkReserved }: {
               {ALERT_LABELS[item.alert_key] ?? item.alert_key}
             </span>
             {item.actionHref && (
-              <Link href={item.actionHref} className="text-xs text-gray-500 hover:text-white transition-colors">
+              <Link href={item.actionHref} className="text-xs text-gray-500 hover:text-gray-900 transition-colors">
                 Open →
               </Link>
             )}
           </div>
-          <p className="text-sm font-semibold text-white mt-1">{item.title}</p>
+          <p className="text-sm font-semibold text-gray-900 mt-1">{item.title}</p>
           <p className="text-xs text-gray-500">{item.subtitle}</p>
           <ul className="mt-1.5 space-y-0.5">
             {item.bullets.map((b, i) => (
-              <li key={i} className="text-xs text-gray-400">{b}</li>
+              <li key={i} className="text-xs text-gray-500">{b}</li>
             ))}
           </ul>
         </div>
@@ -53,7 +53,7 @@ export function NotificationRow({ item, onComplete, onMarkReserved }: {
           {item.status === 'pending' && onComplete && (
             <button
               onClick={() => onComplete(item.id)}
-              className="text-xs px-2.5 py-1 rounded-md bg-white/10 text-gray-300 hover:bg-[#C8973A] hover:text-white transition-colors whitespace-nowrap"
+              className="text-xs px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-[#C8973A] hover:text-white transition-colors whitespace-nowrap"
             >
               Mark Complete
             </button>

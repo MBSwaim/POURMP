@@ -13,7 +13,7 @@ export default function BEOPage({ searchParams }: { searchParams: { event?: stri
     <div className="p-6 max-w-4xl mx-auto print:p-0 print:max-w-none">
       <div className="mb-6 print:hidden">
         <h1 className="text-2xl font-bold">Banquet Event Order</h1>
-        <p className="text-gray-400 text-sm mt-1">
+        <p className="text-gray-500 text-sm mt-1">
           Full run-of-show document for confirmed upcoming events.
         </p>
       </div>

@@ -188,11 +188,7 @@ export function generateToastNotes(ev: EventForNotes, tasks: BriefTask[] = []): 
       barImpactLevel: calcBarImpact(ev).level,
     }
     const complexity = calcTaskComplexity(taskCtx, dynamicCount)
-    const setupTasks = tasks.filter(t => t.category === 'Setup')
-    const breakdownTasks = tasks.filter(t => t.category === 'Breakdown')
-    const setupDone = setupTasks.filter(t => t.completed).length
-    const breakdownDone = breakdownTasks.filter(t => t.completed).length
-    lines.push(`Task Complexity: ${complexity.level.toUpperCase()} — Setup ${setupDone}/${setupTasks.length} · Breakdown ${breakdownDone}/${breakdownTasks.length} complete (see Tasks tab)`)
+    lines.push(`Task Complexity: ${complexity.level.toUpperCase()} (see Internal Tasks section below for full checklist)`)
   }
   lines.push('')
 
@@ -255,6 +251,36 @@ export function generateToastNotes(ev: EventForNotes, tasks: BriefTask[] = []): 
   // else lines.push('\t• Audio/visual equipment powered down and secured if applicable')
   // lines.push('\t• Production Space cleaned and reset for normal brewery operations')
   // lines.push('\t• Final event walkthrough completed by MP staff')
+
+  // INTERNAL TASKS — staff prep reference only. Not part of the customer-facing
+  // BEO/proposal/invoice content; Toast remains the system of record for those.
+  if (tasks.length > 0) {
+    lines.push('')
+    lines.push('INTERNAL TASKS — STAFF USE ONLY (do not copy into customer-facing Toast fields)')
+
+    const renderTaskLines = (category: string) => {
+      const inCategory = tasks.filter(t => t.category === category)
+      if (inCategory.length === 0) {
+        lines.push('  None for this event')
+        return
+      }
+      for (const t of inCategory) {
+        lines.push(`  ${t.completed ? '☑' : '☐'} ${t.label} (${t.role})`)
+      }
+    }
+
+    lines.push('')
+    lines.push('SETUP TASKS SUMMARY')
+    renderTaskLines('Setup')
+
+    lines.push('')
+    lines.push('BREAKDOWN TASKS SUMMARY')
+    renderTaskLines('Breakdown')
+
+    lines.push('')
+    lines.push('SPECIAL EVENT TASKS')
+    renderTaskLines('Dynamic')
+  }
 
   return lines.join('\n')
 }

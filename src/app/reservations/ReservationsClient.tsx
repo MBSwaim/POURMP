@@ -13,11 +13,11 @@ import { formatPhoneNumber } from '@/lib/phone'
 const TABLE_CAPACITIES = Array.from(new Set(TAPROOM_TABLES.map((t) => t.seats))).sort((a, b) => a - b)
 
 const STATUS_COLORS: Record<string, string> = {
-  Confirmed: 'bg-green-500/20 text-green-300 border-green-500/30',
-  Seated: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  Completed: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-  Cancelled: 'bg-red-500/20 text-red-300 border-red-500/30',
-  'No-Show': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  Confirmed: 'bg-green-50 text-green-700 border-green-200',
+  Seated: 'bg-blue-50 text-blue-700 border-blue-200',
+  Completed: 'bg-slate-50 text-slate-700 border-slate-200',
+  Cancelled: 'bg-red-50 text-red-700 border-red-200',
+  'No-Show': 'bg-orange-50 text-orange-700 border-orange-200',
 }
 
 const EMPTY_FORM = {
@@ -148,15 +148,15 @@ export function ReservationsClient({ initialReservations }: { initialReservation
           {showForm ? 'Cancel' : '+ New Reservation'}
         </Button>
         <div className="flex items-center gap-2 ml-auto">
-          <Label className="text-sm text-gray-400">Filter by date</Label>
+          <Label className="text-sm text-gray-500">Filter by date</Label>
           <Input
             type="date"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="w-44 bg-[#1F3348] border-white/20 text-white text-sm"
+            className="w-44 bg-white border-gray-300 text-gray-900 text-sm"
           />
           {filterDate && (
-            <button onClick={() => setFilterDate('')} className="text-xs text-gray-400 hover:text-white">
+            <button onClick={() => setFilterDate('')} className="text-xs text-gray-500 hover:text-gray-900">
               Clear
             </button>
           )}
@@ -165,7 +165,7 @@ export function ReservationsClient({ initialReservations }: { initialReservation
 
       {/* New Reservation Form */}
       {showForm && (
-        <div className="rounded-xl border border-[#C8973A]/30 bg-[#1F3348]/60 p-5">
+        <div className="rounded-xl border border-[#C8973A]/30 bg-white p-5">
           <h2 className="text-base font-semibold text-[#C8973A] mb-4">New Reservation</h2>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -191,7 +191,7 @@ export function ReservationsClient({ initialReservations }: { initialReservation
                 <select
                   value={form.status}
                   onChange={(e) => set('status', e.target.value)}
-                  className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
                 >
                   {RESERVATION_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -203,7 +203,7 @@ export function ReservationsClient({ initialReservations }: { initialReservation
                 <select
                   value={form.assigned_staff_id}
                   onChange={(e) => set('assigned_staff_id', e.target.value)}
-                  className="w-full bg-[#0f1e2d] border border-white/20 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
                 >
                   <option value="">Unassigned</option>
                   {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -230,45 +230,45 @@ export function ReservationsClient({ initialReservations }: { initialReservation
 
       {/* Reservation List */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/30 p-10 text-center text-gray-400">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-10 text-center text-gray-500">
           {filterDate ? 'No reservations on this date.' : 'No upcoming reservations.'}
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <div className="rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm min-w-[880px]">
-            <thead className="bg-[#1F3348] border-b border-white/10">
+            <thead className="bg-white border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Date & Time</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Guest</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Party</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Contact</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Notes</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Tables</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Lead</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Alert</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Status</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Date & Time</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Guest</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Party</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Contact</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Notes</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Tables</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Lead</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Alert</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {filtered.map((r, i) => (
-                <tr key={r.id} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-[#1F3348]/20' : ''} hover:bg-white/5`}>
+                <tr key={r.id} className={`border-b border-gray-200 ${i % 2 === 0 ? 'bg-gray-50' : ''} hover:bg-gray-50`}>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="font-medium text-white">{formatDate(r.reservation_date)}</div>
-                    <div className="text-gray-400 text-xs">{formatTime(r.reservation_time)}</div>
+                    <div className="font-medium text-gray-900">{formatDate(r.reservation_date)}</div>
+                    <div className="text-gray-500 text-xs">{formatTime(r.reservation_time)}</div>
                   </td>
-                  <td className="px-4 py-3 font-medium text-white">{r.client_name}</td>
-                  <td className="px-4 py-3 text-gray-300">{r.party_size || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3 font-medium text-gray-900">{r.client_name}</td>
+                  <td className="px-4 py-3 text-gray-700">{r.party_size || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
                     {r.phone && <div>{r.phone}</div>}
                     {r.email && <div>{r.email}</div>}
                     {!r.phone && !r.email && '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-400 max-w-[180px] truncate">{r.notes || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{r.notes || '—'}</td>
                   <td className="px-4 py-3">
                     <TableAssignDialog value={r.table_numbers} onChange={(v) => updateTableNumbers(r.id, v)} partySize={r.party_size} guestName={r.client_name} />
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{staffName(r.assigned_staff_id) ?? 'Unassigned'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{staffName(r.assigned_staff_id) ?? 'Unassigned'}</td>
                   <td className="px-4 py-3">
                     <Input
                       type="number"
@@ -283,9 +283,9 @@ export function ReservationsClient({ initialReservations }: { initialReservation
                     <select
                       value={r.status}
                       onChange={(e) => updateStatus(r.id, e.target.value)}
-                      className={`text-xs rounded-full px-2 py-1 border font-medium bg-transparent cursor-pointer focus:outline-none ${STATUS_COLORS[r.status] ?? 'text-gray-300 border-gray-500'}`}
+                      className={`text-xs rounded-full px-2 py-1 border font-medium bg-transparent cursor-pointer focus:outline-none ${STATUS_COLORS[r.status] ?? 'text-gray-700 border-gray-500'}`}
                     >
-                      {RESERVATION_STATUSES.map((s) => <option key={s} value={s} className="bg-[#0f1e2d] text-white">{s}</option>)}
+                      {RESERVATION_STATUSES.map((s) => <option key={s} value={s} className="bg-white text-gray-900">{s}</option>)}
                     </select>
                   </td>
                   <td className="px-4 py-3">
@@ -295,7 +295,7 @@ export function ReservationsClient({ initialReservations }: { initialReservation
                       ) : (
                         <button
                           onClick={() => markReserved(r.id)}
-                          className="text-xs text-[#C8973A] hover:text-white transition-colors whitespace-nowrap"
+                          className="text-xs text-[#C8973A] hover:text-gray-900 transition-colors whitespace-nowrap"
                         >
                           Mark Reserved
                         </button>
@@ -375,7 +375,7 @@ function TableGridPicker({ selected, toggle, toggleCombo, totalSeats, short, par
                 className={`text-xs px-2 py-1 rounded-md border font-medium transition-colors ${
                   active
                     ? 'bg-[#C8973A] text-white border-[#C8973A]'
-                    : 'bg-white/5 text-gray-300 border-white/15 hover:bg-white/10'
+                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
               >
                 {combo.tables.join('+')} ({combo.seats})
@@ -396,7 +396,7 @@ function TableGridPicker({ selected, toggle, toggleCombo, totalSeats, short, par
                 className={`text-xs px-2 py-1 rounded-md border font-medium transition-colors ${
                   selected.has(String(t.number))
                     ? 'bg-[#C8973A] text-white border-[#C8973A]'
-                    : 'bg-white/5 text-gray-300 border-white/15 hover:bg-white/10'
+                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
               >
                 {t.number}
@@ -416,12 +416,12 @@ function TablePicker({ value, onChange, partySize }: { value: string; onChange: 
   return (
     <details className="relative">
       <summary className={`cursor-pointer list-none select-none flex items-center gap-1.5 text-sm ${
-        short ? 'text-red-400' : selected.size > 0 ? 'text-white' : 'text-gray-500 italic'
+        short ? 'text-red-400' : selected.size > 0 ? 'text-gray-900' : 'text-gray-500 italic'
       } hover:text-[#C8973A] transition-colors`}>
         {short && <span title={`Only ${totalSeats} seat(s) selected for a party of ${partySize}`}>⚠</span>}
         {summary}
       </summary>
-      <div className="absolute z-20 mt-1.5 p-2.5 rounded-lg bg-[#0f1e2d] border border-white/20 shadow-xl w-56">
+      <div className="absolute z-20 mt-1.5 p-2.5 rounded-lg bg-white border border-gray-300 shadow-xl w-56">
         <TableGridPicker selected={selected} toggle={toggle} toggleCombo={toggleCombo} totalSeats={totalSeats} short={short} partySize={partySize} />
       </div>
     </details>
@@ -444,8 +444,8 @@ function TableAssignDialog({ value, onChange, partySize, guestName }: { value: s
               short
                 ? 'border-red-500/40 text-red-400 hover:bg-red-500/10'
                 : selected.size > 0
-                  ? 'border-white/20 text-white hover:bg-white/10'
-                  : 'border-white/15 text-gray-500 italic hover:bg-white/5'
+                  ? 'border-gray-300 text-gray-900 hover:bg-gray-100'
+                  : 'border-gray-200 text-gray-500 italic hover:bg-gray-50'
             }`}
           />
         }
@@ -453,12 +453,12 @@ function TableAssignDialog({ value, onChange, partySize, guestName }: { value: s
         {short && <span>⚠</span>}
         {summary}
       </DialogTrigger>
-      <DialogContent className="bg-[#1F3348] text-white ring-white/10 sm:max-w-xs">
+      <DialogContent className="bg-white text-gray-900 ring-gray-200 sm:max-w-xs">
         <DialogHeader>
           <DialogTitle className="text-[#C8973A]">Assign Tables{guestName ? ` — ${guestName}` : ''}</DialogTitle>
         </DialogHeader>
         <TableGridPicker selected={selected} toggle={toggle} toggleCombo={toggleCombo} totalSeats={totalSeats} short={short} partySize={partySize} />
-        <DialogFooter className="bg-transparent border-white/10">
+        <DialogFooter className="bg-transparent border-gray-200">
           <Button onClick={() => setOpen(false)} className="bg-[#C8973A] hover:bg-[#b07d2e] text-white">
             Done
           </Button>
@@ -471,7 +471,7 @@ function TableAssignDialog({ value, onChange, partySize, guestName }: { value: s
 function Field({ label, children, required, className }: { label: string; children: React.ReactNode; required?: boolean; className?: string }) {
   return (
     <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label className="text-gray-300 text-sm">
+      <Label className="text-gray-700 text-sm">
         {label}{required && <span className="text-red-400 ml-1">*</span>}
       </Label>
       {children}

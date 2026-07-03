@@ -19,12 +19,12 @@ const STATUS_FLOW: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  'New':       { bg: 'bg-gray-600/30',    text: 'text-gray-300',   border: 'border-gray-500/40' },
-  'Contacted': { bg: 'bg-blue-600/30',    text: 'text-blue-300',   border: 'border-blue-500/40' },
-  'Converted': { bg: 'bg-purple-600/30',  text: 'text-purple-300', border: 'border-purple-500/40' },
-  'Tentative': { bg: 'bg-yellow-600/30',  text: 'text-yellow-300', border: 'border-yellow-500/40' },
-  'Confirmed': { bg: 'bg-green-600/30',   text: 'text-green-300',  border: 'border-green-500/40' },
-  'Closed':    { bg: 'bg-slate-600/30',   text: 'text-slate-300',  border: 'border-slate-500/40' },
+  'New':       { bg: 'bg-gray-50',    text: 'text-gray-700',   border: 'border-gray-200' },
+  'Contacted': { bg: 'bg-blue-50',    text: 'text-blue-700',   border: 'border-blue-200' },
+  'Converted': { bg: 'bg-purple-50',  text: 'text-purple-700', border: 'border-purple-200' },
+  'Tentative': { bg: 'bg-yellow-50',  text: 'text-yellow-700', border: 'border-yellow-200' },
+  'Confirmed': { bg: 'bg-green-50',   text: 'text-green-700',  border: 'border-green-200' },
+  'Closed':    { bg: 'bg-slate-50',   text: 'text-slate-700',  border: 'border-slate-200' },
 }
 
 interface Props {
@@ -70,24 +70,24 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
   }
 
   return (
-    <div className="rounded-xl border border-white/10 overflow-visible">
+    <div className="rounded-xl border border-gray-200 overflow-visible">
       {events.length === 0 ? (
         <div className="py-12 text-center text-gray-500 text-sm">
           No {statusFilter ?? ''} events in {year}.
         </div>
       ) : (
       <table className="w-full text-sm">
-        <thead className="bg-[#1F3348] border-b border-white/10">
+        <thead className="bg-white border-b border-gray-200">
           <tr>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Event</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Client</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Date</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Guests</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Package</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Value</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Status</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Deposit</th>
-            <th className="text-left px-4 py-3 text-gray-400 font-medium tracking-widest uppercase text-xs">Final</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Event</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Client</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Date</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Guests</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Package</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Value</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Status</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Deposit</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Final</th>
           </tr>
         </thead>
         <tbody>
@@ -100,8 +100,8 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
             return (
               <tr
                 key={ev.id}
-                className={`border-b border-white/5 hover:bg-white/5 transition-colors
-                  ${i % 2 !== 0 ? 'bg-white/[0.02]' : ''}
+                className={`border-b border-gray-200 hover:bg-gray-50 transition-colors
+                  ${i % 2 !== 0 ? 'bg-gray-50/50' : ''}
                   ${isPast && isCurrentYear ? 'opacity-60' : ''}`}
               >
                 <td className="px-4 py-3">
@@ -109,15 +109,15 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                     {ev.event_name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-gray-300">
+                <td className="px-4 py-3 text-gray-700">
                   {ev.first_name || ev.last_name
                     ? `${ev.first_name} ${ev.last_name}`.trim()
                     : <span className="text-gray-600">—</span>}
                 </td>
-                <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{ev.event_date}</td>
-                <td className="px-4 py-3 text-gray-300">{ev.guest_count ?? <span className="text-gray-600">—</span>}</td>
-                <td className="px-4 py-3 text-gray-300">{ev.package_name ?? <span className="text-gray-600">—</span>}</td>
-                <td className="px-4 py-3 text-gray-300">
+                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{ev.event_date}</td>
+                <td className="px-4 py-3 text-gray-700">{ev.guest_count ?? <span className="text-gray-600">—</span>}</td>
+                <td className="px-4 py-3 text-gray-700">{ev.package_name ?? <span className="text-gray-600">—</span>}</td>
+                <td className="px-4 py-3 text-gray-700">
                   {ev.guest_count && ev.price_per_guest
                     ? formatCurrency(ev.guest_count * ev.price_per_guest)
                     : <span className="text-gray-600">—</span>}
@@ -137,7 +137,7 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                     </button>
 
                     {isOpen && (
-                      <div className="absolute z-50 top-full left-0 mt-1 w-40 rounded-xl border border-white/10 bg-[#0f1e2d] shadow-xl overflow-hidden">
+                      <div className="absolute z-50 top-full left-0 mt-1 w-40 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
                         {/* Next step hint */}
                         {nextStatus !== ev.status && (
                           <div className="px-3 pt-2 pb-1">
@@ -162,7 +162,7 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                               className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
                                 ${ev.status === s
                                   ? `${STATUS_COLORS[s].bg} ${STATUS_COLORS[s].text} ${STATUS_COLORS[s].border} border`
-                                  : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
                                 }`}
                             >
                               {ev.status === s && <span className="mr-1">✓</span>}{s}

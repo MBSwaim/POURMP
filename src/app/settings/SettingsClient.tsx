@@ -167,7 +167,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
       <SettingsCard title="Proposal Policies" description="Text included in every proposal PDF. Changes apply to the next generated proposal.">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-widest">General Information</label>
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-widest">General Information</label>
             <Textarea
               value={settings.general_info}
               onChange={e => setSettings(s => ({ ...s, general_info: e.target.value }))}
@@ -176,8 +176,8 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
             />
             <SaveButton onClick={() => saveSetting('general_info')} loading={savingKey === 'general_info'} />
           </div>
-          <div className="space-y-2 pt-2 border-t border-white/10">
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-widest">Cancellation Policy</label>
+          <div className="space-y-2 pt-2 border-t border-gray-200">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-widest">Cancellation Policy</label>
             <Textarea
               value={settings.cancellation_policy}
               onChange={e => setSettings(s => ({ ...s, cancellation_policy: e.target.value }))}
@@ -199,7 +199,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
               onChange={() => toggleNotifSetting('notif_sms_enabled')}
               className="rounded accent-[#C8973A] w-4 h-4"
             />
-            <span className="text-sm text-white">SMS via Twilio</span>
+            <span className="text-sm text-gray-900">SMS via Twilio</span>
             <span className="text-xs text-gray-500">(not yet connected — stub only)</span>
           </label>
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
@@ -209,7 +209,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
               onChange={() => toggleNotifSetting('notif_email_enabled')}
               className="rounded accent-[#C8973A] w-4 h-4"
             />
-            <span className="text-sm text-white">Email backup</span>
+            <span className="text-sm text-gray-900">Email backup</span>
             <span className="text-xs text-gray-500">(not yet connected — stub only)</span>
           </label>
         </div>
@@ -219,16 +219,16 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
       <SettingsCard title="Catering Packages" description="Active packages appear in the event package dropdown. Deactivated packages remain on existing events but cannot be selected for new ones.">
         <div className="space-y-2">
           {packages.map(pkg => (
-            <div key={pkg.id} className="rounded-lg border border-white/10 overflow-hidden">
+            <div key={pkg.id} className="rounded-lg border border-gray-200 overflow-hidden">
 
               {/* Package row */}
-              <div className="flex items-center gap-3 px-3 py-2.5 bg-white/5">
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-white">{pkg.name}</span>
-                    <span className="text-xs text-gray-400 tabular-nums">{formatCurrency(pkg.price_per_guest)}/guest</span>
+                    <span className="text-sm font-semibold text-gray-900">{pkg.name}</span>
+                    <span className="text-xs text-gray-500 tabular-nums">{formatCurrency(pkg.price_per_guest)}/guest</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium
-                      ${pkg.active ? 'bg-green-600/20 text-green-400' : 'bg-gray-600/30 text-gray-500'}`}>
+                      ${pkg.active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {pkg.active ? 'Active' : 'Inactive'}
                     </span>
                     <span className="text-xs text-gray-600 font-mono">{pkg.id}</span>
@@ -240,7 +240,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => editingId === pkg.id ? setEditingId(null) : startEdit(pkg)}
-                    className="text-xs px-2.5 py-1 rounded-md border border-white/15 text-gray-300 hover:bg-white/5 transition-colors"
+                    className="text-xs px-2.5 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     {editingId === pkg.id ? 'Cancel' : 'Edit'}
                   </button>
@@ -258,10 +258,10 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
 
               {/* Inline edit form */}
               {editingId === pkg.id && (
-                <div className="px-3 py-3 bg-[#0f1e2d]/50 border-t border-white/10 space-y-2">
+                <div className="px-3 py-3 bg-gray-50 border-t border-gray-200 space-y-2">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Package Name</label>
+                      <label className="text-xs text-gray-500">Package Name</label>
                       <Input
                         value={editForm.name}
                         onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
@@ -269,7 +269,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Price per Guest ($)</label>
+                      <label className="text-xs text-gray-500">Price per Guest ($)</label>
                       <Input
                         type="number"
                         min="0"
@@ -281,7 +281,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-400">Description</label>
+                    <label className="text-xs text-gray-500">Description</label>
                     <Textarea
                       value={editForm.description}
                       onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
@@ -292,11 +292,11 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                   {/* Menu items — purchase units */}
                   {pkgItems[pkg.id] && pkgItems[pkg.id].length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Kitchen Order Units</p>
+                      <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Kitchen Order Units</p>
                       <div className="space-y-1">
                         {pkgItems[pkg.id].map(item => (
                           <div key={item.id} className="flex items-center gap-2">
-                            <span className="text-xs text-gray-300 flex-1 truncate">{item.item_name}</span>
+                            <span className="text-xs text-gray-700 flex-1 truncate">{item.item_name}</span>
                             <Input
                               value={itemUnits[item.id] ?? ''}
                               onChange={e => setItemUnits(prev => ({ ...prev, [item.id]: e.target.value }))}
@@ -328,16 +328,16 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
           {!addingNew ? (
             <button
               onClick={() => setAddingNew(true)}
-              className="w-full rounded-lg border border-dashed border-white/20 py-2.5 text-sm text-gray-400 hover:border-[#C8973A]/50 hover:text-[#C8973A] transition-colors"
+              className="w-full rounded-lg border border-dashed border-gray-300 py-2.5 text-sm text-gray-500 hover:border-[#C8973A]/50 hover:text-[#C8973A] transition-colors"
             >
               + Add Package
             </button>
           ) : (
-            <div className="rounded-lg border border-white/10 px-3 py-3 bg-[#0f1e2d]/50 space-y-2">
+            <div className="rounded-lg border border-gray-200 px-3 py-3 bg-gray-50 space-y-2">
               <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">New Package</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-400">Package Name</label>
+                  <label className="text-xs text-gray-500">Package Name</label>
                   <Input
                     value={newForm.name}
                     onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
@@ -346,7 +346,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-400">Price per Guest ($)</label>
+                  <label className="text-xs text-gray-500">Price per Guest ($)</label>
                   <Input
                     type="number"
                     min="0"
@@ -359,7 +359,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-gray-400">Description (optional)</label>
+                <label className="text-xs text-gray-500">Description (optional)</label>
                 <Textarea
                   value={newForm.description}
                   onChange={e => setNewForm(f => ({ ...f, description: e.target.value }))}
@@ -388,7 +388,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
                   size="sm"
                   variant="outline"
                   onClick={() => { setAddingNew(false); setNewForm({ name: '', price_per_guest: '', description: '' }) }}
-                  className="border-white/20 text-gray-300"
+                  className="border-gray-300 text-gray-700"
                 >
                   Cancel
                 </Button>
@@ -404,7 +404,7 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
 
 function SettingsCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="mb-3">
         <h2 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{title}</h2>
         {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}

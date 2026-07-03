@@ -54,7 +54,7 @@ export function KitchenSheetClient({ events, initialEventId = '' }: { events: Ev
           </button>
         )}
         {events.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-8 text-center text-gray-500 text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500 text-sm">
             No confirmed upcoming events found.
           </div>
         ) : (
@@ -62,7 +62,7 @@ export function KitchenSheetClient({ events, initialEventId = '' }: { events: Ev
             <select
               value={selectedId}
               onChange={e => loadEvent(e.target.value)}
-              className="flex-1 min-w-64 bg-[#1F3348] border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+              className="flex-1 min-w-64 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
             >
               <option value="">— Select a confirmed event —</option>
               {events.map(e => (
@@ -83,7 +83,7 @@ export function KitchenSheetClient({ events, initialEventId = '' }: { events: Ev
             )}
           </div>
         )}
-        {loading && <p className="text-sm text-gray-400">Loading…</p>}
+        {loading && <p className="text-sm text-gray-500">Loading…</p>}
       </div>
 
       {/* Prep sheet */}
@@ -126,12 +126,12 @@ function PrepSheet({ data }: { data: FullData }) {
 
   return (
     <div className="
-      rounded-xl border border-white/10 bg-[#1F3348]/50 p-6 space-y-5
+      rounded-xl border border-gray-200 bg-white p-6 space-y-5
       print:rounded-none print:border-0 print:bg-white print:p-0 print:space-y-2 print:text-black
     ">
 
       {/* Sheet header */}
-      <div className="border-b border-white/20 pb-4 print:border-gray-300 print:pb-2">
+      <div className="border-b border-gray-300 pb-4 print:border-gray-300 print:pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-start gap-3">
             <Logo className="w-12 h-12 print:w-9 print:h-9 shrink-0 mt-0.5" color="black" />
@@ -139,16 +139,16 @@ function PrepSheet({ data }: { data: FullData }) {
             <p className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-1">
               Manhattan Project Beer Co. · Kitchen Prep Sheet
             </p>
-            <h2 className="text-xl font-bold text-white print:text-black">{event.event_name}</h2>
+            <h2 className="text-xl font-bold text-gray-900 print:text-black">{event.event_name}</h2>
             {client && (
-              <p className="text-sm text-gray-400 print:text-gray-600 mt-0.5">
+              <p className="text-sm text-gray-500 print:text-gray-600 mt-0.5">
                 {client.first_name} {client.last_name}
                 {client.company ? ` · ${client.company}` : ''}
               </p>
             )}
             </div>
           </div>
-          <div className="text-right text-xs text-gray-500 print:text-gray-400">
+          <div className="text-right text-xs text-gray-500 print:text-gray-500">
             <p>Generated {generatedAt}</p>
           </div>
         </div>
@@ -187,45 +187,45 @@ function PrepSheet({ data }: { data: FullData }) {
       <div>
         <SectionHeader>Prep Quantities</SectionHeader>
         {prepItems.length === 0 ? (
-          <p className="text-sm text-gray-500 italic print:text-gray-400">
+          <p className="text-sm text-gray-500 italic print:text-gray-500">
             No package set — quantities unavailable.
           </p>
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-white/20 print:border-gray-400">
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 pr-4">Item</th>
-                <th className="text-center py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600">Notes</th>
-                <th className="text-right py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-20">Qty</th>
-                <th className="text-right py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-28 pl-4">Unit</th>
+              <tr className="border-b-2 border-gray-300 print:border-gray-400">
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 pr-4">Item</th>
+                <th className="text-center py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600">Notes</th>
+                <th className="text-right py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-20">Qty</th>
+                <th className="text-right py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-28 pl-4">Unit</th>
               </tr>
             </thead>
             <tbody>
               {prepItems.map((item, i) => (
-                <tr key={i} className="border-b border-white/10 print:border-gray-200">
-                  <td className="py-2 print:py-1 text-white print:text-black pr-4">{item.item_name}</td>
+                <tr key={i} className="border-b border-gray-200 print:border-gray-200">
+                  <td className="py-2 print:py-1 text-gray-900 print:text-black pr-4">{item.item_name}</td>
                   <td className="py-2 print:py-1 text-center">
                     <div className="flex items-center justify-center gap-2 flex-wrap">
                       {item.piece_count !== undefined && (
-                        <span className="text-xs text-gray-400 print:text-gray-500 font-normal">
+                        <span className="text-xs text-gray-500 print:text-gray-500 font-normal">
                           {item.piece_count} pcs
                         </span>
                       )}
                       {typeof item.total_qty === 'number' && item.total_qty > 1 && (
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded print:border print:border-gray-400 print:bg-transparent ${
                           (serveStyle[item.item_name] ?? 'all') === 'staggered'
-                            ? 'bg-blue-900/40 text-blue-300 print:text-blue-800'
-                            : 'bg-white/10 text-gray-300 print:text-gray-600'
+                            ? 'bg-blue-50 text-blue-700 print:text-blue-800'
+                            : 'bg-gray-100 text-gray-700 print:text-gray-600'
                         }`}>
                           {(serveStyle[item.item_name] ?? 'all') === 'staggered' ? '1 @ a time' : 'All at once'}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-2 print:py-1 text-right tabular-nums font-bold text-lg print:text-base text-white print:text-black w-20">
+                  <td className="py-2 print:py-1 text-right tabular-nums font-bold text-lg print:text-base text-gray-900 print:text-black w-20">
                     {typeof item.total_qty === 'string' ? '—' : item.total_qty}
                   </td>
-                  <td className="py-2 print:py-1 text-right text-gray-400 print:text-gray-600 w-28 pl-4">
+                  <td className="py-2 print:py-1 text-right text-gray-500 print:text-gray-600 w-28 pl-4">
                     {typeof item.total_qty === 'string' ? item.total_qty : (item.unit_name ?? '')}
                     {item.half_pan_qty ? (
                       <span className="block text-[10px] text-gray-500 print:text-gray-500">+ {item.half_pan_qty} 1/2 Chafer</span>
@@ -244,17 +244,17 @@ function PrepSheet({ data }: { data: FullData }) {
           <SectionHeader>Sauces</SectionHeader>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-white/20 print:border-gray-400">
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 pr-4">Sauce</th>
-                <th className="text-right py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-32">Vessel</th>
-                <th className="text-right py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-44 pl-4">Note</th>
+              <tr className="border-b-2 border-gray-300 print:border-gray-400">
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 pr-4">Sauce</th>
+                <th className="text-right py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-32">Vessel</th>
+                <th className="text-right py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-44 pl-4">Note</th>
               </tr>
             </thead>
             <tbody>
               {displayedSauces.map((sauce: ApplicableSauce) => (
-                <tr key={sauce.name} className="border-b border-white/10 print:border-gray-200">
-                  <td className="py-2 print:py-1 text-white print:text-black pr-4">{sauce.name}</td>
-                  <td className="py-2 print:py-1 text-right text-gray-400 print:text-gray-600 w-32">Medium Bowl</td>
+                <tr key={sauce.name} className="border-b border-gray-200 print:border-gray-200">
+                  <td className="py-2 print:py-1 text-gray-900 print:text-black pr-4">{sauce.name}</td>
+                  <td className="py-2 print:py-1 text-right text-gray-500 print:text-gray-600 w-32">Medium Bowl</td>
                   <td className="py-2 print:py-1 text-right text-gray-500 print:text-gray-500 w-44 pl-4 italic">Refill as necessary</td>
                 </tr>
               ))}
@@ -269,11 +269,11 @@ function PrepSheet({ data }: { data: FullData }) {
           <SectionHeader>Equipment Required</SectionHeader>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-white/20 print:border-gray-400">
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 pr-4">Food Item</th>
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-36">Utensil</th>
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600 w-40">Servingware</th>
-                <th className="text-left py-2 print:py-1 font-semibold text-gray-300 print:text-gray-600">Notes</th>
+              <tr className="border-b-2 border-gray-300 print:border-gray-400">
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 pr-4">Food Item</th>
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-36">Utensil</th>
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600 w-40">Servingware</th>
+                <th className="text-left py-2 print:py-1 font-semibold text-gray-700 print:text-gray-600">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -281,20 +281,20 @@ function PrepSheet({ data }: { data: FullData }) {
                 const sw = getServingware(item.item_name)
                 if (!sw) return null
                 return (
-                  <tr key={i} className="border-b border-white/10 print:border-gray-200">
-                    <td className="py-2 print:py-1 text-white print:text-black pr-4">{item.item_name}</td>
-                    <td className="py-2 print:py-1 text-gray-300 print:text-gray-700 w-36">{sw.utensil}</td>
-                    <td className="py-2 print:py-1 text-gray-300 print:text-gray-700 w-40">{sw.vessel}</td>
-                    <td className="py-2 print:py-1 text-gray-500 print:text-gray-400 italic text-xs">{sw.altNote ?? ''}</td>
+                  <tr key={i} className="border-b border-gray-200 print:border-gray-200">
+                    <td className="py-2 print:py-1 text-gray-900 print:text-black pr-4">{item.item_name}</td>
+                    <td className="py-2 print:py-1 text-gray-700 print:text-gray-700 w-36">{sw.utensil}</td>
+                    <td className="py-2 print:py-1 text-gray-700 print:text-gray-700 w-40">{sw.vessel}</td>
+                    <td className="py-2 print:py-1 text-gray-500 print:text-gray-500 italic text-xs">{sw.altNote ?? ''}</td>
                   </tr>
                 )
               })}
               {displayedSauces.map((sauce: ApplicableSauce) => (
-                <tr key={`sw-sauce-${sauce.name}`} className="border-b border-white/10 print:border-gray-200">
-                  <td className="py-2 print:py-1 text-gray-400 print:text-gray-600 pr-4 italic">{sauce.name}</td>
-                  <td className="py-2 print:py-1 text-gray-300 print:text-gray-700 w-36">Small Ladle</td>
-                  <td className="py-2 print:py-1 text-gray-300 print:text-gray-700 w-40">1 per bowl</td>
-                  <td className="py-2 print:py-1 text-gray-500 print:text-gray-400 italic text-xs"></td>
+                <tr key={`sw-sauce-${sauce.name}`} className="border-b border-gray-200 print:border-gray-200">
+                  <td className="py-2 print:py-1 text-gray-500 print:text-gray-600 pr-4 italic">{sauce.name}</td>
+                  <td className="py-2 print:py-1 text-gray-700 print:text-gray-700 w-36">Small Ladle</td>
+                  <td className="py-2 print:py-1 text-gray-700 print:text-gray-700 w-40">1 per bowl</td>
+                  <td className="py-2 print:py-1 text-gray-500 print:text-gray-500 italic text-xs"></td>
                 </tr>
               ))}
               {(() => {
@@ -305,8 +305,8 @@ function PrepSheet({ data }: { data: FullData }) {
                     <td colSpan={4} className="py-3 print:py-1.5 px-1">
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-[#C8973A] print:text-black tabular-nums">{c.total}</span>
-                        <span className="text-sm font-semibold text-white print:text-black">Chafing {c.total === 1 ? 'Dish' : 'Dishes'} Needed</span>
-                        <span className="text-xs text-gray-400 print:text-gray-600 ml-2">
+                        <span className="text-sm font-semibold text-gray-900 print:text-black">Chafing {c.total === 1 ? 'Dish' : 'Dishes'} Needed</span>
+                        <span className="text-xs text-gray-500 print:text-gray-600 ml-2">
                           {[
                             c.fullSize > 0 ? `${c.fullSize} × full-size (200 pan)` : '',
                             c.halfSize > 0 ? `${c.halfSize} × half-size (1/2 pan)` : '',
@@ -338,18 +338,18 @@ function PrepSheet({ data }: { data: FullData }) {
           <SectionHeader>Add-ons & Extras</SectionHeader>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-white/20 print:border-gray-400">
-                <th className="text-left py-1.5 font-semibold text-gray-300 print:text-gray-600">Item</th>
-                <th className="text-right py-1.5 font-semibold text-gray-300 print:text-gray-600 w-20">Qty</th>
-                <th className="text-right py-1.5 font-semibold text-gray-300 print:text-gray-600 w-24">Unit</th>
+              <tr className="border-b-2 border-gray-300 print:border-gray-400">
+                <th className="text-left py-1.5 font-semibold text-gray-700 print:text-gray-600">Item</th>
+                <th className="text-right py-1.5 font-semibold text-gray-700 print:text-gray-600 w-20">Qty</th>
+                <th className="text-right py-1.5 font-semibold text-gray-700 print:text-gray-600 w-24">Unit</th>
               </tr>
             </thead>
             <tbody>
               {addOns.map(a => (
-                <tr key={a.id} className="border-b border-white/10 print:border-gray-200">
-                  <td className="py-1.5 text-white print:text-black">{a.item_name}</td>
-                  <td className="py-1.5 text-right tabular-nums font-bold text-lg text-white print:text-black">{a.qty}</td>
-                  <td className="py-1.5 text-right text-gray-400 print:text-gray-600">{a.unit}</td>
+                <tr key={a.id} className="border-b border-gray-200 print:border-gray-200">
+                  <td className="py-1.5 text-gray-900 print:text-black">{a.item_name}</td>
+                  <td className="py-1.5 text-right tabular-nums font-bold text-lg text-gray-900 print:text-black">{a.qty}</td>
+                  <td className="py-1.5 text-right text-gray-500 print:text-gray-600">{a.unit}</td>
                 </tr>
               ))}
             </tbody>
@@ -383,11 +383,11 @@ function PrepSheet({ data }: { data: FullData }) {
 
       {/* Client contact (for day-of reference) */}
       {client && (client.first_name || client.phone || client.email) && (
-        <div className="border-t border-white/10 pt-4 print:pt-2 print:border-gray-200">
+        <div className="border-t border-gray-200 pt-4 print:pt-2 print:border-gray-200">
           <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1">Client Contact</p>
-          <div className="flex gap-6 text-sm text-gray-300 print:text-gray-700">
+          <div className="flex gap-6 text-sm text-gray-700 print:text-gray-700">
             {(client.first_name || client.last_name) && (
-              <span className="font-semibold text-white print:text-black">
+              <span className="font-semibold text-gray-900 print:text-black">
                 {[client.first_name, client.last_name].filter(Boolean).join(' ')}
               </span>
             )}
@@ -403,7 +403,7 @@ function PrepSheet({ data }: { data: FullData }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-2 print:mb-1 pb-1 print:pb-0.5 border-b border-white/10 print:border-gray-300">
+    <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] print:text-gray-500 mb-2 print:mb-1 pb-1 print:pb-0.5 border-b border-gray-200 print:border-gray-300">
       {children}
     </h3>
   )
@@ -412,19 +412,19 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 function MetaRow({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="flex gap-2 text-sm py-0.5">
-      <span className={`shrink-0 w-36 ${alert ? 'text-[#C8973A] print:text-gray-500 font-semibold' : 'text-gray-400 print:text-gray-500'}`}>{label}</span>
-      <span className={`font-medium ${alert ? 'text-[#C8973A] print:text-black font-bold' : 'text-white print:text-black'}`}>{value}</span>
+      <span className={`shrink-0 w-36 ${alert ? 'text-[#C8973A] print:text-gray-500 font-semibold' : 'text-gray-500 print:text-gray-500'}`}>{label}</span>
+      <span className={`font-medium ${alert ? 'text-[#C8973A] print:text-black font-bold' : 'text-gray-900 print:text-black'}`}>{value}</span>
     </div>
   )
 }
 
 function NoteRow({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
-    <div className={`rounded-lg px-3 py-2 print:rounded-none print:px-0 print:bg-transparent ${alert ? 'bg-red-900/20 border border-red-500/30 print:border-0' : 'bg-white/5 print:bg-transparent'}`}>
-      <p className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${alert ? 'text-red-400 print:text-red-700' : 'text-gray-400 print:text-gray-500'}`}>
+    <div className={`rounded-lg px-3 py-2 print:rounded-none print:px-0 print:bg-transparent ${alert ? 'bg-red-50 border border-red-200 print:border-0' : 'bg-gray-50 print:bg-transparent'}`}>
+      <p className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${alert ? 'text-red-400 print:text-red-700' : 'text-gray-500 print:text-gray-500'}`}>
         {label}
       </p>
-      <p className="text-white print:text-black leading-relaxed whitespace-pre-wrap">{value}</p>
+      <p className="text-gray-900 print:text-black leading-relaxed whitespace-pre-wrap">{value}</p>
     </div>
   )
 }

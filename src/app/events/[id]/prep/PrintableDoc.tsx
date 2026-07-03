@@ -51,7 +51,7 @@ function fmtDate(dateStr: string) {
 
 export function PrintDoc({ title, ev, children }: DocProps) {
   return (
-    <div className="print-doc bg-white text-gray-900 rounded-xl overflow-hidden shadow-sm border border-white/10">
+    <div className="print-doc bg-white text-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-200">
       {/* MP Header */}
       <div className="border-b-2 border-[#C8973A] px-8 pt-4 pb-4">
         <p className="font-[var(--font-josefin)] text-[10px] tracking-[0.25em] uppercase text-[#C8973A] mb-1">

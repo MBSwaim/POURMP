@@ -64,20 +64,20 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       </Button>
 
       {showForm && (
-        <div className="rounded-xl border border-[#C8973A]/30 bg-[#1F3348]/60 p-5">
+        <div className="rounded-xl border border-[#C8973A]/30 bg-white p-5">
           <h2 className="text-base font-semibold text-[#C8973A] mb-4">New Staff Member</h2>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-gray-300 text-sm">Name<span className="text-red-400 ml-1">*</span></Label>
+                <Label className="text-gray-700 text-sm">Name<span className="text-red-400 ml-1">*</span></Label>
                 <Input value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Full name" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-gray-300 text-sm">Phone</Label>
+                <Label className="text-gray-700 text-sm">Phone</Label>
                 <Input type="tel" value={form.phone} onChange={(e) => set('phone', formatPhoneNumber(e.target.value))} placeholder="(555) 000-0000" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-gray-300 text-sm">Email</Label>
+                <Label className="text-gray-700 text-sm">Email</Label>
                 <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
               </div>
             </div>
@@ -94,35 +94,35 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       )}
 
       {staff.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/30 p-10 text-center text-gray-400">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-10 text-center text-gray-500">
           No staff members yet.
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-hidden">
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#1F3348] border-b border-white/10">
+            <thead className="bg-white border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Name</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Phone</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Email</th>
-                <th className="px-4 py-3 text-left text-gray-300 font-medium">Status</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Name</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Phone</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Email</th>
+                <th className="px-4 py-3 text-left text-gray-700 font-medium">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {staff.map((s, i) => (
-                <tr key={s.id} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-[#1F3348]/20' : ''} hover:bg-white/5`}>
-                  <td className="px-4 py-3 font-medium text-white">{s.name}</td>
-                  <td className="px-4 py-3 text-gray-400">{s.phone || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400">{s.email || '—'}</td>
+                <tr key={s.id} className={`border-b border-gray-200 ${i % 2 === 0 ? 'bg-gray-50' : ''} hover:bg-gray-50`}>
+                  <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
+                  <td className="px-4 py-3 text-gray-500">{s.phone || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">{s.email || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${s.active ? 'bg-green-600/20 text-green-400' : 'bg-gray-600/30 text-gray-500'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${s.active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {s.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <button onClick={() => toggleActive(s)} className="text-xs text-gray-400 hover:text-white transition-colors">
+                      <button onClick={() => toggleActive(s)} className="text-xs text-gray-500 hover:text-gray-900 transition-colors">
                         {s.active ? 'Deactivate' : 'Reactivate'}
                       </button>
                       <button onClick={() => remove(s.id)} className="text-xs text-gray-500 hover:text-red-400 transition-colors">

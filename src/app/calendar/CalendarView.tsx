@@ -26,8 +26,8 @@ interface Props {
 }
 
 const REASON_STYLES: Record<string, string> = {
-  'Company Event': 'bg-purple-500/20 border-purple-400/40 text-purple-200',
-  'Holiday':       'bg-red-500/20 border-red-400/40 text-red-200',
+  'Company Event': 'bg-purple-50 border-purple-200 text-purple-700',
+  'Holiday':       'bg-red-50 border-red-200 text-red-700',
 }
 
 export function CalendarView({ events, year, month, blockedDates: initialBlocked }: Props) {
@@ -133,7 +133,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
         <div className="ml-auto flex items-center gap-2">
           {blockMode ? (
             <>
-              <span className="text-xs text-gray-400 tracking-wide uppercase">
+              <span className="text-xs text-gray-500 tracking-wide uppercase">
                 {selectedToBlock.size} day{selectedToBlock.size !== 1 ? 's' : ''} selected
               </span>
               <Button
@@ -148,7 +148,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
             <Button
               size="sm"
               onClick={() => { setBlockMode(true); setSelectedDay(null) }}
-              className="bg-[#1F3348] border border-white/20 hover:bg-red-900/30 hover:border-red-500/40 text-gray-300 hover:text-red-300 text-xs tracking-widest uppercase"
+              className="bg-white border border-gray-300 hover:bg-red-50 hover:border-red-300 text-gray-700 hover:text-red-700 text-xs tracking-widest uppercase"
             >
               Block Dates
             </Button>
@@ -158,13 +158,13 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
 
       {/* Block panel — shown when in block mode */}
       {blockMode && (
-        <div className="rounded-xl border border-red-500/20 bg-red-900/10 p-4 space-y-3">
-          <p className="text-xs text-red-300 tracking-widest uppercase font-medium">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
+          <p className="text-xs text-red-700 tracking-widest uppercase font-medium">
             Click dates on the calendar to select, then confirm below
           </p>
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <label className="text-xs text-gray-400 tracking-widest uppercase">Reason</label>
+              <label className="text-xs text-gray-500 tracking-widest uppercase">Reason</label>
               <div className="flex gap-2">
                 {BLOCK_REASONS.map((r) => (
                   <button
@@ -173,9 +173,9 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                       blockReason === r
                         ? r === 'Holiday'
-                          ? 'bg-red-500/30 border-red-400 text-red-200'
-                          : 'bg-purple-500/30 border-purple-400 text-purple-200'
-                        : 'bg-white/5 border-white/20 text-gray-400 hover:border-white/40'
+                          ? 'bg-red-100 border-red-400 text-red-700'
+                          : 'bg-purple-100 border-purple-400 text-purple-700'
+                        : 'bg-gray-50 border-gray-300 text-gray-500 hover:border-gray-400'
                     }`}
                   >
                     {r}
@@ -184,7 +184,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
               </div>
             </div>
             <div className="flex-1 min-w-48 space-y-1">
-              <label className="text-xs text-gray-400 tracking-widest uppercase">Notes (optional)</label>
+              <label className="text-xs text-gray-500 tracking-widest uppercase">Notes (optional)</label>
               <Textarea
                 value={blockNotes}
                 onChange={(e) => setBlockNotes(e.target.value)}
@@ -196,7 +196,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
             <Button
               onClick={saveBlock}
               disabled={saving || selectedToBlock.size === 0}
-              className="bg-red-700/60 hover:bg-red-700/80 text-white border border-red-500/40 text-xs tracking-widest uppercase"
+              className="bg-red-600 hover:bg-red-700 text-white border border-red-600 text-xs tracking-widest uppercase"
             >
               {saving ? 'Saving…' : `Block ${selectedToBlock.size || ''} Date${selectedToBlock.size !== 1 ? 's' : ''}`}
             </Button>
@@ -205,15 +205,15 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
       )}
 
       {/* Calendar Grid */}
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-7 bg-[#1F3348] border-b border-white/10">
+      <div className="rounded-xl border border-gray-200 overflow-hidden">
+        <div className="grid grid-cols-7 bg-white border-b border-gray-200">
           {DAYS.map((d) => (
-            <div key={d} className="text-center text-xs text-gray-400 py-2 font-medium tracking-widest uppercase">{d}</div>
+            <div key={d} className="text-center text-xs text-gray-500 py-2 font-medium tracking-widest uppercase">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7">
           {cells.map((cell, i) => {
-            if (!cell.date) return <div key={i} className="border-b border-r border-white/5 min-h-[88px]" />
+            if (!cell.date) return <div key={i} className="border-b border-r border-gray-200 min-h-[88px]" />
             const dayEvents = eventsByDay[cell.date] ?? []
             const isSelected = blockMode ? selectedToBlock.has(cell.date) : selectedDay === cell.date
             const today = format(new Date(), 'yyyy-MM-dd')
@@ -221,27 +221,27 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
             const blockInfo = blockedByDay[cell.date]
             const isBlocked = !!blockInfo
 
-            let cellBg = 'hover:bg-white/5'
-            if (isBlocked) cellBg = blockInfo.reason === 'Holiday' ? 'bg-red-900/20' : 'bg-purple-900/20'
-            if (isSelected && blockMode) cellBg = 'bg-amber-500/20 border-amber-400/30'
+            let cellBg = 'hover:bg-gray-50'
+            if (isBlocked) cellBg = blockInfo.reason === 'Holiday' ? 'bg-red-50' : 'bg-purple-50'
+            if (isSelected && blockMode) cellBg = 'bg-amber-100 border-amber-300'
             else if (isSelected) cellBg = 'bg-[#C8973A]/10'
 
             return (
               <div
                 key={i}
                 onClick={() => cell.date && handleDayClick(cell.date)}
-                className={`border-b border-r border-white/5 min-h-[88px] p-1.5 cursor-pointer transition-colors relative
+                className={`border-b border-r border-gray-200 min-h-[88px] p-1.5 cursor-pointer transition-colors relative
                   ${cellBg}
                   ${isSelected ? 'ring-1 ring-inset ring-[#C8973A]/40' : ''}
                   ${i % 7 === 6 ? 'border-r-0' : ''}`}
               >
                 <div className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full
-                  ${isToday ? 'bg-[#C8973A] text-white' : 'text-gray-300'}`}>
+                  ${isToday ? 'bg-[#C8973A] text-white' : 'text-gray-700'}`}>
                   {cell.day}
                 </div>
 
                 {isBlocked && (
-                  <div className={`text-[10px] px-1.5 py-0.5 rounded border truncate mb-0.5 ${REASON_STYLES[blockInfo.reason] ?? 'bg-gray-700/40 border-gray-500/40 text-gray-300'}`}>
+                  <div className={`text-[10px] px-1.5 py-0.5 rounded border truncate mb-0.5 ${REASON_STYLES[blockInfo.reason] ?? 'bg-gray-100 border-gray-300 text-gray-700'}`}>
                     🚫 {blockInfo.reason}
                   </div>
                 )}
@@ -256,7 +256,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
                     </div>
                   ))}
                   {dayEvents.length > (isBlocked ? 1 : 3) && (
-                    <div className="text-xs text-gray-400 pl-1">+{dayEvents.length - (isBlocked ? 1 : 3)} more</div>
+                    <div className="text-xs text-gray-500 pl-1">+{dayEvents.length - (isBlocked ? 1 : 3)} more</div>
                   )}
                 </div>
               </div>
@@ -266,26 +266,26 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-gray-400">
+      <div className="flex items-center gap-4 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-red-900/40 border border-red-400/40 inline-block" />
+          <span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 inline-block" />
           Holiday
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-purple-900/40 border border-purple-400/40 inline-block" />
+          <span className="w-3 h-3 rounded-sm bg-purple-100 border border-purple-300 inline-block" />
           Company Event
         </span>
       </div>
 
       {/* Day detail panel */}
       {selectedDay && !blockMode && (selectedEvents.length > 0 || selectedBlock) && (
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4 space-y-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{selectedDay}</h3>
             {selectedBlock && (
               <button
                 onClick={() => unblock(selectedDay)}
-                className="text-xs text-red-400 hover:text-red-300 border border-red-500/30 rounded px-2 py-0.5"
+                className="text-xs text-red-400 hover:text-red-600 border border-red-500/30 rounded px-2 py-0.5"
               >
                 Unblock this date
               </button>
@@ -305,11 +305,11 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
                 <div
                   key={ev.id}
                   onClick={() => router.push(`/events/${ev.id}`)}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer"
                 >
                   <div>
                     <span className="font-medium text-sm">{ev.event_name}</span>
-                    <span className="text-gray-400 text-xs ml-2">{ev.first_name} {ev.last_name}</span>
+                    <span className="text-gray-500 text-xs ml-2">{ev.first_name} {ev.last_name}</span>
                   </div>
                   <StatusBadge status={ev.status} />
                 </div>
@@ -321,7 +321,7 @@ export function CalendarView({ events, year, month, blockedDates: initialBlocked
 
       {/* Selected day with no events but is blocked */}
       {selectedDay && !blockMode && !selectedBlock && selectedEvents.length === 0 && (
-        <div className="rounded-xl border border-white/10 bg-[#1F3348]/30 p-4 text-sm text-gray-400 text-center">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 text-center">
           No events on {selectedDay}
         </div>
       )}

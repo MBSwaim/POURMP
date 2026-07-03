@@ -56,12 +56,12 @@ export function KanbanBoard({ initialEvents }: Props) {
         return (
           <div
             key={status}
-            className={`flex-shrink-0 w-48 rounded-xl bg-[#1a2e42] border border-white/10 border-t-2 ${COLUMN_ACCENT[status] ?? 'border-t-white/20'} overflow-hidden`}
+            className={`flex-shrink-0 w-48 rounded-xl bg-white border border-gray-200 border-t-2 ${COLUMN_ACCENT[status] ?? 'border-t-gray-300'} overflow-hidden`}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => drop(status)}
           >
             {/* Column header */}
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/8">
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200">
               <StatusBadge status={status} />
               <span className="text-[10px] font-bold text-gray-500 tabular-nums">{col.length}</span>
             </div>
@@ -74,9 +74,9 @@ export function KanbanBoard({ initialEvents }: Props) {
                   draggable
                   onDragStart={() => setDragging(ev.id)}
                   onClick={() => router.push(`/events/${ev.id}`)}
-                  className="cursor-pointer rounded-lg bg-[#0f1e2d]/70 border border-white/8 px-3 py-2.5 hover:border-[#C8973A]/40 hover:bg-[#0f1e2d] transition-all select-none group"
+                  className="cursor-pointer rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 hover:border-[#C8973A]/40 hover:bg-white transition-all select-none group"
                 >
-                  <p className="text-xs font-semibold text-white truncate group-hover:text-[#C8973A] transition-colors">
+                  <p className="text-xs font-semibold text-gray-900 truncate group-hover:text-[#C8973A] transition-colors">
                     {ev.event_name}
                   </p>
                   <p className="text-[10px] text-gray-500 mt-0.5 truncate">

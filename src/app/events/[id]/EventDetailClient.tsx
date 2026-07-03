@@ -306,7 +306,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{event.event_name}</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <p className="text-gray-500 text-sm mt-0.5">
             {client?.first_name} {client?.last_name}
             {client?.company ? ` · ${client.company}` : ''}
             {' · '}{event.event_date}
@@ -316,7 +316,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
           <select
             value={event.status}
             onChange={(e) => saveStatus(e.target.value)}
-            className="bg-[#1F3348] border border-white/20 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
+            className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#C8973A]"
           >
             {EVENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -331,7 +331,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               Edit Event
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={saveAsTentative} className="border-white/30 text-white hover:bg-white/10">
+          <Button size="sm" variant="outline" onClick={saveAsTentative} className="border-gray-300 text-gray-900 hover:bg-gray-100">
             Save
           </Button>
           <Button size="sm" onClick={saveAndConfirm} className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white">
@@ -348,7 +348,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
       </div>
 
       {editingConfirmed && (
-        <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300 flex items-start gap-2">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700 flex items-start gap-2">
           <span className="mt-0.5">⚠</span>
           <span>
             This event has been set to <strong>Tentative</strong> while you make changes.
@@ -359,15 +359,15 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
       <div>
         {/* Tab bar */}
-        <div className="flex gap-1 border-b border-white/10 mb-5">
+        <div className="flex gap-1 border-b border-gray-200 mb-5">
           {(['overview','catering','floorplan','tasks','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors rounded-t-lg -mb-px border-b-2 ${
                 tab === id
-                  ? 'text-[#C8973A] border-[#C8973A] bg-[#1F3348]/60'
-                  : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
+                  ? 'text-[#C8973A] border-[#C8973A] bg-white'
+                  : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', notes: 'Notes' }[id]}
@@ -387,8 +387,8 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               <EditableRow locked={locked} label="Decorating / Customer Access" value={event.decorate_time} type="time" display={to12Hour(event.decorate_time)} onSave={(v) => saveField('event', 'decorate_time', v)} />
               <EditableRow locked={locked} label="Event Ends" value={event.teardown_time} type="time" display={to12Hour(event.teardown_time)} onSave={(v) => saveField('event', 'teardown_time', v)} />
               {event.event_time && (
-                <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                  <span className="text-gray-400 shrink-0 mr-2">Food Ready By</span>
+                <div className="flex justify-between items-center text-sm py-1 border-b border-gray-200">
+                  <span className="text-gray-500 shrink-0 mr-2">Food Ready By</span>
                   <span className="text-right font-medium text-[#C8973A]">
                     {to12Hour(shiftTime(event.event_time, -15))}
                   </span>
@@ -396,17 +396,17 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               )}
               <EditableRow locked={locked} label="Space" value={event.space} onSave={(v) => saveField('event', 'space', v)} />
               {(deposit || finalPayment) && (
-                <div className="border-t border-white/5 pt-2 mt-1 space-y-1">
+                <div className="border-t border-gray-200 pt-2 mt-1 space-y-1">
                   <p className="text-xs text-gray-500 uppercase tracking-widest">Payments</p>
                   {deposit && (
                     <div className="flex justify-between items-center text-sm py-0.5">
-                      <span className="text-gray-400">Deposit</span>
+                      <span className="text-gray-500">Deposit</span>
                       <PaymentStatusBadge status={deposit.status} />
                     </div>
                   )}
                   {finalPayment && (
                     <div className="flex justify-between items-center text-sm py-0.5">
-                      <span className="text-gray-400">Final</span>
+                      <span className="text-gray-500">Final</span>
                       <PaymentStatusBadge status={finalPayment.status} />
                     </div>
                   )}
@@ -439,16 +439,16 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             <InfoCard title="Event Readiness">
               <div className={`rounded-lg border px-3 py-2.5 mb-3 flex items-center justify-between ${readinessColors.bg} ${readinessColors.border}`}>
-                <span className="text-xs text-gray-400 uppercase tracking-wide">Operational Readiness</span>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Operational Readiness</span>
                 <span className={`text-xl font-bold ${readinessColors.text}`}>{readiness.score}%</span>
               </div>
               {readiness.missingLabels.length === 0 ? (
-                <p className="text-sm text-green-300">All operational checks complete.</p>
+                <p className="text-sm text-green-600">All operational checks complete.</p>
               ) : (
                 <div className="space-y-1">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Still Needed</p>
                   {readiness.missingLabels.map(label => (
-                    <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
+                    <div key={label} className="flex items-center gap-2 text-sm text-gray-700">
                       <span className="text-red-400">•</span>{label}
                     </div>
                   ))}
@@ -459,10 +459,10 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             <InfoCard title="Tasks">
               <div className={`rounded-lg border px-3 py-2.5 mb-3 flex items-center justify-between ${taskComplexityColors.bg} ${taskComplexityColors.border}`}>
-                <span className="text-xs text-gray-400 uppercase tracking-wide">Complexity</span>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Complexity</span>
                 <span className={`text-lg font-bold ${taskComplexityColors.text}`}>{taskComplexity.level}</span>
               </div>
-              <p className="text-sm text-gray-300 mb-3">
+              <p className="text-sm text-gray-700 mb-3">
                 {initialTasks.filter(t => t.completed).length}/{initialTasks.length} tasks complete
               </p>
               <Button size="sm" variant="outline" onClick={() => setTab('tasks')} className="w-full">
@@ -473,15 +473,15 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             <InfoCard title="Package & Food">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Package</span>
+                  <span className="text-gray-500">Package</span>
                   {locked ? (
-                    <span className="text-sm text-white text-right">{packages.find(p => p.id === details?.package_id)?.name ?? '—'}</span>
+                    <span className="text-sm text-gray-900 text-right">{packages.find(p => p.id === details?.package_id)?.name ?? '—'}</span>
                   ) : (
                     <select
                       key={details?.package_id ?? ''}
                       defaultValue={details?.package_id ?? ''}
                       onBlur={(e) => saveField('details', 'package_id', e.target.value)}
-                      className="bg-transparent border-b border-white/20 text-right text-sm text-white focus:outline-none"
+                      className="bg-transparent border-b border-gray-300 text-right text-sm text-gray-900 focus:outline-none"
                     >
                       <option value="">— none —</option>
                       {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -493,7 +493,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 <EditableRow locked={locked} label="Food Notes / Allergies" value={details?.food_notes ?? ''} onSave={(v) => saveField('details', 'food_notes', v)} />
                 <EditableRow locked={locked} label="Dietary Restrictions" value={details?.dietary_restrictions ?? ''} onSave={(v) => saveField('details', 'dietary_restrictions', v)} />
                 <div className="flex items-center gap-4 pt-1">
-                  <label className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer select-none">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={!!details?.dessert_expected}
@@ -502,7 +502,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                     />
                     Dessert Expected
                   </label>
-                  <label className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer select-none">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={!!details?.kids_attending}
@@ -516,8 +516,8 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             </InfoCard>
 
             <InfoCard title="Bar & Beverage">
-              <div className="flex justify-between text-sm py-1 border-b border-white/5">
-                <span className="text-gray-400 shrink-0 mr-2">Bar Tab Type</span>
+              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
+                <span className="text-gray-500 shrink-0 mr-2">Bar Tab Type</span>
                 {locked ? (
                   <span className="text-right">{details?.bar_tab_type || <span className="text-gray-500 italic">—</span>}</span>
                 ) : (
@@ -531,7 +531,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                         await saveField('details', 'tab_details', BAR_TAB_DESCRIPTIONS[type])
                       }
                     }}
-                    className="bg-transparent border-b border-white/20 text-right text-sm text-white focus:outline-none max-w-[200px]"
+                    className="bg-transparent border-b border-gray-300 text-right text-sm text-gray-900 focus:outline-none max-w-[200px]"
                   >
                     <option value="">— none —</option>
                     <option value="Pre-Paid Drink Ticket(s)">BAR TAB | Pre-Paid Drink Ticket(s)</option>
@@ -550,7 +550,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
           <InfoCard title="Add-ons" fullWidth>
             {addOns.length > 0 && (
               <table className="w-full text-sm mb-3">
-                <thead><tr className="text-gray-400 border-b border-white/10">
+                <thead><tr className="text-gray-500 border-b border-gray-200">
                   <th className="text-left py-1">Item</th>
                   <th className="text-right py-1">Qty</th>
                   <th className="text-right py-1">Unit</th>
@@ -560,10 +560,10 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 </tr></thead>
                 <tbody>
                   {addOns.map((a) => (
-                    <tr key={a.id} className="border-b border-white/5">
+                    <tr key={a.id} className="border-b border-gray-200">
                       <td className="py-1.5">{a.item_name}</td>
                       <td className="text-right">{a.qty}</td>
-                      <td className="text-right text-gray-400">{a.unit}</td>
+                      <td className="text-right text-gray-500">{a.unit}</td>
                       <td className="text-right">
                         <div className="inline-flex items-center gap-0.5 justify-end">
                           <span className="text-gray-500">$</span>
@@ -579,19 +579,19 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                               if (!Number.isFinite(val) || val < 0) return
                               updateAddOnPrice(a.id, val)
                             }}
-                            className="w-16 bg-white/5 border border-white/20 rounded px-1 py-0.5 text-right text-white focus:outline-none focus:border-[#C8973A]"
+                            className="w-16 bg-gray-50 border border-gray-300 rounded px-1 py-0.5 text-right text-gray-900 focus:outline-none focus:border-[#C8973A]"
                           />
                         </div>
                       </td>
-                      <td className="text-right text-gray-300">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
+                      <td className="text-right text-gray-700">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
                       <td className="text-right pl-2">
-                        <button onClick={() => deleteAddOn(a.id)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                        <button onClick={() => deleteAddOn(a.id)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
                       </td>
                     </tr>
                   ))}
                   {addOns.some(a => a.price_each > 0) && (
                     <tr>
-                      <td colSpan={4} className="text-right py-1.5 text-gray-400 font-medium">Add-ons Total</td>
+                      <td colSpan={4} className="text-right py-1.5 text-gray-500 font-medium">Add-ons Total</td>
                       <td className="text-right py-1.5 text-[#C8973A] font-semibold">
                         {formatCurrency(addOns.reduce((s, a) => s + a.qty * a.price_each, 0))}
                       </td>
@@ -615,7 +615,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
         <div className={tab === 'catering' ? 'space-y-4' : 'hidden'}>
 
             {/* Catering Packages */}
-            <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">Catering Packages</h3>
                 <button
@@ -630,10 +630,10 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               )}
               <div className="space-y-6">
                 {eventPackages.map((ep, idx) => (
-                  <div key={ep.id} className={idx > 0 ? 'border-t border-white/10 pt-6' : ''}>
+                  <div key={ep.id} className={idx > 0 ? 'border-t border-gray-200 pt-6' : ''}>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Package {idx + 1}</p>
-                      <button onClick={() => removePackage(ep.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">
+                      <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Package {idx + 1}</p>
+                      <button onClick={() => removePackage(ep.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">
                         Remove
                       </button>
                     </div>
@@ -643,7 +643,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                         <select
                           defaultValue={ep.package_id}
                           onBlur={e => updatePackage(ep.id, { package_id: e.target.value })}
-                          className="bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                          className="bg-white border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]"
                         >
                           <option value="">— none —</option>
                           {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -656,7 +656,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                           defaultValue={ep.guest_count || ''}
                           onBlur={e => updatePackage(ep.id, { guest_count: Number(e.target.value) || 0 })}
                           placeholder="0"
-                          className="w-20 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                          className="w-20 bg-white border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]"
                         />
                       </div>
                       <div>
@@ -666,7 +666,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                           defaultValue={ep.buffer_pct ? Math.round(ep.buffer_pct * 100) : ''}
                           onBlur={e => updatePackage(ep.id, { buffer_pct: (Number(e.target.value) || 0) / 100 })}
                           placeholder="0"
-                          className="w-16 bg-[#0f1e2d] border border-white/20 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#C8973A]"
+                          className="w-16 bg-white border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]"
                         />
                       </div>
                     </div>
@@ -691,11 +691,11 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             {/* Add-ons */}
             {addOns.length > 0 && (
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Add-ons & Extras</h3>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/10 text-gray-400">
+                    <tr className="border-b border-gray-200 text-gray-500">
                       <th className="text-left py-1.5">Item</th>
                       <th className="text-right py-1.5">Qty</th>
                       <th className="text-right py-1.5">Unit</th>
@@ -704,16 +704,16 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   </thead>
                   <tbody>
                     {addOns.map((a) => (
-                      <tr key={a.id} className="border-b border-white/5">
+                      <tr key={a.id} className="border-b border-gray-200">
                         <td className="py-1.5">{a.item_name}</td>
                         <td className="text-right">{a.qty}</td>
-                        <td className="text-right text-gray-400">{a.unit}</td>
-                        <td className="text-right text-gray-400">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
+                        <td className="text-right text-gray-500">{a.unit}</td>
+                        <td className="text-right text-gray-500">{a.price_each ? formatCurrency(a.qty * a.price_each) : '—'}</td>
                       </tr>
                     ))}
                     {addOns.some(a => a.price_each > 0) && (
                       <tr>
-                        <td colSpan={3} className="text-right py-1.5 text-gray-400 font-medium">Add-ons Total</td>
+                        <td colSpan={3} className="text-right py-1.5 text-gray-500 font-medium">Add-ons Total</td>
                         <td className="text-right py-1.5 text-[#C8973A] font-semibold">
                           {formatCurrency(addOns.reduce((s, a) => s + a.qty * a.price_each, 0))}
                         </td>
@@ -726,21 +726,21 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             {/* Bar & Beverage */}
             {details?.bar_tab_type && (
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Bar & Beverage</h3>
                 <div className="space-y-1 text-sm">
                   <div className="flex gap-2">
-                    <span className="text-gray-400 w-32 shrink-0">Bar Setup</span>
-                    <span className="text-white font-medium">BAR TAB | {details.bar_tab_type}</span>
+                    <span className="text-gray-500 w-32 shrink-0">Bar Setup</span>
+                    <span className="text-gray-900 font-medium">BAR TAB | {details.bar_tab_type}</span>
                   </div>
                   {details.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && details.drink_tickets ? (
                     <div className="flex gap-2">
-                      <span className="text-gray-400 w-32 shrink-0">Drink Tickets</span>
-                      <span className="text-white font-medium">{details.drink_tickets}</span>
+                      <span className="text-gray-500 w-32 shrink-0">Drink Tickets</span>
+                      <span className="text-gray-900 font-medium">{details.drink_tickets}</span>
                     </div>
                   ) : null}
                   {details.tab_details && (
-                    <p className="text-gray-400 text-xs mt-2 leading-relaxed">{details.tab_details}</p>
+                    <p className="text-gray-500 text-xs mt-2 leading-relaxed">{details.tab_details}</p>
                   )}
                 </div>
               </div>
@@ -748,19 +748,19 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             {/* Food Notes & Restrictions */}
             {(details?.dietary_restrictions || details?.food_notes) && (
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Food Notes & Restrictions</h3>
                 <div className="space-y-2 text-sm">
                   {details.dietary_restrictions && (
-                    <div className="rounded-lg bg-red-900/20 border border-red-500/30 px-3 py-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-red-400 mb-0.5">Dietary Restrictions</p>
-                      <p className="text-white leading-relaxed">{details.dietary_restrictions}</p>
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-red-600 mb-0.5">Dietary Restrictions</p>
+                      <p className="text-gray-900 leading-relaxed">{details.dietary_restrictions}</p>
                     </div>
                   )}
                   {details.food_notes && (
-                    <div className="rounded-lg bg-white/5 px-3 py-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">Food Notes</p>
-                      <p className="text-white leading-relaxed">{details.food_notes}</p>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-0.5">Food Notes</p>
+                      <p className="text-gray-900 leading-relaxed">{details.food_notes}</p>
                     </div>
                   )}
                 </div>
@@ -768,7 +768,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             )}
 
             {/* Staff Notes */}
-            <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
               <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Staff Notes</h3>
               <div className="space-y-4">
                 <NoteField
@@ -837,7 +837,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               })
 
               return (
-                <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
                   <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Supplies Summary</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <SupplyStat label="Plates" value={supplies.plates} />
@@ -888,16 +888,16 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             <div className="space-y-4">
 
               {/* Recommendation Card */}
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Recommended Layout</h3>
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <p className="text-white font-semibold text-base">{rec.layoutType}</p>
+                    <p className="text-gray-900 font-semibold text-base">{rec.layoutType}</p>
                     {rec.warningLevel && (
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        rec.warningLevel === 'danger'  ? 'bg-red-600/20 text-red-400' :
-                        rec.warningLevel === 'caution' ? 'bg-yellow-600/20 text-yellow-400' :
-                        'bg-blue-600/20 text-blue-400'
+                        rec.warningLevel === 'danger'  ? 'bg-red-50 text-red-700' :
+                        rec.warningLevel === 'caution' ? 'bg-yellow-50 text-yellow-700' :
+                        'bg-blue-50 text-blue-700'
                       }`}>
                         {rec.warningLevel === 'danger' ? 'OVER CAPACITY' : rec.warningLevel === 'caution' ? 'CAUTION' : 'NOTE'}
                       </span>
@@ -906,46 +906,46 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
                   {!rec.isOverCapacity && rec.tablesNeeded !== null && (
                     <div className="grid grid-cols-4 gap-3">
-                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                        <p className="text-2xl font-bold text-white">{rec.tablesNeeded}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">6-ft Tables</p>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-gray-900">{rec.tablesNeeded}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">6-ft Tables</p>
                       </div>
-                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                        <p className="text-2xl font-bold text-white">{rec.highTopCount ?? 0}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">High-Tops</p>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-gray-900">{rec.highTopCount ?? 0}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">High-Tops</p>
                       </div>
-                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                        <p className="text-2xl font-bold text-white">{rec.receptionHighTops ?? 0}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Reception High-Tops</p>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-gray-900">{rec.receptionHighTops ?? 0}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Reception High-Tops</p>
                       </div>
-                      <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                        <p className="text-2xl font-bold text-white">{rec.seatedCapacity ?? '—'}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Seated Cap.</p>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2 text-center">
+                        <p className="text-2xl font-bold text-gray-900">{rec.seatedCapacity ?? '—'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Seated Cap.</p>
                       </div>
                     </div>
                   )}
 
                   {rec.warning && (
                     <div className={`rounded-lg px-3 py-2 text-sm ${
-                      rec.warningLevel === 'danger'  ? 'bg-red-900/20 border border-red-500/30 text-red-300' :
-                      rec.warningLevel === 'caution' ? 'bg-yellow-900/20 border border-yellow-500/30 text-yellow-300' :
-                      'bg-blue-900/20 border border-blue-500/30 text-blue-300'
+                      rec.warningLevel === 'danger'  ? 'bg-red-50 border border-red-200 text-red-700' :
+                      rec.warningLevel === 'caution' ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' :
+                      'bg-blue-50 border border-blue-200 text-blue-700'
                     }`}>
                       {rec.warning}
                     </div>
                   )}
 
-                  <div className="pt-2 border-t border-white/10">
+                  <div className="pt-2 border-t border-gray-200">
                     <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1">Staff Setup Notes</p>
-                    <p className="text-sm text-gray-300 leading-relaxed">{rec.staffNotes}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{rec.staffNotes}</p>
                   </div>
                 </div>
               </div>
 
               {/* Standard Setup Checklist */}
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Standard Setup Checklist</h3>
-                <ul className="space-y-2 text-sm text-gray-300">
+                <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
                     Cover all tables with black tablecloths <span className="text-gray-500">(check BEO — some events exempt)</span>
@@ -960,7 +960,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
-                    Place current <strong className="text-white">beer list</strong> and <strong className="text-white">wine list</strong> on each table for guests to review before ordering at the bar
+                    Place current <strong className="text-gray-900">beer list</strong> and <strong className="text-gray-900">wine list</strong> on each table for guests to review before ordering at the bar
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
@@ -968,7 +968,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#C8973A] mt-0.5 shrink-0">•</span>
-                    Music on <strong className="text-white">Source 2</strong>, turned up to at least <strong className="text-white">90</strong>
+                    Music on <strong className="text-gray-900">Source 2</strong>, turned up to at least <strong className="text-gray-900">90</strong>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className={`mt-0.5 shrink-0 font-bold ${tvOn ? 'text-green-400' : 'text-gray-500'}`}>•</span>
@@ -995,7 +995,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               </div>
 
               {/* Final Floor Plan Notes */}
-              <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Final Floor Plan Notes</h3>
                 <p className="text-xs text-gray-500 mb-2">Override the recommendation or document the agreed setup for staff.</p>
                 <Textarea
@@ -1028,12 +1028,12 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
         {tab === 'notes' && (
           <InfoCard title="Activity Log">
             {notes.length === 0 ? (
-              <p className="text-gray-400 text-sm">No notes yet.</p>
+              <p className="text-gray-500 text-sm">No notes yet.</p>
             ) : (
               <div className="space-y-3">
                 {notes.map((n) => (
-                  <div key={n.id} className="text-sm border-b border-white/5 pb-2">
-                    <p className="text-gray-300">{n.note}</p>
+                  <div key={n.id} className="text-sm border-b border-gray-200 pb-2">
+                    <p className="text-gray-700">{n.note}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{new Date(n.created_at).toLocaleString()}</p>
                   </div>
                 ))}
@@ -1058,7 +1058,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
 function InfoCard({ title, children, fullWidth }: { title: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div className={`rounded-xl border border-white/10 bg-[#1F3348]/50 p-4 ${fullWidth ? 'col-span-2' : ''}`}>
+    <div className={`rounded-xl border border-gray-200 bg-white p-4 ${fullWidth ? 'col-span-2' : ''}`}>
       <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">{title}</h3>
       {children}
     </div>
@@ -1067,7 +1067,7 @@ function InfoCard({ title, children, fullWidth }: { title: string; children: Rea
 
 function ToastStatusRow({ label, date, onToggle }: { label: string; date: string | null; onToggle: (checked: boolean) => void }) {
   return (
-    <div className="flex justify-between items-center text-sm py-1.5 border-b border-white/5 last:border-0">
+    <div className="flex justify-between items-center text-sm py-1.5 border-b border-gray-200 last:border-0">
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
@@ -1075,7 +1075,7 @@ function ToastStatusRow({ label, date, onToggle }: { label: string; date: string
           onChange={(e) => onToggle(e.target.checked)}
           className="rounded accent-[#C8973A] w-4 h-4"
         />
-        <span className={date ? 'text-white' : 'text-gray-400'}>{label}</span>
+        <span className={date ? 'text-gray-900' : 'text-gray-500'}>{label}</span>
       </label>
       <span className="text-xs text-gray-500 tabular-nums">
         {date ? new Date(date + 'T00:00:00').toLocaleDateString() : '—'}
@@ -1104,8 +1104,8 @@ function EditableRow({ label, value, type = 'text', display, locked, format, onS
   const shown = display ?? value
 
   return (
-    <div className="flex justify-between items-center text-sm py-1 border-b border-white/5 last:border-0">
-      <span className="text-gray-400 shrink-0 mr-2">{label}</span>
+    <div className="flex justify-between items-center text-sm py-1 border-b border-gray-200 last:border-0">
+      <span className="text-gray-500 shrink-0 mr-2">{label}</span>
       {!locked && editing ? (
         <Input
           type={type}
@@ -1147,8 +1147,8 @@ function ExpandableText({ label, value, locked, onSave }: {
   }
 
   return (
-    <div className="pt-2 border-t border-white/5 mt-1">
-      <p className="text-gray-400 text-xs mb-1">{label}</p>
+    <div className="pt-2 border-t border-gray-200 mt-1">
+      <p className="text-gray-500 text-xs mb-1">{label}</p>
       {!locked && editing ? (
         <Textarea
           value={val}
@@ -1156,13 +1156,13 @@ function ExpandableText({ label, value, locked, onSave }: {
           onBlur={commit}
           autoFocus
           rows={4}
-          className="w-full text-sm bg-[#0f1e2d] border border-[#C8973A]/50 rounded px-2 py-1 text-white focus:outline-none focus:border-[#C8973A] resize-none"
+          className="w-full text-sm bg-white border border-[#C8973A]/50 rounded px-2 py-1 text-gray-900 focus:outline-none focus:border-[#C8973A] resize-none"
         />
       ) : (
         <button
           disabled={locked}
           onClick={() => { setVal(value); setEditing(true) }}
-          className={`w-full text-left text-sm text-gray-200 leading-relaxed whitespace-pre-wrap ${locked ? '' : 'hover:text-[#C8973A] transition-colors cursor-text'}`}
+          className={`w-full text-left text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${locked ? '' : 'hover:text-[#C8973A] transition-colors cursor-text'}`}
         >
           {value || <span className="text-gray-500 italic">—</span>}
         </button>
@@ -1221,30 +1221,30 @@ function CateringTextCard({ label, text, showDisclaimer }: { label: string; text
   const lines = text.split('\n')
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A]">{label}</h3>
         <button
           onClick={copy}
           className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
             copied
-              ? 'bg-green-600/30 text-green-400 border border-green-500/40'
-              : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
           }`}
         >
           {copied ? '✓ Copied!' : 'Copy to Clipboard'}
         </button>
       </div>
-      <div className="w-full bg-[#0f1e2d] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 font-mono leading-relaxed">
+      <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 font-mono leading-relaxed">
         <pre className="whitespace-pre-wrap">
           {lines.map((line, i) => (
             <span key={i}>
-              {isHeaderLine(line) ? <strong className="text-white">{line}</strong> : line}
+              {isHeaderLine(line) ? <strong className="text-gray-900">{line}</strong> : line}
               {i < lines.length - 1 ? '\n' : ''}
             </span>
           ))}
           {showDisclaimer && (
-            <>{'\n\n'}<strong className="text-white">{CATERING_DISCLAIMER}</strong></>
+            <>{'\n\n'}<strong className="text-gray-900">{CATERING_DISCLAIMER}</strong></>
           )}
         </pre>
       </div>
@@ -1254,9 +1254,9 @@ function CateringTextCard({ label, text, showDisclaimer }: { label: string; text
 
 function SupplyStat({ label, value, note }: { label: string; value: number | string; note?: string }) {
   return (
-    <div className="rounded-lg bg-white/5 px-3 py-2">
+    <div className="rounded-lg bg-gray-50 px-3 py-2">
       <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">{label}</p>
-      <p className="text-lg font-bold text-white leading-none">{value}</p>
+      <p className="text-lg font-bold text-gray-900 leading-none">{value}</p>
       {note && <p className="text-xs text-gray-500 mt-0.5">{note}</p>}
     </div>
   )
@@ -1267,7 +1267,7 @@ function NoteField({ label, value, onSave }: { label: string; value: string; onS
   function commit() { if (val !== value) onSave(val) }
   return (
     <div>
-      <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">{label}</label>
       <Textarea
         value={val}
         onChange={(e) => setVal(e.target.value)}
@@ -1296,7 +1296,7 @@ function AlertTimingCard({ value, onSave }: { value: string; onSave: (v: string)
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1F3348]/50 p-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
       <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-1">Alert Timing</h3>
       <p className="text-xs text-gray-500 mb-3">Minutes before event start that each notification fires.</p>
       <div className="grid grid-cols-3 gap-3">
