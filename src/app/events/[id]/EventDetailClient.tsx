@@ -19,8 +19,11 @@ import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import { formatPhoneNumber } from '@/lib/phone'
 import { TOAST_STAGES } from '@/lib/toastStatus'
 import { calcReadiness, readinessColor } from '@/lib/readiness'
+import { calcBarImpact } from '@/lib/barImpact'
+import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
+import { TasksTab } from './TasksTab'
 import Link from 'next/link'
-import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems } from '@/lib/db'
+import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
 
 const ProposalDownloadButton = dynamic(
   () => import('@/components/ProposalPDF').then((m) => m.ProposalDownloadButton),
@@ -42,13 +45,14 @@ interface FullData {
 interface Props {
   data: FullData
   packages: Package[]
+  initialTasks: EventTask[]
 }
 
-export function EventDetailClient({ data: initialData, packages }: Props) {
+export function EventDetailClient({ data: initialData, packages, initialTasks }: Props) {
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'notes'>('overview')
+  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'tasks'|'notes'>('overview')
   const [editingConfirmed, setEditingConfirmed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
@@ -78,6 +82,43 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
     contract_signed: details?.contract_signed,
   })
   const readinessColors = readinessColor(readiness.score)
+
+  const hasPackage = eventPackages.some(ep => !!ep.package_id)
+  const packageCount = eventPackages.filter(ep => !!ep.package_id).length
+  const barImpactLevel = calcBarImpact({
+    id: event.id,
+    event_name: event.event_name,
+    event_date: event.event_date,
+    event_time: event.event_time,
+    setup_time: '',
+    decorate_time: '',
+    teardown_time: event.teardown_time,
+    production_close_time: '',
+    event_duration_mins: event.event_duration_mins,
+    space: event.space,
+    status: event.status,
+    first_name: client?.first_name ?? '',
+    last_name: client?.last_name ?? '',
+    email: '',
+    company: client?.company ?? '',
+    guest_count: details?.guest_count ?? 0,
+    bar_tab_type: details?.bar_tab_type ?? '',
+    drink_tickets: details?.drink_tickets ?? 0,
+  }).level
+  const taskContext: TaskContext = {
+    guestCount: details?.guest_count ?? 0,
+    hasPackage,
+    packageCount,
+    barTabType: details?.bar_tab_type,
+    drinkTickets: details?.drink_tickets,
+    bigScreenTv: details?.big_screen_tv,
+    kidsAttending: details?.kids_attending,
+    dessertExpected: details?.dessert_expected,
+    dietaryRestrictions: details?.dietary_restrictions,
+    barImpactLevel,
+  }
+  const taskComplexity = calcTaskComplexity(taskContext, initialTasks.filter(t => t.category === 'Dynamic').length)
+  const taskComplexityColors = COMPLEXITY_COLORS[taskComplexity.level]
 
   async function reload() {
     const res = await fetch(`/api/events/${event.id}`)
@@ -319,7 +360,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-white/10 mb-5">
-          {(['overview','catering','floorplan','notes'] as const).map((id) => (
+          {(['overview','catering','floorplan','tasks','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -329,7 +370,7 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                   : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
               }`}
             >
-              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', notes: 'Notes' }[id]}
+              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', notes: 'Notes' }[id]}
             </button>
           ))}
         </div>
@@ -416,6 +457,19 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
               <p className="text-[10px] text-gray-500 mt-2 italic">Based on operational prep, not payment status.</p>
             </InfoCard>
 
+            <InfoCard title="Tasks">
+              <div className={`rounded-lg border px-3 py-2.5 mb-3 flex items-center justify-between ${taskComplexityColors.bg} ${taskComplexityColors.border}`}>
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Complexity</span>
+                <span className={`text-lg font-bold ${taskComplexityColors.text}`}>{taskComplexity.level}</span>
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                {initialTasks.filter(t => t.completed).length}/{initialTasks.length} tasks complete
+              </p>
+              <Button size="sm" variant="outline" onClick={() => setTab('tasks')} className="w-full">
+                View Tasks
+              </Button>
+            </InfoCard>
+
             <InfoCard title="Package & Food">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -438,6 +492,26 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
                 <EditableRow locked={locked} label="Extra Headcount %" value={String((details?.buffer_pct ?? 0) * 100)} type="number" onSave={(v) => saveField('details', 'buffer_pct', Number(v) / 100)} />
                 <EditableRow locked={locked} label="Food Notes / Allergies" value={details?.food_notes ?? ''} onSave={(v) => saveField('details', 'food_notes', v)} />
                 <EditableRow locked={locked} label="Dietary Restrictions" value={details?.dietary_restrictions ?? ''} onSave={(v) => saveField('details', 'dietary_restrictions', v)} />
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!details?.dessert_expected}
+                      onChange={(e) => saveField('details', 'dessert_expected', e.target.checked ? 1 : 0)}
+                      className="rounded accent-[#C8973A] w-4 h-4"
+                    />
+                    Dessert Expected
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!details?.kids_attending}
+                      onChange={(e) => saveField('details', 'kids_attending', e.target.checked ? 1 : 0)}
+                      className="rounded accent-[#C8973A] w-4 h-4"
+                    />
+                    Kids Attending
+                  </label>
+                </div>
               </div>
             </InfoCard>
 
@@ -944,6 +1018,11 @@ export function EventDetailClient({ data: initialData, packages }: Props) {
             </div>
           )
         })()}
+
+        {/* Tasks Tab */}
+        {tab === 'tasks' && (
+          <TasksTab eventId={event.id} initialTasks={initialTasks} taskContext={taskContext} />
+        )}
 
         {/* Notes Tab */}
         {tab === 'notes' && (

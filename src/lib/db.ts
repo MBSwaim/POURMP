@@ -5,6 +5,7 @@ import { DEPOSIT_PCT, FINAL_PCT, DEPOSIT_DAYS_BEFORE } from './constants'
 import { subDays, addDays, format, parseISO } from 'date-fns'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
+import { generateTasksForEvent, type TaskContext } from './tasks'
 import type { EventForNotes } from './noteGenerators'
 
 declare global {
@@ -244,6 +245,24 @@ function initSchema(db: Database.Database) {
       created_at TEXT,
       updated_at TEXT
     )`,
+    // Event flags that drive dynamic task generation
+    `ALTER TABLE event_details ADD COLUMN kids_attending INTEGER DEFAULT 0`,
+    `ALTER TABLE event_details ADD COLUMN dessert_expected INTEGER DEFAULT 0`,
+    // Internal Task Management — modular, event-driven checklist (Setup/Breakdown/Dynamic)
+    `CREATE TABLE IF NOT EXISTS event_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      category TEXT NOT NULL,
+      label TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'Lead',
+      source_key TEXT,
+      sort_order INTEGER DEFAULT 0,
+      completed INTEGER DEFAULT 0,
+      completed_at TEXT,
+      notes TEXT DEFAULT '',
+      created_at TEXT,
+      UNIQUE(event_id, source_key)
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -329,6 +348,22 @@ export interface EventDetails {
   toast_invoice_sent_date: string | null
   toast_deposit_received_date: string | null
   toast_final_payment_date: string | null
+  kids_attending: number
+  dessert_expected: number
+}
+
+export interface EventTask {
+  id: number
+  event_id: number
+  category: string
+  label: string
+  role: string
+  source_key: string | null
+  sort_order: number
+  completed: number
+  completed_at: string | null
+  notes: string
+  created_at: string
 }
 
 export interface EventDebrief {
@@ -1256,6 +1291,99 @@ export function getClientDebriefHistory(clientId: number, excludeEventId: number
     went_well: string; issues: string; catering_accuracy: string; bar_impact_accuracy: string
     would_repeat_client: string; recommendations: string
   }>
+}
+
+// ─── Internal Task Management ───────────────────────────────────────────────
+// Modular, event-driven: Setup/Breakdown tasks always generated, Dynamic tasks
+// only when the triggering condition is true for this event (see lib/tasks.ts).
+
+function buildTaskContext(eventId: number): TaskContext | null {
+  const full = getEventFull(eventId)
+  if (!full) return null
+  const { event, details, packages } = full
+  const hasPackage = packages.some(p => !!p.package_id)
+  const packageCount = packages.filter(p => !!p.package_id).length
+
+  const evForImpact: EventForNotes = {
+    id: event.id,
+    event_name: event.event_name,
+    event_date: event.event_date,
+    event_time: event.event_time,
+    setup_time: '',
+    decorate_time: '',
+    teardown_time: event.teardown_time,
+    production_close_time: '',
+    event_duration_mins: event.event_duration_mins,
+    space: event.space,
+    status: event.status,
+    first_name: '',
+    last_name: '',
+    email: '',
+    guest_count: details?.guest_count ?? 0,
+    bar_tab_type: details?.bar_tab_type ?? '',
+    drink_tickets: details?.drink_tickets ?? 0,
+  }
+  const barImpactLevel = calcBarImpact(evForImpact).level
+
+  return {
+    guestCount: details?.guest_count ?? 0,
+    hasPackage,
+    packageCount,
+    barTabType: details?.bar_tab_type ?? null,
+    drinkTickets: details?.drink_tickets ?? 0,
+    bigScreenTv: details?.big_screen_tv ?? 0,
+    kidsAttending: details?.kids_attending ?? 0,
+    dessertExpected: details?.dessert_expected ?? 0,
+    dietaryRestrictions: details?.dietary_restrictions ?? '',
+    barImpactLevel,
+  }
+}
+
+export function getEventTasks(eventId: number): EventTask[] {
+  return getDb().prepare(`SELECT * FROM event_tasks WHERE event_id = ? ORDER BY category, sort_order, id`).all(eventId) as EventTask[]
+}
+
+// Idempotent: only INSERTs templates that don't already have a matching source_key
+// for this event. Never removes or overwrites an existing (possibly completed) task.
+export function syncEventTasks(eventId: number): EventTask[] {
+  const ctx = buildTaskContext(eventId)
+  if (ctx) {
+    const templates = generateTasksForEvent(ctx)
+    const existing = new Set(
+      (getDb().prepare(`SELECT source_key FROM event_tasks WHERE event_id = ? AND source_key IS NOT NULL`).all(eventId) as { source_key: string }[])
+        .map(r => r.source_key)
+    )
+    const now = new Date().toISOString()
+    const insert = getDb().prepare(`INSERT INTO event_tasks (event_id, category, label, role, source_key, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+    const tx = getDb().transaction(() => {
+      for (const t of templates) {
+        if (!existing.has(t.key)) insert.run(eventId, t.category, t.label, t.role, t.key, now)
+      }
+    })
+    tx()
+  }
+  return getEventTasks(eventId)
+}
+
+export function toggleTask(id: number, completed: boolean): void {
+  const now = completed ? new Date().toISOString() : null
+  getDb().prepare(`UPDATE event_tasks SET completed = ?, completed_at = ? WHERE id = ?`).run(completed ? 1 : 0, now, id)
+}
+
+export function updateTaskNotes(id: number, notes: string): void {
+  getDb().prepare(`UPDATE event_tasks SET notes = ? WHERE id = ?`).run(notes, id)
+}
+
+export function addManualTask(eventId: number, data: { category: string; label: string; role: string }): number {
+  const now = new Date().toISOString()
+  const result = getDb()
+    .prepare(`INSERT INTO event_tasks (event_id, category, label, role, source_key, created_at) VALUES (?, ?, ?, ?, NULL, ?)`)
+    .run(eventId, data.category, data.label, data.role, now)
+  return result.lastInsertRowid as number
+}
+
+export function deleteTask(id: number): void {
+  getDb().prepare(`DELETE FROM event_tasks WHERE id = ?`).run(id)
 }
 
 // ─── Staff Members ────────────────────────────────────────────────────────────

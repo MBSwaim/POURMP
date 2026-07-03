@@ -13,6 +13,8 @@ import type { EventForNotes } from '@/lib/noteGenerators'
 import { calcBarImpact, IMPACT_PRINT_COLORS } from '@/lib/barImpact'
 import { calcReadiness } from '@/lib/readiness'
 import { TOAST_STAGES } from '@/lib/toastStatus'
+import { TASK_ROLES, calcTaskComplexity, COMPLEXITY_PRINT_COLORS, type TaskRole, type TaskContext } from '@/lib/tasks'
+import type { EventTask } from '@/lib/db'
 
 // ─── Shared print styles injected once ────────────────────────────────────────
 
@@ -167,6 +169,21 @@ function ImpactRow({ ev, label = 'Main Bar Impact' }: { ev: EventForNotes; label
   )
 }
 
+// ─── Task checklist (role-filtered, open tasks only) ──────────────────────────
+
+function TaskChecklist({ tasks, role }: { tasks?: EventTask[]; role: TaskRole }) {
+  if (!tasks) return null
+  const open = tasks.filter(t => t.role === role && !t.completed)
+  if (open.length === 0) {
+    return <p className="font-[var(--font-crimson)] text-sm text-gray-500 italic">No open {role} tasks.</p>
+  }
+  return (
+    <div className="space-y-1">
+      {open.map(t => <CheckItem key={t.id}>{t.label}</CheckItem>)}
+    </div>
+  )
+}
+
 // ─── Extra tab notes dedup ─────────────────────────────────────────────────────
 
 const STANDARD_TAB_DESCRIPTIONS: Record<string, string> = {
@@ -191,13 +208,19 @@ function beverageLabel(ev: EventForNotes) {
 
 // ─── RUN OF SHOW ──────────────────────────────────────────────────────────────
 
-export function RunOfShowDoc({ ev }: { ev: EventForNotes }) {
+export function RunOfShowDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const decorateTime = ev.decorate_time || ev.setup_time
   const foodServed = shiftTime(ev.event_time, -15)
   const lastCall = shiftTime(ev.teardown_time, -30)
 
   return (
     <PrintDoc title="Run of Show" ev={ev}>
+      {tasks && (
+        <Section title="Lead Tasks">
+          <TaskChecklist tasks={tasks} role="Lead" />
+        </Section>
+      )}
+
       <Section title="Timeline">
         {ev.production_close_time && <TimeRow time={ev.production_close_time} label="Production space closed off" />}
         {ev.setup_time && <TimeRow time={ev.setup_time} label="MP event setup begins" />}
@@ -342,7 +365,7 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
 
 // ─── KITCHEN SHEET ────────────────────────────────────────────────────────────
 
-export function KitchenSheetDoc({ ev }: { ev: EventForNotes }) {
+export function KitchenSheetDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const items = ev.menuItems
     ? calcAllItems(ev.menuItems as Parameters<typeof calcAllItems>[0], ev.guest_count, (ev.buffer_pct ?? 0) / 100, parseMenuItemOverrides(ev.menu_item_overrides_json))
     : []
@@ -387,6 +410,12 @@ export function KitchenSheetDoc({ ev }: { ev: EventForNotes }) {
 
   return (
     <PrintDoc title="Kitchen Sheet" ev={ev}>
+      {tasks && (
+        <Section title="Kitchen Tasks">
+          <TaskChecklist tasks={tasks} role="Kitchen" />
+        </Section>
+      )}
+
       <Section title="Catering Order">
         <CateringItems ev={ev} />
       </Section>
@@ -429,12 +458,18 @@ export function KitchenSheetDoc({ ev }: { ev: EventForNotes }) {
 
 // ─── FOH NOTES ────────────────────────────────────────────────────────────────
 
-export function FOHNotesDoc({ ev }: { ev: EventForNotes }) {
+export function FOHNotesDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const decorateTime = ev.decorate_time || ev.setup_time
   const lastCall = shiftTime(ev.teardown_time, -30)
 
   return (
     <PrintDoc title="FOH Notes" ev={ev}>
+      {tasks && (
+        <Section title="FOH Tasks">
+          <TaskChecklist tasks={tasks} role="FOH" />
+        </Section>
+      )}
+
       <Section title="Timeline">
         {ev.production_close_time && <TimeRow time={ev.production_close_time} label="Production space closed off" />}
         {ev.setup_time && <TimeRow time={ev.setup_time} label="MP setup begins" />}
@@ -489,7 +524,7 @@ export function FOHNotesDoc({ ev }: { ev: EventForNotes }) {
 
 // ─── BAR NOTES ────────────────────────────────────────────────────────────────
 
-export function BarNotesDoc({ ev }: { ev: EventForNotes }) {
+export function BarNotesDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const lastCall = shiftTime(ev.teardown_time, -30)
 
   const impact = calcBarImpact(ev)
@@ -502,6 +537,12 @@ export function BarNotesDoc({ ev }: { ev: EventForNotes }) {
           <BulletItem key={i}>{note}</BulletItem>
         ))}
       </Section>
+
+      {tasks && (
+        <Section title="Bar Tasks">
+          <TaskChecklist tasks={tasks} role="Bar" />
+        </Section>
+      )}
 
       <Section title="Beverage Setup">
         <Row label="Beverage Option" value={beverageLabel(ev)} />
@@ -627,7 +668,7 @@ export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
 // Master control sheet for whoever is running point on the event — readiness,
 // Toast status, main bar impact, and a condensed timeline in one place.
 
-export function LeadsPackDoc({ ev }: { ev: EventForNotes }) {
+export function LeadsPackDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const decorateTime = ev.decorate_time || ev.setup_time
   const lastCall = shiftTime(ev.teardown_time, -30)
   const impact = calcBarImpact(ev)
@@ -641,6 +682,17 @@ export function LeadsPackDoc({ ev }: { ev: EventForNotes }) {
     staffing_notes: ev.staffing_notes,
     contract_signed: ev.contract_signed,
   })
+  const dynamicCount = tasks?.filter(t => t.category === 'Dynamic').length ?? 0
+  const taskCtx: TaskContext = {
+    guestCount: ev.guest_count,
+    hasPackage: !!ev.package_name,
+    packageCount: ev.package_name ? 1 : 0,
+    barTabType: ev.bar_tab_type,
+    drinkTickets: ev.drink_tickets,
+    bigScreenTv: ev.big_screen_tv,
+    barImpactLevel: impact.level,
+  }
+  const complexity = calcTaskComplexity(taskCtx, dynamicCount)
 
   return (
     <PrintDoc title="Leads Pack" ev={ev}>
@@ -681,6 +733,26 @@ export function LeadsPackDoc({ ev }: { ev: EventForNotes }) {
           <BulletItem key={i}>{note}</BulletItem>
         ))}
       </Section>
+
+      <div className="flex gap-2 text-sm">
+        <span className="font-[var(--font-josefin)] text-[10px] uppercase tracking-wider text-gray-400 w-36 shrink-0 pt-0.5">Task Complexity</span>
+        <span className="font-[var(--font-josefin)] font-bold flex-1" style={{ color: COMPLEXITY_PRINT_COLORS[complexity.level] }}>
+          {complexity.level}
+        </span>
+      </div>
+
+      {tasks && (
+        <Section title="Open Tasks by Role">
+          <TwoCol>
+            {TASK_ROLES.map(role => (
+              <div key={role}>
+                <p className="font-[var(--font-josefin)] text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{role}</p>
+                <TaskChecklist tasks={tasks} role={role} />
+              </div>
+            ))}
+          </TwoCol>
+        </Section>
+      )}
 
       <Section title="Quick Timeline">
         <div className="grid grid-cols-2 gap-x-8 gap-y-1">

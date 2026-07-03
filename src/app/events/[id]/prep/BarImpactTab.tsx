@@ -3,14 +3,15 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { calcBarImpact, IMPACT_COLORS, type ImpactLevel } from '@/lib/barImpact'
 import type { EventForNotes } from '@/lib/noteGenerators'
-import type { DrinkTicketLog } from '@/lib/db'
+import type { DrinkTicketLog, EventTask } from '@/lib/db'
 
 interface Props {
   ev: EventForNotes
   initialLog: DrinkTicketLog | null
+  tasks?: EventTask[]
 }
 
-export function BarImpactTab({ ev, initialLog }: Props) {
+export function BarImpactTab({ ev, initialLog, tasks }: Props) {
   const impact = calcBarImpact(ev)
   const colors = IMPACT_COLORS[impact.level]
   const isTicketEvent = ev.bar_tab_type === 'Pre-Paid Drink Ticket(s)'
@@ -95,6 +96,25 @@ export function BarImpactTab({ ev, initialLog }: Props) {
           {impact.alertText}
         </pre>
       </div>
+
+      {/* Bar Tasks */}
+      {tasks && (
+        <div className="rounded-xl bg-[#1F3348] border border-white/10 p-4 space-y-2">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Bar Tasks</p>
+          {tasks.filter(t => t.role === 'Bar' && !t.completed).length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No open bar tasks.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {tasks.filter(t => t.role === 'Bar' && !t.completed).map(t => (
+                <div key={t.id} className="flex items-start gap-2.5 text-sm text-gray-300">
+                  <span className="w-4 h-4 mt-0.5 shrink-0 border border-gray-500 rounded-sm inline-block" />
+                  {t.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Drink Ticket Tracker — only for ticket events */}
       {isTicketEvent && (

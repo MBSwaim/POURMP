@@ -10,6 +10,8 @@ import {
   type CalculatedItem,
 } from './calculations'
 import { calcBarImpact } from './barImpact'
+import { calcReadiness } from './readiness'
+import { calcTaskComplexity, TASK_ROLES, type TaskContext } from './tasks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,8 @@ export interface EventForNotes {
   toast_invoice_sent_date?: string | null
   toast_deposit_received_date?: string | null
   toast_final_payment_date?: string | null
+  kids_attending?: number
+  dessert_expected?: number
   // catering items from the package
   menuItems?: MenuItem[]
 }
@@ -109,7 +113,7 @@ function calcItems(ev: EventForNotes): CalculatedItem[] {
 
 // ─── TOAST NOTES BUILDER ──────────────────────────────────────────────────────
 
-export function generateToastNotes(ev: EventForNotes): string {
+export function generateToastNotes(ev: EventForNotes, tasks: BriefTask[] = []): string {
   const lines: string[] = []
   const foodServedTime = shiftTime(ev.event_time, -15)
   const items = calcItems(ev)
@@ -172,6 +176,24 @@ export function generateToastNotes(ev: EventForNotes): string {
     lines.push(extraNotes)
   }
   lines.push(`Main Bar Impact: ${calcBarImpact(ev).level.toUpperCase()} (see Main Bar Impact tab for details)`)
+  if (tasks.length > 0) {
+    const dynamicCount = tasks.filter(t => t.category === 'Dynamic').length
+    const taskCtx: TaskContext = {
+      guestCount: ev.guest_count,
+      hasPackage: !!ev.package_name,
+      packageCount: ev.package_name ? 1 : 0,
+      barTabType: ev.bar_tab_type,
+      drinkTickets: ev.drink_tickets,
+      bigScreenTv: ev.big_screen_tv,
+      barImpactLevel: calcBarImpact(ev).level,
+    }
+    const complexity = calcTaskComplexity(taskCtx, dynamicCount)
+    const setupTasks = tasks.filter(t => t.category === 'Setup')
+    const breakdownTasks = tasks.filter(t => t.category === 'Breakdown')
+    const setupDone = setupTasks.filter(t => t.completed).length
+    const breakdownDone = breakdownTasks.filter(t => t.completed).length
+    lines.push(`Task Complexity: ${complexity.level.toUpperCase()} — Setup ${setupDone}/${setupTasks.length} · Breakdown ${breakdownDone}/${breakdownTasks.length} complete (see Tasks tab)`)
+  }
   lines.push('')
 
   // SETUP DETAILS
@@ -551,6 +573,82 @@ export function generateSetupChecklist(ev: EventForNotes): string {
   lines.push('  □ Floor swept and spot cleaned')
   lines.push('  □ High-tops and tables reset to standard')
   lines.push('  □ Production space returned to standard configuration')
+
+  return lines.join('\n')
+}
+
+// ─── PRE-SHIFT BRIEF ────────────────────────────────────────────────────────
+
+export interface BriefTask {
+  category: string
+  role: string
+  label: string
+  completed: number | boolean
+}
+
+export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[]): string {
+  const lines: string[] = []
+  const impact = calcBarImpact(ev)
+  const readiness = calcReadiness({
+    guest_count: ev.guest_count,
+    hasPackage: !!ev.package_name,
+    bar_tab_type: ev.bar_tab_type,
+    setup_notes: ev.setup_notes,
+    floor_plan_notes: ev.floor_plan_notes,
+    dietary_restrictions: ev.dietary_restrictions,
+    staffing_notes: ev.staffing_notes,
+    contract_signed: ev.contract_signed,
+  })
+  const dynamicCount = tasks.filter(t => t.category === 'Dynamic').length
+  const taskCtx: TaskContext = {
+    guestCount: ev.guest_count,
+    hasPackage: !!ev.package_name,
+    packageCount: ev.package_name ? 1 : 0,
+    barTabType: ev.bar_tab_type,
+    drinkTickets: ev.drink_tickets,
+    bigScreenTv: ev.big_screen_tv,
+    barImpactLevel: impact.level,
+  }
+  const complexity = calcTaskComplexity(taskCtx, dynamicCount)
+
+  lines.push('PRE-SHIFT BRIEF')
+  lines.push(ev.event_name)
+  lines.push(fmtDate(ev.event_date))
+  lines.push('')
+
+  lines.push(`Time:   ${to12Hour(ev.event_time)} – ${to12Hour(ev.teardown_time)}`)
+  lines.push(`Space:  ${ev.space || '—'}`)
+  lines.push(`Guests: ${ev.guest_count > 0 ? ev.guest_count : '—'}`)
+  lines.push('')
+
+  lines.push(`READINESS: ${readiness.score}% operational`)
+  lines.push(`COMPLEXITY: ${complexity.level}`)
+  lines.push(`MAIN BAR IMPACT: ${impact.level}`)
+  if (impact.congestionNotes[0]) lines.push(`  ${impact.congestionNotes[0]}`)
+  lines.push('')
+
+  lines.push('OPEN TASKS BY ROLE')
+  for (const role of TASK_ROLES) {
+    const open = tasks.filter(t => t.role === role && !t.completed)
+    lines.push(`${role.toUpperCase()} (${open.length} open)`)
+    if (open.length === 0) {
+      lines.push('  — all clear')
+    } else {
+      for (const t of open) lines.push(`  • ${t.label}`)
+    }
+  }
+
+  const reminders: string[] = []
+  if (ev.kids_attending) reminders.push('Kids attending — patio supervision')
+  if (ev.dessert_expected) reminders.push('Dessert expected — host-provided, coordinate space')
+  if (ev.dietary_restrictions) reminders.push(`Dietary: ${ev.dietary_restrictions}`)
+  if (readiness.missingLabels.length > 0) reminders.push(`Still needed: ${readiness.missingLabels.join(', ')}`)
+
+  if (reminders.length > 0) {
+    lines.push('')
+    lines.push('KEY REMINDERS')
+    for (const r of reminders) lines.push(`  • ${r}`)
+  }
 
   return lines.join('\n')
 }

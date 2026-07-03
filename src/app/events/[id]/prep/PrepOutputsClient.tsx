@@ -2,15 +2,16 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { generateToastNotes, type EventForNotes } from '@/lib/noteGenerators'
+import { generateToastNotes, generatePreShiftBrief, type EventForNotes } from '@/lib/noteGenerators'
 import { PrintStyles, RunOfShowDoc, KitchenSheetDoc, FOHNotesDoc, BarNotesDoc, SetupChecklistDoc, LeadsPackDoc } from './PrintableDoc'
 import { BarImpactTab } from './BarImpactTab'
 import { DebriefTab } from './DebriefTab'
 import { to12Hour } from '@/lib/timeUtils'
-import type { DrinkTicketLog, EventDebrief } from '@/lib/db'
+import type { DrinkTicketLog, EventDebrief, EventTask } from '@/lib/db'
 
 const TABS = [
   { key: 'toast',    label: 'Toast Notes',    icon: '📋', printable: false },
+  { key: 'brief',    label: 'Pre-Shift Brief',icon: '🗓️', printable: false },
   { key: 'impact',   label: 'Main Bar Impact',icon: '🍺', printable: false },
   { key: 'ros',      label: 'Run of Show',    icon: '🕐', printable: true  },
   { key: 'kitchen',  label: 'Kitchen Sheet',  icon: '🍳', printable: true  },
@@ -35,15 +36,25 @@ interface Props {
   initialTicketLog: DrinkTicketLog | null
   initialDebrief: EventDebrief | null
   clientHistory: ClientHistoryEntry[]
+  tasks: EventTask[]
 }
 
-export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory }: Props) {
+export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory, tasks }: Props) {
   const [active, setActive] = useState<TabKey>('toast')
   const activeTab = TABS.find(t => t.key === active)!
 
   async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(generateToastNotes(ev))
+      toast.success('Copied to clipboard')
+    } catch {
+      toast.error('Copy failed — try selecting the text manually')
+    }
+  }
+
+  async function copyBrief() {
+    try {
+      await navigator.clipboard.writeText(generatePreShiftBrief(ev, tasks))
       toast.success('Copied to clipboard')
     } catch {
       toast.error('Copy failed — try selecting the text manually')
@@ -116,10 +127,32 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
         </div>
       )}
 
+      {/* ── Pre-Shift Brief ── */}
+      {active === 'brief' && (
+        <div className="max-w-4xl mx-auto px-4 no-print">
+          <div className="rounded-xl bg-[#1F3348] border border-white/10 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <p className="text-xs font-bold tracking-widest uppercase text-gray-400">
+                🗓️ Pre-Shift Brief — Copy &amp; Paste
+              </p>
+              <button
+                onClick={copyBrief}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C8973A] hover:bg-[#b07d2e] text-white text-xs font-semibold transition-colors"
+              >
+                Copy to Clipboard
+              </button>
+            </div>
+            <pre className="p-4 text-xs text-gray-300 leading-relaxed font-mono whitespace-pre-wrap overflow-x-auto">
+              {generatePreShiftBrief(ev, tasks)}
+            </pre>
+          </div>
+        </div>
+      )}
+
       {/* ── Main Bar Impact ── */}
       {active === 'impact' && (
         <div className="max-w-4xl mx-auto px-4 no-print">
-          <BarImpactTab ev={ev} initialLog={initialTicketLog} />
+          <BarImpactTab ev={ev} initialLog={initialTicketLog} tasks={tasks} />
         </div>
       )}
 
@@ -144,10 +177,10 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
               🖨 Print Full Handoff Pack
             </button>
           </div>
-          <div className="print-page-break"><LeadsPackDoc ev={ev} /></div>
-          <div className="print-page-break"><KitchenSheetDoc ev={ev} /></div>
-          <div className="print-page-break"><FOHNotesDoc ev={ev} /></div>
-          <BarNotesDoc ev={ev} />
+          <div className="print-page-break"><LeadsPackDoc ev={ev} tasks={tasks} /></div>
+          <div className="print-page-break"><KitchenSheetDoc ev={ev} tasks={tasks} /></div>
+          <div className="print-page-break"><FOHNotesDoc ev={ev} tasks={tasks} /></div>
+          <BarNotesDoc ev={ev} tasks={tasks} />
         </div>
       )}
 
@@ -162,11 +195,11 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
               🖨 Print / Save as PDF
             </button>
           </div>
-          {active === 'ros'     && <RunOfShowDoc ev={ev} />}
-          {active === 'kitchen' && <KitchenSheetDoc ev={ev} />}
-          {active === 'foh'     && <FOHNotesDoc ev={ev} />}
-          {active === 'bar'     && <BarNotesDoc ev={ev} />}
-          {active === 'leads'   && <LeadsPackDoc ev={ev} />}
+          {active === 'ros'     && <RunOfShowDoc ev={ev} tasks={tasks} />}
+          {active === 'kitchen' && <KitchenSheetDoc ev={ev} tasks={tasks} />}
+          {active === 'foh'     && <FOHNotesDoc ev={ev} tasks={tasks} />}
+          {active === 'bar'     && <BarNotesDoc ev={ev} tasks={tasks} />}
+          {active === 'leads'   && <LeadsPackDoc ev={ev} tasks={tasks} />}
           {active === 'setup'   && <SetupChecklistDoc ev={ev} />}
         </div>
       )}

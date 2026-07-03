@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getEventFull, getDrinkTicketLog, getDebrief, getClientDebriefHistory } from '@/lib/db'
+import { getEventFull, getDrinkTicketLog, getDebrief, getClientDebriefHistory, syncEventTasks } from '@/lib/db'
 import { PrepOutputsClient } from './PrepOutputsClient'
 import type { EventForNotes } from '@/lib/noteGenerators'
 
@@ -55,12 +55,15 @@ export default function PrepPage({ params }: { params: { id: string } }) {
     toast_invoice_sent_date: details?.toast_invoice_sent_date ?? null,
     toast_deposit_received_date: details?.toast_deposit_received_date ?? null,
     toast_final_payment_date: details?.toast_final_payment_date ?? null,
+    kids_attending: details?.kids_attending ?? 0,
+    dessert_expected: details?.dessert_expected ?? 0,
     menuItems: data.menuItems as import('@/lib/calculations').MenuItem[],
   }
 
   const ticketLog = getDrinkTicketLog(event.id) ?? null
   const debrief = getDebrief(event.id) ?? null
   const clientHistory = client ? getClientDebriefHistory(client.id, event.id) : []
+  const tasks = syncEventTasks(event.id)
 
-  return <PrepOutputsClient ev={ev} initialTicketLog={ticketLog} initialDebrief={debrief} clientHistory={clientHistory} />
+  return <PrepOutputsClient ev={ev} initialTicketLog={ticketLog} initialDebrief={debrief} clientHistory={clientHistory} tasks={tasks} />
 }
