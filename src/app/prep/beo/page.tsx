@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export default function BEOPage({ searchParams }: { searchParams: { event?: string } }) {
   const today = new Date().toISOString().slice(0, 10)
   const events = getEvents()
-    .filter(e => e.status === 'Confirmed' && e.event_date >= today)
+    .filter(e => e.status !== 'Closed' && e.event_date >= today)
     .sort((a, b) => a.event_date.localeCompare(b.event_date))
 
   return (

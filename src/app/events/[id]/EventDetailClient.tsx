@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge, PaymentStatusBadge } from '@/components/StatusBadge'
 import { CateringCalculator } from '@/components/CateringCalculator'
-import dynamic from 'next/dynamic'
 import { EVENT_STATUSES } from '@/lib/constants'
 
 const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
@@ -22,13 +21,7 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
-import Link from 'next/link'
 import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
-
-const ProposalDownloadButton = dynamic(
-  () => import('@/components/ProposalPDF').then((m) => m.ProposalDownloadButton),
-  { ssr: false, loading: () => <Button variant="outline" disabled>Loading PDF...</Button> }
-)
 
 interface FullData {
   event: Event
@@ -53,7 +46,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
   const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'tasks'|'notes'>('overview')
-  const [editingConfirmed, setEditingConfirmed] = useState(false)
+  const [editingClosed, setEditingClosed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
   const { event, client, details, payments, addOns, notes } = data
@@ -68,8 +61,8 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     setFloorPlanNotes(data.details?.floor_plan_notes ?? '')
   }, [data])
 
-  const isConfirmed = event.status === 'Confirmed'
-  const locked = isConfirmed && !editingConfirmed
+  const isClosed = event.status === 'Closed'
+  const locked = isClosed && !editingClosed
 
   const readiness = calcReadiness({
     guest_count: details?.guest_count ?? 0,
@@ -168,42 +161,13 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     } catch { toast.error('Failed') }
   }
 
-  async function enterEditMode() {
-    try {
-      await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: { status: 'Tentative' } }),
-      })
-      await reload()
-      setEditingConfirmed(true)
-    } catch { toast.error('Failed to enter edit mode') }
+  function enterEditMode() {
+    setEditingClosed(true)
   }
 
-  async function saveAndConfirm() {
-    try {
-      await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: { status: 'Confirmed' } }),
-      })
-      toast.success('Event confirmed')
-      await reload()
-      setEditingConfirmed(false)
-    } catch { toast.error('Failed') }
-  }
-
-  async function saveAsTentative() {
-    try {
-      await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: { status: 'Tentative' } }),
-      })
-      toast.success('Saved as Tentative')
-      await reload()
-      setEditingConfirmed(false)
-    } catch { toast.error('Failed') }
+  function doneEditing() {
+    setEditingClosed(false)
+    toast.success('Done editing')
   }
 
   async function saveField(section: 'event' | 'client' | 'details', key: string, value: unknown) {
@@ -321,38 +285,24 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             {EVENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <StatusBadge status={event.status} />
-          {isConfirmed && !editingConfirmed && (
+          {isClosed && (
             <Button
               variant="outline"
               size="sm"
-              onClick={enterEditMode}
+              onClick={locked ? enterEditMode : doneEditing}
               className="border-[#C8973A] text-[#C8973A] hover:bg-[#C8973A]/10"
             >
-              Edit Event
+              {locked ? 'Edit Event' : 'Done Editing'}
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={saveAsTentative} className="border-gray-300 text-gray-900 hover:bg-gray-100">
-            Save
-          </Button>
-          <Button size="sm" onClick={saveAndConfirm} className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white">
-            Save & Confirm
-          </Button>
-          <Link
-            href={`/events/${event.id}/prep`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-[#C8973A]/15 border border-[#C8973A]/40 text-[#C8973A] hover:bg-[#C8973A]/25 transition-colors font-medium"
-          >
-            📋 Generate Outputs
-          </Link>
-          <ProposalDownloadButton eventId={event.id} />
         </div>
       </div>
 
-      {editingConfirmed && (
+      {isClosed && editingClosed && (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700 flex items-start gap-2">
           <span className="mt-0.5">⚠</span>
           <span>
-            This event has been set to <strong>Tentative</strong> while you make changes.
-            Click <strong>Save & Confirm</strong> to restore Confirmed status, or <strong>Save</strong> to keep it as Tentative.
+            Editing a <strong>Closed</strong> event. Click <strong>Done Editing</strong> when finished to lock it again.
           </span>
         </div>
       )}
@@ -437,7 +387,34 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               ))}
             </InfoCard>
 
-            <InfoCard title="Event Readiness">
+            <InfoCard title="Financial Tracking">
+              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
+                Internal visibility only — mirrors what Toast shows for this event. Toast processes all payments; POURMP does not.
+              </p>
+              <EditableRow locked={locked} label="Total Event Value" type="number" value={String(details?.total_event_value ?? '')} display={formatCurrency(details?.total_event_value ?? 0)} onSave={(v) => saveField('details', 'total_event_value', Number(v))} />
+              <EditableRow locked={locked} label="Deposit Due" type="number" value={String(details?.deposit_due ?? '')} display={formatCurrency(details?.deposit_due ?? 0)} onSave={(v) => saveField('details', 'deposit_due', Number(v))} />
+              <EditableRow locked={locked} label="Deposit Received" type="number" value={String(details?.deposit_received ?? '')} display={formatCurrency(details?.deposit_received ?? 0)} onSave={(v) => saveField('details', 'deposit_received', Number(v))} />
+              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
+                <span className="text-gray-500 shrink-0 mr-2">Deposit Received Date</span>
+                <span className="text-right text-gray-900">{details?.toast_deposit_received_date ? new Date(details.toast_deposit_received_date + 'T00:00:00').toLocaleDateString() : '—'}</span>
+              </div>
+              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
+                <span className="text-gray-500 shrink-0 mr-2">Deposit Outstanding</span>
+                <span className="text-right text-gray-900 font-medium">{formatCurrency(Math.max(0, (details?.deposit_due ?? 0) - (details?.deposit_received ?? 0)))}</span>
+              </div>
+              <EditableRow locked={locked} label="Final Amount Due" type="number" value={String(details?.final_amount_due ?? '')} display={formatCurrency(details?.final_amount_due ?? 0)} onSave={(v) => saveField('details', 'final_amount_due', Number(v))} />
+              <EditableRow locked={locked} label="Final Amount Received" type="number" value={String(details?.final_amount_received ?? '')} display={formatCurrency(details?.final_amount_received ?? 0)} onSave={(v) => saveField('details', 'final_amount_received', Number(v))} />
+              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
+                <span className="text-gray-500 shrink-0 mr-2">Final Payment Date</span>
+                <span className="text-right text-gray-900">{details?.toast_final_payment_date ? new Date(details.toast_final_payment_date + 'T00:00:00').toLocaleDateString() : '—'}</span>
+              </div>
+              <div className="flex justify-between text-sm py-1">
+                <span className="text-gray-500 shrink-0 mr-2">Final Balance Outstanding</span>
+                <span className="text-right text-gray-900 font-medium">{formatCurrency(Math.max(0, (details?.final_amount_due ?? 0) - (details?.final_amount_received ?? 0)))}</span>
+              </div>
+            </InfoCard>
+
+            <InfoCard title="Planning Readiness">
               <div className={`rounded-lg border px-3 py-2.5 mb-3 flex items-center justify-between ${readinessColors.bg} ${readinessColors.border}`}>
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Operational Readiness</span>
                 <span className={`text-xl font-bold ${readinessColors.text}`}>{readiness.score}%</span>
@@ -511,6 +488,15 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                     />
                     Kids Attending
                   </label>
+                  <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!details?.final_menu_locked}
+                      onChange={(e) => saveField('details', 'final_menu_locked', e.target.checked ? 1 : 0)}
+                      className="rounded accent-[#C8973A] w-4 h-4"
+                    />
+                    Final Menu Locked
+                  </label>
                 </div>
               </div>
             </InfoCard>
@@ -540,7 +526,9 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   </select>
                 )}
               </div>
-              <EditableRow locked={locked} label="Drink Tickets" value={String(details?.drink_tickets ?? '')} type="number" onSave={(v) => saveField('details', 'drink_tickets', Number(v))} />
+              {details?.bar_tab_type !== 'Individual Tabs' && (
+                <EditableRow locked={locked} label="Drink Tickets" value={String(details?.drink_tickets ?? '')} type="number" onSave={(v) => saveField('details', 'drink_tickets', Number(v))} />
+              )}
               <ExpandableText locked={locked} label="Tab Details" value={details?.tab_details ?? ''} onSave={(v) => saveField('details', 'tab_details', v)} />
             </InfoCard>
 

@@ -8,6 +8,8 @@ import { BarImpactTab } from './BarImpactTab'
 import { DebriefTab } from './DebriefTab'
 import { to12Hour } from '@/lib/timeUtils'
 import type { DrinkTicketLog, EventDebrief, EventTask } from '@/lib/db'
+import type { RiskFlag } from '@/lib/riskScanner'
+import type { ClientHistoryEntry } from '@/lib/prepOutputsData'
 
 const TABS = [
   { key: 'toast',    label: 'Toast Notes',    icon: '📋', printable: false },
@@ -25,21 +27,16 @@ const TABS = [
 
 type TabKey = typeof TABS[number]['key']
 
-interface ClientHistoryEntry {
-  id: number; event_name: string; event_date: string; actual_guest_count: number | null
-  went_well: string; issues: string; catering_accuracy: string; bar_impact_accuracy: string
-  would_repeat_client: string; recommendations: string
-}
-
 interface Props {
   ev: EventForNotes
   initialTicketLog: DrinkTicketLog | null
   initialDebrief: EventDebrief | null
   clientHistory: ClientHistoryEntry[]
   tasks: EventTask[]
+  risks: RiskFlag[]
 }
 
-export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory, tasks }: Props) {
+export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory, tasks, risks }: Props) {
   const [active, setActive] = useState<TabKey>('toast')
   const activeTab = TABS.find(t => t.key === active)!
 
@@ -54,7 +51,7 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
 
   async function copyBrief() {
     try {
-      await navigator.clipboard.writeText(generatePreShiftBrief(ev, tasks))
+      await navigator.clipboard.writeText(generatePreShiftBrief(ev, tasks, risks))
       toast.success('Copied to clipboard')
     } catch {
       toast.error('Copy failed — try selecting the text manually')
@@ -143,7 +140,7 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
               </button>
             </div>
             <pre className="p-4 text-xs text-gray-700 leading-relaxed font-mono whitespace-pre-wrap overflow-x-auto">
-              {generatePreShiftBrief(ev, tasks)}
+              {generatePreShiftBrief(ev, tasks, risks)}
             </pre>
           </div>
         </div>
@@ -177,7 +174,7 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
               🖨 Print Full Handoff Pack
             </button>
           </div>
-          <div className="print-page-break"><LeadsPackDoc ev={ev} tasks={tasks} /></div>
+          <div className="print-page-break"><LeadsPackDoc ev={ev} tasks={tasks} risks={risks} clientHistory={clientHistory} /></div>
           <div className="print-page-break"><KitchenSheetDoc ev={ev} tasks={tasks} /></div>
           <div className="print-page-break"><FOHNotesDoc ev={ev} tasks={tasks} /></div>
           <BarNotesDoc ev={ev} tasks={tasks} />
@@ -199,8 +196,8 @@ export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, client
           {active === 'kitchen' && <KitchenSheetDoc ev={ev} tasks={tasks} />}
           {active === 'foh'     && <FOHNotesDoc ev={ev} tasks={tasks} />}
           {active === 'bar'     && <BarNotesDoc ev={ev} tasks={tasks} />}
-          {active === 'leads'   && <LeadsPackDoc ev={ev} tasks={tasks} />}
-          {active === 'setup'   && <SetupChecklistDoc ev={ev} />}
+          {active === 'leads'   && <LeadsPackDoc ev={ev} tasks={tasks} risks={risks} clientHistory={clientHistory} />}
+          {active === 'setup'   && <SetupChecklistDoc ev={ev} tasks={tasks} />}
         </div>
       )}
     </>

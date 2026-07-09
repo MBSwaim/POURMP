@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 async function getEventsForDate(dateStr: string) {
   const db = getDb()
   const rows = db.prepare(
-    `SELECT id FROM events WHERE event_date = ? AND status = 'Confirmed' ORDER BY event_time ASC`
+    `SELECT id FROM events WHERE event_date = ? AND status != 'Closed' ORDER BY event_time ASC`
   ).all(dateStr) as { id: number }[]
 
   const events = []

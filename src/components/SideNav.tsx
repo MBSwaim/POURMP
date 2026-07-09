@@ -2,8 +2,8 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { EVENT_STATUSES } from '@/lib/constants'
 import { Logo } from '@/components/Logo'
+import { GlobalEventSearch } from '@/components/GlobalEventSearch'
 
 const NOTIFICATIONS_POLL_MS = 45_000
 
@@ -12,42 +12,10 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const STATUS_DOT: Record<string, string> = {
-  'New':       'bg-gray-400',
-  'Contacted': 'bg-blue-400',
-  'Converted': 'bg-purple-400',
-  'Tentative': 'bg-yellow-400',
-  'Confirmed': 'bg-green-400',
-  'Closed':    'bg-slate-400',
-}
-
-function SubLink({ href, pathname, label, icon, onClose }: { href: string; pathname: string; label: string; icon: string; onClose?: () => void }) {
-  const isActive = pathname === href || pathname.startsWith(href + '/')
-  return (
-    <Link
-      href={href}
-      onClick={onClose}
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium transition-colors
-        ${isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
-    >
-      <span className="text-sm leading-none">{icon}</span>
-      {label}
-    </Link>
-  )
-}
-
 export function SideNav({ onClose }: { onClose?: () => void }) {
   const pathname  = usePathname()
   const params    = useSearchParams()
   const router    = useRouter()
-  const activeStatus = pathname === '/events' ? (params.get('status') ?? null) : null
-  const onEvents  = pathname.startsWith('/events')
-
-  const onPrepTools = pathname.startsWith('/prep') || pathname.startsWith('/book')
-
-  // Keep submenus open when on their section
-  const [eventsOpen, setEventsOpen] = useState(onEvents)
-  const [prepOpen, setPrepOpen] = useState(onPrepTools)
 
   // Date picker: prefill from ?date= if on /today, otherwise use today
   const pickerDefault = (pathname === '/today' && params.get('date')) ? params.get('date')! : todayISO()
@@ -78,7 +46,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
 
   // Active nav item: left gold bar + background
   function navClass(href: string) {
-    const active = pathname === href && !activeStatus
+    const active = pathname === href
     return active
       ? 'flex items-center gap-2 pl-[10px] pr-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium border-l-2 border-[#C8973A] bg-[#C8973A]/10 text-[#C8973A] transition-colors'
       : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors'
@@ -103,6 +71,14 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
       </div>
 
       <div className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+        {/* Global event search */}
+        <div className="px-1 pb-2">
+          <label className="block text-[9px] tracking-widest uppercase text-gray-600 mb-1 px-2 pt-1">
+            Search Events
+          </label>
+          <GlobalEventSearch onNavigate={onClose} />
+        </div>
+
         {/* Today + date picker group */}
         <Link href="/today" onClick={onClose} className={todayClass()}>
           <span className="text-sm leading-none">📅</span>
@@ -128,58 +104,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         <Link href="/" onClick={onClose} className={navClass('/')}>Dashboard</Link>
         <Link href="/operations" onClick={onClose} className={navClass('/operations')}>Operations</Link>
 
-        {/* Events with submenu */}
-        <div>
-          <button
-            onClick={() => setEventsOpen(v => !v)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onEvents ? 'text-[#C8973A]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
-          >
-            <span>Events</span>
-            <span className={`text-[10px] transition-transform duration-150 ${eventsOpen ? 'rotate-90' : ''}`}>▶</span>
-          </button>
-
-          {eventsOpen && (
-            <div className="mt-0.5 ml-3 border-l border-gray-200 pl-3 space-y-0.5">
-              <Link
-                href="/events"
-                onClick={onClose}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
-                  ${pathname === '/events' && !activeStatus
-                    ? 'text-gray-900 bg-gray-100'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block shrink-0" />
-                All Events
-              </Link>
-
-              {EVENT_STATUSES.map((s) => {
-                const isActive = activeStatus === s
-                return (
-                  <Link
-                    key={s}
-                    href={`/events?status=${s}`}
-                    onClick={onClose}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors
-                      ${isActive ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${STATUS_DOT[s]}`} />
-                    {s}
-                  </Link>
-                )
-              })}
-
-              <Link
-                href="/events/new"
-                onClick={onClose}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-[#C8973A]/60 hover:text-[#C8973A] transition-colors mt-1"
-              >
-                <span className="text-base leading-none">+</span>
-                New Event
-              </Link>
-            </div>
-          )}
-        </div>
+        <Link href="/events" onClick={onClose} className={navClass('/events')}>Events</Link>
 
         <Link href="/calendar" onClick={onClose} className={navClass('/calendar')}>Calendar</Link>
         <Link href="/reservations" onClick={onClose} className={navClass('/reservations')}>Reservations</Link>
@@ -198,33 +123,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         {/* Divider before prep tools */}
         <div className="border-t border-gray-200 my-1" />
 
-        {/* Prep Tools submenu */}
-        <div>
-          <button
-            onClick={() => setPrepOpen(v => !v)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium transition-colors
-              ${onPrepTools ? 'text-[#C8973A]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
-          >
-            <span>Prep & Docs</span>
-            <span className={`text-[10px] transition-transform ${prepOpen ? 'rotate-90' : ''}`}>▶</span>
-          </button>
-
-          {prepOpen && (
-            <div className="mt-0.5 ml-3 border-l border-gray-200 pl-3 space-y-0.5">
-              <p className="px-2.5 py-2 text-xs text-gray-500 leading-relaxed">
-                Open an event and click "Generate Outputs" to build Toast Notes, Kitchen Sheet, FOH, Bar &amp; Run of Show.
-              </p>
-              <Link
-                href="/events"
-                onClick={onClose}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs tracking-wide font-medium text-[#C8973A]/70 hover:text-[#C8973A] transition-colors"
-              >
-                <span className="text-sm leading-none">→</span>
-                Go to Events
-              </Link>
-            </div>
-          )}
-        </div>
+        <Link href="/prep-docs" onClick={onClose} className={navClass('/prep-docs')}>Prep Docs</Link>
 
         {/* Divider before settings */}
         <div className="border-t border-gray-200 my-1" />

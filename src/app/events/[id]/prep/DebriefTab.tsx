@@ -82,6 +82,9 @@ export function DebriefTab({ ev, initialDebrief, clientHistory }: Props) {
             <p className="text-[10px] font-bold tracking-widest uppercase text-[#C8973A]">
               Repeat Client — {clientHistory.length} Past Debrief{clientHistory.length !== 1 ? 's' : ''}
             </p>
+            <p className="text-xs text-gray-600 mt-1">
+              {clientHistory.filter(h => h.would_repeat_client === 'Yes').length} of {clientHistory.length} past events marked would-repeat.
+            </p>
           </div>
           <div className="divide-y divide-gray-200">
             {clientHistory.map(h => (

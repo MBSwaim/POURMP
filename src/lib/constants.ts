@@ -1,4 +1,4 @@
-export const EVENT_STATUSES = ['New', 'Contacted', 'Converted', 'Tentative', 'Confirmed', 'Closed'] as const
+export const EVENT_STATUSES = ['Confirmed', 'Planning', 'Ready', 'Active', 'Closed'] as const
 export type EventStatus = (typeof EVENT_STATUSES)[number]
 
 export const PAYMENT_TYPES = ['deposit', 'final', 'other'] as const
@@ -63,11 +63,10 @@ export type BlockReason = (typeof BLOCK_REASONS)[number]
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number]
 
 export const STATUS_COLORS: Record<string, string> = {
-  New: 'bg-gray-500',
-  Contacted: 'bg-blue-500',
-  Converted: 'bg-purple-500',
-  Tentative: 'bg-yellow-500',
   Confirmed: 'bg-green-500',
+  Planning: 'bg-blue-500',
+  Ready: 'bg-yellow-500',
+  Active: 'bg-orange-500',
   Closed: 'bg-slate-500',
 }
 

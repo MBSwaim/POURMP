@@ -42,53 +42,60 @@ interface TaskRule {
 }
 
 const TASK_RULES: TaskRule[] = [
-  // ── Setup (always generated) ──────────────────────────────────────────
-  { key: 'setup_production_close', category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Close off production space' },
-  { key: 'setup_tables_chairs',    category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Tables and chairs set per floor plan' },
-  { key: 'setup_linens',           category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Linens placed' },
-  { key: 'setup_prep_station',     category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Buffet/prep station positioned and ready' },
-  { key: 'setup_trash',            category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Trash can with liner placed' },
-  { key: 'setup_signage',          category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Signage placed at entrance' },
-  { key: 'setup_confirm_host',     category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Confirm floor plan and guest count with host' },
-  { key: 'setup_bar_station',      category: 'Setup', role: 'Bar',     condition: () => true, label: () => 'Bar station set up per beverage option' },
+  // ── Setup (always generated) — Manhattan Project operational standard ──
+  { key: 'setup_review_beo',        category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Review BEO, event notes, and floor plan' },
+  { key: 'setup_kitchen_menu',      category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Confirm kitchen menu and food timing' },
+  { key: 'setup_bar_tab_type',      category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Confirm bar tab, tickets, or individual tabs' },
+  { key: 'setup_bar_team_brief',    category: 'Setup', role: 'Bar',     condition: () => true, label: () => 'Confirm with bar team tab name and bar type' },
+  { key: 'setup_safety_signage',    category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set safety boundaries and reserved signage' },
+  { key: 'setup_tables_linens',     category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set tables, linens, and seating' },
+  { key: 'setup_buffet_chafers',    category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Set buffet table, chafers, and sternos' },
+  { key: 'setup_serving_ware',      category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Set plates, utensils, and serving ware' },
+  { key: 'setup_menus_coasters',    category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set menus and coasters' },
+  { key: 'setup_lighting_music',    category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set lighting, music, and volume' },
+  { key: 'setup_garage_door',       category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set garage door based on weather' },
+  { key: 'setup_av',                category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set TV, HDMI, or A/V if needed' },
+  { key: 'setup_clean_area',        category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Clean and organize event area' },
+  { key: 'setup_guest_ready_check', category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Complete guest-ready check' },
+  { key: 'setup_host_guidelines',   category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Review host guidelines with host' },
 
-  // ── Breakdown (always generated) ──────────────────────────────────────
-  { key: 'breakdown_last_call',    category: 'Breakdown', role: 'Bar',     condition: () => true, label: () => 'Last call called, bar closed' },
-  { key: 'breakdown_clear_tables', category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Clear all tables and chairs' },
-  { key: 'breakdown_linens',       category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Remove and bag linens' },
-  { key: 'breakdown_reset_layout', category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Reset tables/high-tops to standard layout' },
-  { key: 'breakdown_trash',        category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Trash checked and replaced' },
-  { key: 'breakdown_sweep',        category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Sweep / spot clean floor' },
-  { key: 'breakdown_buffet_clear', category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Food service and buffet areas cleared' },
-  { key: 'breakdown_equipment',    category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Remaining catering equipment removed and cleaned' },
-  { key: 'breakdown_production',   category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Production space returned to standard configuration' },
-  { key: 'breakdown_walkthrough',  category: 'Breakdown', role: 'Lead',    condition: () => true, label: () => 'Final event walkthrough completed' },
+  // ── Breakdown (always generated) — Manhattan Project operational standard ──
+  { key: 'breakdown_last_call',        category: 'Breakdown', role: 'Bar',     condition: () => true, label: () => 'Last call on event tab 30 minutes before end' },
+  { key: 'breakdown_tab_closed',       category: 'Breakdown', role: 'Bar',     condition: () => true, label: () => 'Confirm event tab is closed or ready' },
+  { key: 'breakdown_togo_containers',  category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Provide to-go containers on buffet table' },
+  { key: 'breakdown_clear_buffet',     category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Clear buffet and food service areas' },
+  { key: 'breakdown_remove_chafers',   category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Remove chafers, sternos, and service items' },
+  { key: 'breakdown_discard_disposables', category: 'Breakdown', role: 'FOH', condition: () => true, label: () => 'Discard used plates, utensils, and napkins' },
+  { key: 'breakdown_lost_items',       category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Check for personal or lost items' },
+  { key: 'breakdown_collect_linens',   category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Collect linens and reusable service ware' },
+  { key: 'breakdown_laundry',          category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Start laundry for used linens' },
+  { key: 'breakdown_remove_trash',     category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Remove trash from event area' },
+  { key: 'breakdown_remove_signage',   category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Remove menus, coasters, and reserved signage' },
+  { key: 'breakdown_reset_tables',     category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Reset tables and seating to floor plan' },
+  { key: 'breakdown_music_garage',     category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Turn off music and close garage door' },
+  { key: 'breakdown_av_power_down',    category: 'Breakdown', role: 'FOH',     condition: () => true, label: () => 'Power down TV, HDMI, and A/V' },
+  { key: 'breakdown_production_reset', category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Clean and reset production space' },
+  { key: 'breakdown_dishes_to_kitchen',category: 'Breakdown', role: 'Kitchen', condition: () => true, label: () => 'Take serving dishes to kitchen for cleaning' },
+  { key: 'breakdown_final_walkthrough',category: 'Breakdown', role: 'Lead',    condition: () => true, label: () => 'Complete final walkthrough' },
+  { key: 'breakdown_report_issues',    category: 'Breakdown', role: 'Lead',    condition: () => true, label: () => 'Report issues or damage to Event Coordinator' },
 
-  // ── Dynamic (only when the condition is true for this event) ─────────
-  { key: 'dyn_dessert',         category: 'Dynamic', role: 'FOH',     condition: ctx => !!ctx.dessertExpected,
-    label: () => 'Set up dessert station area (host-provided cake/cupcakes)' },
-  { key: 'dyn_drink_tickets',   category: 'Dynamic', role: 'Bar',     condition: ctx => ctx.barTabType === 'Pre-Paid Drink Ticket(s)' && (ctx.drinkTickets ?? 0) > 0,
-    label: ctx => `Prep and stage ${ctx.drinkTickets} drink tickets for host distribution` },
-  { key: 'dyn_tv_hdmi',         category: 'Dynamic', role: 'FOH',     condition: ctx => !!ctx.bigScreenTv,
-    label: () => 'Set up TV and test HDMI connection' },
-  { key: 'dyn_kids',            category: 'Dynamic', role: 'Lead',    condition: ctx => !!ctx.kidsAttending,
+  // ── Dynamic (only when the condition is true for this event) — Manhattan Project operational standard ──
+  { key: 'dyn_dessert_setup',     category: 'Dynamic', role: 'FOH', condition: ctx => !!ctx.dessertExpected,
+    label: () => 'Set up dessert station for host-provided dessert' },
+  { key: 'dyn_dessert_breakdown', category: 'Dynamic', role: 'FOH', condition: ctx => !!ctx.dessertExpected,
+    label: () => 'Clear and reset dessert station area' },
+  { key: 'dyn_drink_tickets', category: 'Dynamic', role: 'Bar', condition: ctx => ctx.barTabType === 'Pre-Paid Drink Ticket(s)' && (ctx.drinkTickets ?? 0) > 0,
+    label: ctx => `Confirm ${ctx.drinkTickets} drink tickets and hand to host` },
+  { key: 'dyn_av_confirm',   category: 'Dynamic', role: 'FOH', condition: ctx => !!ctx.bigScreenTv,
+    label: () => 'Confirm A/V content and HDMI source with host, then test connection' },
+  { key: 'dyn_av_teardown',  category: 'Dynamic', role: 'FOH', condition: ctx => !!ctx.bigScreenTv,
+    label: () => 'Confirm A/V equipment disconnected and returned' },
+  { key: 'dyn_kids', category: 'Dynamic', role: 'Lead', condition: ctx => !!ctx.kidsAttending,
     label: () => 'Post patio supervision reminder — kids attending' },
-  { key: 'dyn_buffet',          category: 'Dynamic', role: 'Kitchen', condition: ctx => ctx.hasPackage,
-    label: () => 'Prep chafers and place buffet signage' },
-  { key: 'dyn_individual_tabs', category: 'Dynamic', role: 'Bar',     condition: ctx => ctx.barTabType === 'Individual Tabs',
-    label: () => 'Brief bar staff: individual tabs — no food charges on guest tabs' },
-  { key: 'dyn_by_consumption',  category: 'Dynamic', role: 'Bar',     condition: ctx => ctx.barTabType === 'By Consumption',
-    label: () => 'Open host tab in Toast at event start' },
-  { key: 'dyn_high_bar_impact', category: 'Dynamic', role: 'Lead',    condition: ctx => ctx.barImpactLevel === 'High' || ctx.barImpactLevel === 'Critical',
+  { key: 'dyn_large_group', category: 'Dynamic', role: 'FOH', condition: ctx => ctx.guestCount > 50,
+    label: () => 'Review guest flow and floor plan capacity for large group' },
+  { key: 'dyn_high_bar_impact', category: 'Dynamic', role: 'Lead', condition: ctx => ctx.barImpactLevel === 'High' || ctx.barImpactLevel === 'Critical',
     label: ctx => `Give main bar a heads-up — ${ctx.barImpactLevel} impact expected` },
-  { key: 'dyn_large_group',     category: 'Dynamic', role: 'FOH',     condition: ctx => ctx.guestCount >= 50,
-    label: () => 'Confirm floor plan capacity and signage for large group' },
-  { key: 'dyn_dietary',         category: 'Dynamic', role: 'Kitchen', condition: ctx => !!ctx.dietaryRestrictions?.trim(),
-    label: ctx => `Confirm dietary accommodations with kitchen: ${ctx.dietaryRestrictions}` },
-  { key: 'dyn_over_capacity',   category: 'Dynamic', role: 'Lead',    condition: ctx => calcFloorPlan(ctx.guestCount).isOverCapacity,
-    label: () => 'ESCALATE — guest count exceeds capacity, confirm with owner before setup' },
-  { key: 'dyn_multi_package',   category: 'Dynamic', role: 'Kitchen', condition: ctx => ctx.packageCount > 1,
-    label: () => 'Confirm prep timing across multiple packages' },
 ]
 
 export function generateTasksForEvent(ctx: TaskContext): TaskTemplate[] {
@@ -101,9 +108,8 @@ export function generateTasksForEvent(ctx: TaskContext): TaskTemplate[] {
 // used by the Operational Dashboard's Task Awareness "Needs Attention" flag. Keyed off
 // TaskRule.key (stored as event_tasks.source_key), so no schema change is needed.
 export const CRITICAL_DYNAMIC_TASK_KEYS: ReadonlySet<string> = new Set([
-  'dyn_over_capacity', // guest count exceeds floor plan capacity — requires owner sign-off
-  'dyn_dietary',       // dietary/allergy accommodation — guest safety
-  'dyn_kids',          // child supervision reminder — guest safety
+  'dyn_kids',           // child supervision reminder — guest safety
+  'dyn_high_bar_impact',// main bar heads-up — service escalation
 ])
 
 // ─── Task Complexity Rating ─────────────────────────────────────────────────

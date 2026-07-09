@@ -44,7 +44,7 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
     production_close_time: '',
     decorate_time: '',
     event_duration_mins: '180',
-    status: 'New',
+    status: 'Confirmed',
     space: '',
     // client
     client_id: '',

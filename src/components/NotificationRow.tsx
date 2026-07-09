@@ -20,6 +20,12 @@ const ALERT_LABELS: Record<string, string> = {
   setup_checklist: '4HR · Setup',
   kitchen_prep: '2HR · Kitchen',
   final_readiness: '30MIN · Final',
+  deposit_overdue: 'Deposit Overdue',
+  final_balance_overdue: 'Final Balance Overdue',
+  menu_due: 'Menu Due',
+  high_risk: 'High Risk',
+  high_bar_impact: 'High Bar Impact',
+  incomplete_tasks: 'Incomplete Tasks',
 }
 
 export function NotificationRow({ item, onComplete, onMarkReserved }: {

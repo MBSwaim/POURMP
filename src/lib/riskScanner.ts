@@ -31,7 +31,7 @@ export interface RiskFlag {
 // Everything the rules need, pre-computed by the caller (db.ts) from raw event data —
 // this function does no date math and no DB reads, so it stays trivially testable/auditable.
 export interface RiskScanInput {
-  isBooked: boolean            // status is Tentative or Confirmed
+  isBooked: boolean            // status is not Closed
   guestCount: number
   hasPackage: boolean          // a catering package/menu has been selected
   depositReceived: boolean     // toast_deposit_received_date is set

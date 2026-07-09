@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { to12Hour } from '@/lib/timeUtils'
 import { IMPACT_COLORS, type ImpactLevel } from '@/lib/barImpact'
 import { readinessColor } from '@/lib/readiness'
+import { formatCurrency } from '@/lib/calculations'
 import type { OperationalDashboard, OpsEventSummary } from '@/lib/db'
 
 interface Props {
@@ -62,6 +63,14 @@ export function OperationsClient({ data }: Props) {
 
       {/* Stat card grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="text-left rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3.5">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-gray-500 leading-tight mb-2">Outstanding Revenue</p>
+          <p className="text-2xl font-bold leading-none text-gray-900 tabular-nums">{formatCurrency(data.outstandingRevenue)}</p>
+        </div>
+        <div className="text-left rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3.5">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-gray-500 leading-tight mb-2">Ready This Week</p>
+          <p className="text-2xl font-bold leading-none text-gray-900 tabular-nums">{data.readyThisWeekCount}/{data.thisWeek.length}</p>
+        </div>
         {SECTIONS.map(s => (
           <button
             key={s.key}
@@ -89,6 +98,7 @@ export function OperationsClient({ data }: Props) {
             showBarImpact={s.key === 'highBarImpact'}
             showReadiness={s.key === 'highRisk'}
             showTaskCompletion={s.key === 'needsAttention'}
+            showFinancial={s.key === 'awaitingDeposit' ? 'deposit' : s.key === 'awaitingInvoice' ? 'final' : undefined}
           />
         ))}
       </div>
@@ -96,7 +106,7 @@ export function OperationsClient({ data }: Props) {
   )
 }
 
-function Section({ id, title, hint, emptyText, events, isOpen, onToggle, showBarImpact, showReadiness, showTaskCompletion }: {
+function Section({ id, title, hint, emptyText, events, isOpen, onToggle, showBarImpact, showReadiness, showTaskCompletion, showFinancial }: {
   id: string
   title: string
   hint: string
@@ -107,6 +117,7 @@ function Section({ id, title, hint, emptyText, events, isOpen, onToggle, showBar
   showBarImpact?: boolean
   showReadiness?: boolean
   showTaskCompletion?: boolean
+  showFinancial?: 'deposit' | 'final'
 }) {
   return (
     <div id={id} className="rounded-xl bg-white border border-gray-200 overflow-hidden scroll-mt-4">
@@ -199,7 +210,19 @@ function Section({ id, title, hint, emptyText, events, isOpen, onToggle, showBar
                       {ev.taskCompletionPct}% tasks
                     </span>
                   )}
-                  {!showBarImpact && !showReadiness && !showTaskCompletion && (
+                  {showFinancial === 'deposit' && (
+                    <span className="shrink-0 text-right text-[10px] leading-tight">
+                      <span className="block font-semibold text-gray-900">{formatCurrency(ev.depositDue ?? 0)} due</span>
+                      <span className="block text-gray-500">{formatCurrency(ev.depositReceived ?? 0)} received</span>
+                    </span>
+                  )}
+                  {showFinancial === 'final' && (
+                    <span className="shrink-0 text-right text-[10px] leading-tight">
+                      <span className="block font-semibold text-gray-900">{formatCurrency(ev.finalAmountDue ?? 0)} due</span>
+                      <span className="block text-gray-500">{formatCurrency(ev.finalAmountReceived ?? 0)} received</span>
+                    </span>
+                  )}
+                  {!showBarImpact && !showReadiness && !showTaskCompletion && !showFinancial && (
                     <span className="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border bg-gray-50 text-gray-500 border-gray-200">
                       {ev.status}
                     </span>

@@ -21,11 +21,10 @@ const RANGES = [
 ]
 
 const STATUS_COLORS: Record<string, string> = {
-  New:       'bg-gray-50 text-gray-700 border-gray-200',
-  Contacted: 'bg-blue-50 text-blue-700 border-blue-200',
-  Converted: 'bg-purple-50 text-purple-700 border-purple-200',
-  Tentative: 'bg-yellow-50 text-yellow-700 border-yellow-200',
   Confirmed: 'bg-green-50 text-green-700 border-green-200',
+  Planning:  'bg-blue-50 text-blue-700 border-blue-200',
+  Ready:     'bg-yellow-50 text-yellow-700 border-yellow-200',
+  Active:    'bg-orange-50 text-orange-700 border-orange-200',
   Closed:    'bg-slate-50 text-slate-700 border-slate-200',
 }
 

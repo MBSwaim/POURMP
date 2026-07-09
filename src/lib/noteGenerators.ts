@@ -6,12 +6,14 @@ import {
   formatEquipmentText,
   countChafingDishes,
   parseMenuItemOverrides,
+  formatCurrency,
   type MenuItem,
   type CalculatedItem,
 } from './calculations'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
 import { calcTaskComplexity, TASK_ROLES, type TaskContext } from './tasks'
+import type { RiskFlag } from './riskScanner'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,13 @@ export interface EventForNotes {
   toast_final_payment_date?: string | null
   kids_attending?: number
   dessert_expected?: number
+  // Financial Tracking — manual mirror of what Toast shows (internal visibility only)
+  total_event_value?: number | null
+  deposit_due?: number | null
+  deposit_received?: number | null
+  final_amount_due?: number | null
+  final_amount_received?: number | null
+  final_menu_locked?: number
   // catering items from the package
   menuItems?: MenuItem[]
 }
@@ -612,7 +621,7 @@ export interface BriefTask {
   completed: number | boolean
 }
 
-export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[]): string {
+export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[], risks: RiskFlag[] = []): string {
   const lines: string[] = []
   const impact = calcBarImpact(ev)
   const readiness = calcReadiness({
@@ -649,10 +658,43 @@ export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[]): st
 
   lines.push(`READINESS: ${readiness.score}% operational`)
   lines.push(`COMPLEXITY: ${complexity.level}`)
-  lines.push(`MAIN BAR IMPACT: ${impact.level}`)
+  const impactFlag = impact.level === 'High' || impact.level === 'Critical' ? '⚠ ' : ''
+  lines.push(`MAIN BAR IMPACT: ${impactFlag}${impact.level}`)
   if (impact.congestionNotes[0]) lines.push(`  ${impact.congestionNotes[0]}`)
   lines.push('')
 
+  lines.push('RISK FLAGS')
+  if (risks.length === 0) {
+    lines.push('  — no active risk flags')
+  } else {
+    for (const r of risks) lines.push(`  • [${r.level}] ${r.category}: ${r.message}`)
+  }
+  lines.push('')
+
+  const depositDue = ev.deposit_due ?? null
+  const depositReceived = ev.deposit_received ?? null
+  lines.push('DEPOSIT STATUS')
+  if (depositDue == null && depositReceived == null) {
+    lines.push('  — not yet tracked')
+  } else {
+    const outstanding = Math.max(0, (depositDue ?? 0) - (depositReceived ?? 0))
+    lines.push(`  ${formatCurrency(depositReceived ?? 0)} received of ${formatCurrency(depositDue ?? 0)} due (${formatCurrency(outstanding)} outstanding)`)
+  }
+  lines.push('')
+
+  const finalDue = ev.final_amount_due ?? null
+  const finalReceived = ev.final_amount_received ?? null
+  lines.push('FINAL BALANCE STATUS')
+  if (finalDue == null && finalReceived == null) {
+    lines.push('  — not yet tracked')
+  } else {
+    const outstanding = Math.max(0, (finalDue ?? 0) - (finalReceived ?? 0))
+    lines.push(`  ${formatCurrency(finalReceived ?? 0)} received of ${formatCurrency(finalDue ?? 0)} due (${formatCurrency(outstanding)} outstanding)`)
+  }
+  lines.push('')
+
+  const completedCount = tasks.filter(t => !!t.completed).length
+  lines.push(`OUTSTANDING TASKS: ${completedCount}/${tasks.length} complete`)
   lines.push('OPEN TASKS BY ROLE')
   for (const role of TASK_ROLES) {
     const open = tasks.filter(t => t.role === role && !t.completed)

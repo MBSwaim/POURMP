@@ -264,6 +264,33 @@ function initSchema(db: Database.Database) {
       created_at TEXT,
       UNIQUE(event_id, source_key)
     )`,
+    // Financial Tracking — manual mirror of what Toast shows for this event's money
+    // status. Internal visibility only; POURMP does not process payments (Toast does).
+    `ALTER TABLE event_details ADD COLUMN total_event_value REAL`,
+    `ALTER TABLE event_details ADD COLUMN deposit_due REAL`,
+    `ALTER TABLE event_details ADD COLUMN deposit_received REAL`,
+    `ALTER TABLE event_details ADD COLUMN final_amount_due REAL`,
+    `ALTER TABLE event_details ADD COLUMN final_amount_received REAL`,
+    // Package & Food — whether the final menu selections are locked in with the client
+    `ALTER TABLE event_details ADD COLUMN final_menu_locked INTEGER DEFAULT 0`,
+    // Status model realignment — POURMP now only tracks events once they're
+    // operationally active (already confirmed in Toast). The pre-Toast pipeline
+    // stages (New/Contacted/Converted) and Tentative no longer exist; remap any
+    // rows still carrying those values onto the new lifecycle's entry point.
+    `UPDATE events SET status = 'Confirmed' WHERE status IN ('New','Contacted','Converted','Tentative')`,
+    // Task templates realignment — Setup/Breakdown/Dynamic task content replaced with
+    // Manhattan Project's official operational checklist (lib/tasks.ts TASK_RULES).
+    // Retire event_tasks rows generated under the old template keys so already-synced
+    // events regenerate cleanly under the new keys instead of ending up with both.
+    `DELETE FROM event_tasks WHERE source_key IN (
+      'setup_production_close','setup_tables_chairs','setup_linens','setup_prep_station',
+      'setup_trash','setup_signage','setup_confirm_host','setup_bar_station',
+      'breakdown_last_call','breakdown_clear_tables','breakdown_linens','breakdown_reset_layout',
+      'breakdown_trash','breakdown_sweep','breakdown_buffet_clear','breakdown_equipment',
+      'breakdown_production','breakdown_walkthrough',
+      'dyn_dessert','dyn_drink_tickets','dyn_tv_hdmi','dyn_buffet','dyn_individual_tabs',
+      'dyn_by_consumption','dyn_dietary','dyn_over_capacity','dyn_multi_package','dyn_large_group'
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -351,6 +378,12 @@ export interface EventDetails {
   toast_final_payment_date: string | null
   kids_attending: number
   dessert_expected: number
+  total_event_value: number | null
+  deposit_due: number | null
+  deposit_received: number | null
+  final_amount_due: number | null
+  final_amount_received: number | null
+  final_menu_locked: number
 }
 
 export interface EventTask {
@@ -449,6 +482,7 @@ export interface EventWithClient extends Event {
   first_name: string
   last_name: string
   email: string
+  phone: string
   company: string
   guest_count: number
   package_id: string
@@ -456,6 +490,10 @@ export interface EventWithClient extends Event {
   price_per_guest: number
   deposit_status: string | null
   final_status: string | null
+  deposit_due: number | null
+  deposit_received: number | null
+  final_amount_due: number | null
+  final_amount_received: number | null
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
@@ -492,8 +530,9 @@ export function getEvents(year?: number): EventWithClient[] {
   const yearClause = year ? `WHERE strftime('%Y', e.event_date) = '${year}'` : ''
   return getDb().prepare(`
     SELECT e.*,
-      c.first_name, c.last_name, c.email, c.company,
+      c.first_name, c.last_name, c.email, c.phone, c.company,
       ed.guest_count, ed.package_id,
+      ed.deposit_due, ed.deposit_received, ed.final_amount_due, ed.final_amount_received,
       p.name as package_name, p.price_per_guest,
       dep.status as deposit_status,
       fin.status as final_status
@@ -744,15 +783,37 @@ export function getDashboardStats() {
   const db = getDb()
   const today = format(new Date(), 'yyyy-MM-dd')
   const monthStart = today.substring(0, 7) + '-01'
+  const monthEnd = today.substring(0, 7) + '-31'
   const in14 = format(new Date(Date.now() + 14 * 86400000), 'yyyy-MM-dd')
 
   const eventsThisMonth = (db.prepare(
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
-  ).get(monthStart, today.substring(0, 7) + '-31') as { c: number }).c
+  ).get(monthStart, monthEnd) as { c: number }).c
 
   const eventsThisWeek = (db.prepare(
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
   ).get(today, in14) as { c: number }).c
+
+  // Projected/Confirmed Sales — same guest_count * price_per_guest proxy already used
+  // for the "Value" column on the Events table, scoped to this calendar month.
+  const salesQuery = `
+    SELECT COALESCE(SUM(ed.guest_count * p.price_per_guest), 0) as total
+    FROM events e
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    LEFT JOIN packages p ON p.id = ed.package_id
+    WHERE e.event_date >= ? AND e.event_date <= ?
+  `
+  const projectedSales = (db.prepare(salesQuery).get(monthStart, monthEnd) as { total: number }).total
+  const confirmedSales = (db.prepare(`${salesQuery} AND e.status = 'Confirmed'`).get(monthStart, monthEnd) as { total: number }).total
+
+  // High Risk / High Bar Impact — next 14 days. Reuses the Risk Scanner (for the app's
+  // canonical "High Risk" definition) and the Operational Dashboard's bar-impact bucket
+  // (unbounded there; windowed here to 14 days for this KPI) rather than re-deriving
+  // either threshold a third time.
+  const highRiskCount = getEventRiskAssessment().events
+    .filter(e => (e.highestLevel === 'High' || e.highestLevel === 'Critical') && e.event_date <= in14).length
+  const highBarImpactCount = getOperationalDashboard().highBarImpact
+    .filter(e => e.event_date <= in14).length
 
   const upcomingEvents = db.prepare(`
     SELECT e.*, c.first_name, c.last_name, ed.guest_count
@@ -763,7 +824,10 @@ export function getDashboardStats() {
     ORDER BY e.event_date ASC
   `).all(today, in14) as Array<Event & { first_name: string; last_name: string; guest_count: number }>
 
-  return { eventsThisMonth, eventsThisWeek, upcomingEvents }
+  return {
+    eventsThisMonth, eventsThisWeek, upcomingEvents,
+    projectedSales, confirmedSales, highRiskCount, highBarImpactCount,
+  }
 }
 
 // ─── Operational Dashboard ──────────────────────────────────────────────────────
@@ -791,6 +855,11 @@ export interface OpsEventSummary {
   setupReady: boolean
   breakdownPending: boolean
   operationallyReady: boolean
+  // Financial Tracking visibility — manual mirror of what Toast shows (internal only)
+  depositDue: number | null
+  depositReceived: number | null
+  finalAmountDue: number | null
+  finalAmountReceived: number | null
 }
 
 export interface OperationalDashboard {
@@ -803,6 +872,8 @@ export interface OperationalDashboard {
   highRisk: OpsEventSummary[]
   highBarImpact: OpsEventSummary[]
   needsAttention: OpsEventSummary[]
+  readyThisWeekCount: number
+  outstandingRevenue: number
 }
 
 const RISK_READINESS_THRESHOLD = 70
@@ -842,6 +913,7 @@ export function getOperationalDashboard(): OperationalDashboard {
            ed.guest_count, ed.bar_tab_type, ed.drink_tickets, ed.setup_notes, ed.floor_plan_notes,
            ed.dietary_restrictions, ed.staffing_notes, ed.contract_signed,
            ed.toast_invoice_sent_date, ed.toast_deposit_received_date,
+           ed.deposit_due, ed.deposit_received, ed.final_amount_due, ed.final_amount_received,
            (SELECT p.name FROM event_packages ep JOIN packages p ON p.id = ep.package_id
               WHERE ep.event_id = e.id AND ep.package_id != '' ORDER BY ep.sort_order LIMIT 1) AS package_name,
            (SELECT COUNT(*) FROM event_packages ep WHERE ep.event_id = e.id AND ep.package_id != '') AS package_count
@@ -857,6 +929,8 @@ export function getOperationalDashboard(): OperationalDashboard {
     setup_notes: string | null; floor_plan_notes: string | null; dietary_restrictions: string | null
     staffing_notes: string | null; contract_signed: number | null
     toast_invoice_sent_date: string | null; toast_deposit_received_date: string | null
+    deposit_due: number | null; deposit_received: number | null
+    final_amount_due: number | null; final_amount_received: number | null
     package_name: string | null; package_count: number
   }>
 
@@ -867,6 +941,7 @@ export function getOperationalDashboard(): OperationalDashboard {
   const highRisk: OpsEventSummary[] = []
   const highBarImpact: OpsEventSummary[] = []
   const needsAttention: OpsEventSummary[] = []
+  let outstandingRevenue = 0
 
   for (const row of rows) {
     const evForCalc: EventForNotes = {
@@ -929,10 +1004,18 @@ export function getOperationalDashboard(): OperationalDashboard {
       && new Date(`${row.event_date}T${eventEndTime}`).getTime() < now.getTime()
     const breakdownPending = eventHasPassed && breakdownIncomplete > 0
     const operationallyReady = setupIncomplete === 0 && breakdownIncomplete === 0 && dynamicIncomplete === 0
-    const isBooked = row.status === 'Tentative' || row.status === 'Confirmed'
-    const needsAttentionFlag = isBooked
-      && isWithinAttentionWindow(row.event_date, row.event_time, now)
-      && (taskCompletionPct < TASK_ATTENTION_COMPLETION_THRESHOLD || setupIncomplete > 0 || criticalDynamicIncomplete > 0)
+    const isBooked = row.status !== 'Closed'
+    // Stronger Needs Attention: also flag imminent events carrying a Critical risk flag
+    // (e.g. over-capacity, critical bar load, policy conflicts) even if task execution
+    // happens to be on track — only checked for events already within the attention
+    // window, so this doesn't run the risk scanner against every future booked event.
+    const withinAttentionWindow = isBooked && isWithinAttentionWindow(row.event_date, row.event_time, now)
+    const criticalRiskPresent = withinAttentionWindow && getEventRisks(row.id).some(r => r.level === 'Critical')
+    const needsAttentionFlag = withinAttentionWindow
+      && (taskCompletionPct < TASK_ATTENTION_COMPLETION_THRESHOLD || setupIncomplete > 0 || criticalDynamicIncomplete > 0 || criticalRiskPresent)
+
+    outstandingRevenue += Math.max(0, (row.deposit_due ?? 0) - (row.deposit_received ?? 0))
+      + Math.max(0, (row.final_amount_due ?? 0) - (row.final_amount_received ?? 0))
 
     const summary: OpsEventSummary = {
       id: row.id,
@@ -953,11 +1036,15 @@ export function getOperationalDashboard(): OperationalDashboard {
       setupReady,
       breakdownPending,
       operationallyReady,
+      depositDue: row.deposit_due,
+      depositReceived: row.deposit_received,
+      finalAmountDue: row.final_amount_due,
+      finalAmountReceived: row.final_amount_received,
     }
 
     if (row.event_date >= weekStart && row.event_date <= weekEnd) thisWeek.push(summary)
 
-    if (row.status === 'Confirmed') {
+    if (row.status !== 'Closed') {
       if (!row.toast_deposit_received_date) awaitingDeposit.push(summary)
       if (!row.toast_invoice_sent_date) awaitingInvoice.push(summary)
     }
@@ -969,7 +1056,12 @@ export function getOperationalDashboard(): OperationalDashboard {
     }
   }
 
-  return { weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact, needsAttention }
+  const readyThisWeekCount = thisWeek.filter(s => s.operationallyReady).length
+
+  return {
+    weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact, needsAttention,
+    readyThisWeekCount, outstandingRevenue,
+  }
 }
 
 // ─── Event Risk Assessment ──────────────────────────────────────────────────────
@@ -1083,7 +1175,7 @@ export function getEventRiskAssessment(): EventRiskAssessment {
     ].filter(Boolean).join(' \n ')
 
     const risks = scanEventRisks({
-      isBooked: row.status === 'Tentative' || row.status === 'Confirmed',
+      isBooked: row.status !== 'Closed',
       guestCount: row.guest_count ?? 0,
       hasPackage: row.package_count > 0,
       depositReceived: !!row.toast_deposit_received_date,
@@ -1129,6 +1221,84 @@ export function getEventRiskAssessment(): EventRiskAssessment {
   }
 }
 
+// Single-event risk lookup — mirrors the per-row logic inside getEventRiskAssessment()
+// above (kept as a separate, simpler implementation rather than a shared helper, same
+// intentional-duplication tradeoff already documented for getOperationalDashboard() vs.
+// getEventRiskAssessment()). Used by Prep Outputs / Pre-Shift Brief / Leads Pack /
+// Operations so they don't each re-derive risk thresholds a third time.
+export function getEventRisks(eventId: number): RiskFlag[] {
+  const db = getDb()
+  const now = new Date()
+  const depositWindowEnd = format(addDays(now, 7), 'yyyy-MM-dd')
+  const menuDeadlineWindowEnd = format(addDays(now, 14), 'yyyy-MM-dd')
+
+  const row = db.prepare(`
+    SELECT e.id, e.event_name, e.event_date, e.event_time, e.teardown_time, e.space, e.status,
+           ed.guest_count, ed.bar_tab_type, ed.drink_tickets,
+           ed.setup_notes, ed.floor_plan_notes, ed.staffing_notes, ed.bar_notes,
+           ed.food_notes, ed.beo_notes, ed.kitchen_notes, ed.foh_notes, ed.tab_details,
+           ed.dietary_restrictions, ed.dessert_expected, ed.kids_attending,
+           ed.toast_deposit_received_date,
+           (SELECT COUNT(*) FROM event_packages ep WHERE ep.event_id = e.id AND ep.package_id != '') AS package_count
+    FROM events e
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.id = ?
+  `).get(eventId) as {
+    id: number; event_name: string; event_date: string; event_time: string; teardown_time: string
+    space: string; status: string
+    guest_count: number | null; bar_tab_type: string | null; drink_tickets: number | null
+    setup_notes: string | null; floor_plan_notes: string | null; staffing_notes: string | null; bar_notes: string | null
+    food_notes: string | null; beo_notes: string | null; kitchen_notes: string | null; foh_notes: string | null
+    tab_details: string | null; dietary_restrictions: string | null
+    dessert_expected: number | null; kids_attending: number | null
+    toast_deposit_received_date: string | null
+    package_count: number
+  } | undefined
+  if (!row) return []
+
+  const otherActiveEventsSameDate = (db.prepare(
+    `SELECT COUNT(*) as c FROM events WHERE event_date = ? AND status != 'Closed' AND id != ?`
+  ).get(row.event_date, eventId) as { c: number }).c
+
+  const barImpactLevel = calcBarImpact({
+    id: row.id, event_name: row.event_name, event_date: row.event_date, event_time: row.event_time ?? '',
+    setup_time: '', decorate_time: '', teardown_time: row.teardown_time ?? '', production_close_time: '',
+    event_duration_mins: 180, space: row.space ?? '', status: row.status,
+    first_name: '', last_name: '', email: '', guest_count: row.guest_count ?? 0,
+    bar_tab_type: row.bar_tab_type ?? '', drink_tickets: row.drink_tickets ?? 0,
+  }).level
+
+  const tasks = getEventTasks(row.id)
+  const setupIncomplete = tasks.filter(t => t.category === 'Setup' && !t.completed).length
+  const breakdownIncomplete = tasks.filter(t => t.category === 'Breakdown' && !t.completed).length
+  const dynamicIncomplete = tasks.filter(t => t.category === 'Dynamic' && !t.completed).length
+  const operationallyReady = tasks.length > 0 && setupIncomplete === 0 && breakdownIncomplete === 0 && dynamicIncomplete === 0
+
+  const noteText = [
+    row.setup_notes, row.floor_plan_notes, row.staffing_notes, row.bar_notes,
+    row.food_notes, row.beo_notes, row.kitchen_notes, row.foh_notes, row.tab_details,
+  ].filter(Boolean).join(' \n ')
+
+  return scanEventRisks({
+    isBooked: row.status !== 'Closed',
+    guestCount: row.guest_count ?? 0,
+    hasPackage: row.package_count > 0,
+    depositReceived: !!row.toast_deposit_received_date,
+    barImpactLevel,
+    floorPlanNotesPresent: !!row.floor_plan_notes?.trim(),
+    dessertExpected: !!row.dessert_expected,
+    kidsAttending: !!row.kids_attending,
+    otherActiveEventsSameDate,
+    hasTaskData: tasks.length > 0,
+    setupIncomplete,
+    operationallyReady,
+    noteText,
+    withinDepositWindow: row.event_date <= depositWindowEnd,
+    withinMenuDeadlineWindow: row.event_date <= menuDeadlineWindowEnd,
+    within24Hours: isWithinAttentionWindow(row.event_date, row.event_time, now),
+  })
+}
+
 export function getKanbanEvents() {
   const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
   return getDb().prepare(`
@@ -1138,7 +1308,7 @@ export function getKanbanEvents() {
     LEFT JOIN clients c ON c.id = e.client_id
     LEFT JOIN event_details ed ON ed.event_id = e.id
     LEFT JOIN packages p ON p.id = ed.package_id
-    WHERE e.status NOT IN ('Tentative','Confirmed','Closed')
+    WHERE e.status != 'Closed'
        OR strftime('%Y-%m', e.event_date) = ?
     ORDER BY e.event_date ASC
   `).all(currentMonth) as EventWithClient[]
@@ -1684,14 +1854,29 @@ export function getActiveReservationsForAlerts(): Reservation[] {
     .all(today) as Reservation[]
 }
 
-/** Confirmed events with their details, for the private-event alert engine. */
-/** Confirmed events today or in the future — past events are excluded so their alerts don't linger forever unactioned. */
-export function getConfirmedEventsForAlerts(): (Event & { alert_offsets_json: string; guest_count: number | null })[] {
+/** Active (non-Closed) events with their details, for the private-event alert engine. */
+/** Active events today or in the future — past events are excluded so their alerts don't linger forever unactioned. */
+export function getActiveEventsForAlerts(): (Event & { alert_offsets_json: string; guest_count: number | null })[] {
   const today = format(new Date(), 'yyyy-MM-dd')
   return getDb().prepare(`
     SELECT e.*, ed.alert_offsets_json, ed.guest_count
     FROM events e
     LEFT JOIN event_details ed ON ed.event_id = e.id
-    WHERE e.status = 'Confirmed' AND e.event_date >= ?
+    WHERE e.status != 'Closed' AND e.event_date >= ?
   `).all(today) as (Event & { alert_offsets_json: string; guest_count: number | null })[]
+}
+
+/** Non-Closed events whose date has arrived/passed with an unpaid final balance — for the
+ * "final balance overdue" alert. Deliberately looks at past events (unlike getActiveEventsForAlerts),
+ * since the final balance is only ever "overdue" once the event has already happened. */
+export function getOverdueFinalBalanceEvents(): Array<{ id: number; event_name: string; event_date: string }> {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return getDb().prepare(`
+    SELECT e.id, e.event_name, e.event_date
+    FROM events e
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.status != 'Closed' AND e.event_date <= ?
+      AND ed.final_amount_due IS NOT NULL
+      AND (ed.final_amount_received IS NULL OR ed.final_amount_received < ed.final_amount_due)
+  `).all(today) as Array<{ id: number; event_name: string; event_date: string }>
 }

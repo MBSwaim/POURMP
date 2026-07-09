@@ -1,11 +1,16 @@
-import { subMinutes } from 'date-fns'
+import { subMinutes, addDays, format } from 'date-fns'
 import {
-  getActiveReservationsForAlerts, getConfirmedEventsForAlerts, getNotifications,
+  getActiveReservationsForAlerts, getActiveEventsForAlerts, getNotifications,
   createNotificationIfNew, getStaffMembers, getChecklist, getPayments, getEventDetails,
-  getReservation,
+  getReservation, getEventRiskAssessment, getOperationalDashboard, getOverdueFinalBalanceEvents,
   type Reservation, type Notification,
 } from './db'
 import { deliverNotification } from './notifyDelivery'
+import { formatCurrency } from './calculations'
+
+// Condition-based alerts reuse the same 14-day window as the Dashboard's "High Bar
+// Impact Events" KPI and the Risk Scanner's own windows — not re-derived here.
+const CONDITION_ALERT_WINDOW_DAYS = 14
 
 const DEFAULT_RESERVATION_OFFSET_MINS = 120
 const DEFAULT_EVENT_OFFSETS: Record<string, number> = { setup: 240, kitchen: 120, final: 30 }
@@ -32,7 +37,7 @@ export function generateAlerts(): void {
     }
   }
 
-  for (const e of getConfirmedEventsForAlerts()) {
+  for (const e of getActiveEventsForAlerts()) {
     if (!e.event_date || !e.event_time) continue
     let overrides: Record<string, number> = {}
     try { overrides = JSON.parse(e.alert_offsets_json || '{}') } catch { /* malformed json, ignore */ }
@@ -45,6 +50,44 @@ export function generateAlerts(): void {
         if (created) deliverNotification(buildEventPayload(e.id, alertKey))
       }
     }
+  }
+
+  // Condition-based alerts (not time-offset) — reuse the Risk Scanner and Operational
+  // Dashboard's existing computations rather than re-deriving any threshold a third time.
+  const nowIso = now.toISOString()
+  const windowEnd = format(addDays(now, CONDITION_ALERT_WINDOW_DAYS), 'yyyy-MM-dd')
+
+  for (const ev of getEventRiskAssessment().events) {
+    if (ev.risks.some(r => r.category === 'Deposit Risk')) {
+      const created = createNotificationIfNew('event', ev.id, 'deposit_overdue', nowIso)
+      if (created) deliverNotification(buildEventPayload(ev.id, 'deposit_overdue'))
+    }
+    if (ev.risks.some(r => r.category === 'Menu Deadline Risk')) {
+      const created = createNotificationIfNew('event', ev.id, 'menu_due', nowIso)
+      if (created) deliverNotification(buildEventPayload(ev.id, 'menu_due'))
+    }
+    // Some risk categories (Guest Count, Main Bar Load, Policy Conflict) have no date
+    // gating of their own — window this alert to match the Dashboard's "High Risk
+    // Events" KPI so it doesn't fire for events months out.
+    if ((ev.highestLevel === 'High' || ev.highestLevel === 'Critical') && ev.event_date <= windowEnd) {
+      const created = createNotificationIfNew('event', ev.id, 'high_risk', nowIso)
+      if (created) deliverNotification(buildEventPayload(ev.id, 'high_risk'))
+    }
+  }
+
+  for (const ev of getOverdueFinalBalanceEvents()) {
+    const created = createNotificationIfNew('event', ev.id, 'final_balance_overdue', nowIso)
+    if (created) deliverNotification(buildEventPayload(ev.id, 'final_balance_overdue'))
+  }
+
+  const ops = getOperationalDashboard()
+  for (const ev of ops.highBarImpact.filter(e => e.event_date <= windowEnd)) {
+    const created = createNotificationIfNew('event', ev.id, 'high_bar_impact', nowIso)
+    if (created) deliverNotification(buildEventPayload(ev.id, 'high_bar_impact'))
+  }
+  for (const ev of ops.needsAttention) {
+    const created = createNotificationIfNew('event', ev.id, 'incomplete_tasks', nowIso)
+    if (created) deliverNotification(buildEventPayload(ev.id, 'incomplete_tasks'))
   }
 }
 
@@ -121,6 +164,60 @@ function describeNotification(n: Notification): NotificationFeedItem | null {
         details?.foh_notes ? `FOH notes: ${details.foh_notes}` : 'No FOH notes on file',
         details?.bar_notes ? `Bar notes: ${details.bar_notes}` : 'No bar notes on file',
       ],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'deposit_overdue') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'Deposit Overdue',
+      bullets: [`Deposit due: ${formatCurrency(details?.deposit_due ?? 0)}`, `Deposit received: ${formatCurrency(details?.deposit_received ?? 0)}`],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'final_balance_overdue') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'Final Balance Overdue',
+      bullets: [`Final due: ${formatCurrency(details?.final_amount_due ?? 0)}`, `Final received: ${formatCurrency(details?.final_amount_received ?? 0)}`],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'menu_due') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'Menu Selection Due',
+      bullets: ['No catering package selected yet, and the event is within 14 days.'],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'high_risk') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'High Risk Flagged',
+      bullets: ['This event has one or more High/Critical risk flags — check the Risk Scanner Summary in its Leads Pack.'],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'high_bar_impact') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'High Main Bar Impact',
+      bullets: ['This event is expected to have a High or Critical impact on the main bar — give the bar team a heads-up.'],
+      actionHref: `/events/${n.entity_id}`,
+    }
+  }
+  if (n.alert_key === 'incomplete_tasks') {
+    return {
+      ...n,
+      title: eventLabel,
+      subtitle: 'Incomplete Tasks — Event Imminent',
+      bullets: ['This event starts soon and task execution is behind — check Setup/Breakdown/Dynamic tasks.'],
       actionHref: `/events/${n.entity_id}`,
     }
   }

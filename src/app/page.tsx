@@ -2,13 +2,17 @@ import { getDashboardStats, getKanbanEvents } from '@/lib/db'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
 import { NotificationSummaryCard } from '@/components/NotificationSummaryCard'
+import { formatCurrency } from '@/lib/calculations'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 
 export default function Dashboard() {
-  const { eventsThisMonth, eventsThisWeek, upcomingEvents } = getDashboardStats()
+  const {
+    eventsThisMonth, eventsThisWeek, upcomingEvents,
+    projectedSales, confirmedSales, highRiskCount, highBarImpactCount,
+  } = getDashboardStats()
   const kanban = getKanbanEvents()
   const dateLabel = format(new Date(), 'EEEE, MMMM d')
 
@@ -42,8 +46,16 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="This Month" value={String(eventsThisMonth)} />
-        <StatCard label="Next 14 Days" value={String(eventsThisWeek)} />
+        <StatCard label="This Month" metrics={[
+          { label: 'Total Events', value: String(eventsThisMonth) },
+          { label: 'Projected Sales', value: formatCurrency(projectedSales) },
+          { label: 'Confirmed Sales', value: formatCurrency(confirmedSales) },
+        ]} />
+        <StatCard label="Next 14 Days" metrics={[
+          { label: 'Event Count', value: String(eventsThisWeek) },
+          { label: 'High Risk Events', value: String(highRiskCount) },
+          { label: 'High Bar Impact Events', value: String(highBarImpactCount) },
+        ]} />
       </div>
 
       {/* Upcoming Events */}
@@ -62,11 +74,16 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, metrics }: { label: string; metrics: Array<{ label: string; value: string }> }) {
   return (
-    <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3.5">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 leading-none mb-2">{label}</p>
-      <p className="text-2xl font-bold leading-none text-gray-900 tabular-nums">{value}</p>
+    <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3.5 space-y-2.5">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 leading-none">{label}</p>
+      {metrics.map(m => (
+        <div key={m.label} className="flex items-baseline justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-wide text-gray-400 leading-none">{m.label}</p>
+          <p className="text-lg font-bold leading-none text-gray-900 tabular-nums">{m.value}</p>
+        </div>
+      ))}
     </div>
   )
 }

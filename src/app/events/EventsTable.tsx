@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { PaymentStatusBadge } from '@/components/StatusBadge'
 import { formatCurrency } from '@/lib/calculations'
 import { EVENT_STATUSES } from '@/lib/constants'
 // EVENT_STATUSES used in status dropdown
@@ -10,20 +9,18 @@ import type { EventWithClient } from '@/lib/db'
 
 // Defines the natural progression order
 const STATUS_FLOW: Record<string, string> = {
-  'New':       'Contacted',
-  'Contacted': 'Converted',
-  'Converted': 'Tentative',
-  'Tentative': 'Confirmed',
-  'Confirmed': 'Closed',
+  'Confirmed': 'Planning',
+  'Planning':  'Ready',
+  'Ready':     'Active',
+  'Active':    'Closed',
   'Closed':    'Closed',
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  'New':       { bg: 'bg-gray-50',    text: 'text-gray-700',   border: 'border-gray-200' },
-  'Contacted': { bg: 'bg-blue-50',    text: 'text-blue-700',   border: 'border-blue-200' },
-  'Converted': { bg: 'bg-purple-50',  text: 'text-purple-700', border: 'border-purple-200' },
-  'Tentative': { bg: 'bg-yellow-50',  text: 'text-yellow-700', border: 'border-yellow-200' },
   'Confirmed': { bg: 'bg-green-50',   text: 'text-green-700',  border: 'border-green-200' },
+  'Planning':  { bg: 'bg-blue-50',    text: 'text-blue-700',   border: 'border-blue-200' },
+  'Ready':     { bg: 'bg-yellow-50',  text: 'text-yellow-700', border: 'border-yellow-200' },
+  'Active':    { bg: 'bg-orange-50',  text: 'text-orange-700', border: 'border-orange-200' },
   'Closed':    { bg: 'bg-slate-50',   text: 'text-slate-700',  border: 'border-slate-200' },
 }
 
@@ -93,7 +90,7 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
         <tbody>
           {events.map((ev, i) => {
             const isPast = ev.event_date < today
-            const colors = STATUS_COLORS[ev.status] ?? STATUS_COLORS['New']
+            const colors = STATUS_COLORS[ev.status] ?? STATUS_COLORS['Confirmed']
             const nextStatus = STATUS_FLOW[ev.status]
             const isOpen = openId === ev.id
 
@@ -175,14 +172,26 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                 </td>
 
                 <td className="px-4 py-3">
-                  {ev.deposit_status
-                    ? <PaymentStatusBadge status={ev.deposit_status} />
-                    : <span className="text-gray-600">—</span>}
+                  {ev.deposit_due == null && ev.deposit_received == null ? (
+                    <span className="text-gray-600">—</span>
+                  ) : (
+                    <div className="leading-tight">
+                      <div className="text-gray-900">{formatCurrency(ev.deposit_received ?? 0)} Paid</div>
+                      <div className="text-xs text-gray-500">
+                        {formatCurrency(Math.max(0, (ev.deposit_due ?? 0) - (ev.deposit_received ?? 0)))} Outstanding
+                      </div>
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
-                  {ev.final_status
-                    ? <PaymentStatusBadge status={ev.final_status} />
-                    : <span className="text-gray-600">—</span>}
+                  {ev.final_amount_due == null && ev.final_amount_received == null ? (
+                    <span className="text-gray-600">—</span>
+                  ) : (
+                    <div className="leading-tight">
+                      <div className="text-gray-900">{formatCurrency(ev.final_amount_due ?? 0)} Due</div>
+                      <div className="text-xs text-gray-500">{formatCurrency(ev.final_amount_received ?? 0)} Paid</div>
+                    </div>
+                  )}
                 </td>
               </tr>
             )

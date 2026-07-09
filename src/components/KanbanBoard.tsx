@@ -13,11 +13,10 @@ interface Props {
 
 // Thin top-border color per status column
 const COLUMN_ACCENT: Record<string, string> = {
-  New:       'border-t-gray-500',
-  Contacted: 'border-t-blue-500',
-  Converted: 'border-t-purple-500',
-  Tentative: 'border-t-yellow-500',
   Confirmed: 'border-t-green-500',
+  Planning:  'border-t-blue-500',
+  Ready:     'border-t-yellow-500',
+  Active:    'border-t-orange-500',
   Closed:    'border-t-slate-500',
 }
 

@@ -4,6 +4,7 @@ import { getEvents, getAvailableYears } from '@/lib/db'
 import { formatCurrency } from '@/lib/calculations'
 import Link from 'next/link'
 import { EventsTable } from './EventsTable'
+import { EventsPageSearch } from './EventsPageSearch'
 
 export default function EventsPage({ searchParams }: { searchParams: { year?: string; status?: string } }) {
   const now = new Date()
@@ -12,6 +13,10 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
   const defaultYear = availableYears.includes(currentYear) ? currentYear : (availableYears[0] ?? currentYear)
   const year = Number(searchParams.year ?? defaultYear)
   const statusFilter = searchParams.status ?? null
+
+  // Unscoped by year — the search bar looks across every event, independent of
+  // the year picker/status filter that scope the table below it.
+  const allEventsForSearch = getEvents()
 
   const allEvents = getEvents(year)
   const events = statusFilter ? allEvents.filter(e => e.status === statusFilter) : allEvents
@@ -65,6 +70,9 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
           </Link>
         </div>
       </div>
+
+      {/* Global event search — searches every event, independent of year/status filters below */}
+      <EventsPageSearch allEvents={allEventsForSearch} />
 
       {/* Quick stats */}
       {events.length > 0 && (

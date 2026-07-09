@@ -8,13 +8,17 @@ import {
   countChafingDishes,
   vesselLabelFor,
   parseMenuItemOverrides,
+  formatCurrency,
 } from '@/lib/calculations'
 import type { EventForNotes } from '@/lib/noteGenerators'
 import { calcBarImpact, IMPACT_PRINT_COLORS } from '@/lib/barImpact'
 import { calcReadiness } from '@/lib/readiness'
 import { TOAST_STAGES } from '@/lib/toastStatus'
+import { RISK_LEVEL_COLORS } from '@/lib/riskScanner'
 import { TASK_ROLES, calcTaskComplexity, COMPLEXITY_PRINT_COLORS, type TaskRole, type TaskContext } from '@/lib/tasks'
 import type { EventTask } from '@/lib/db'
+import type { RiskFlag } from '@/lib/riskScanner'
+import type { ClientHistoryEntry } from '@/lib/prepOutputsData'
 
 // ─── Shared print styles injected once ────────────────────────────────────────
 
@@ -171,9 +175,9 @@ function ImpactRow({ ev, label = 'Main Bar Impact' }: { ev: EventForNotes; label
 
 // ─── Task checklist (role-filtered, open tasks only) ──────────────────────────
 
-function TaskChecklist({ tasks, role }: { tasks?: EventTask[]; role: TaskRole }) {
+function TaskChecklist({ tasks, role, category }: { tasks?: EventTask[]; role: TaskRole; category?: EventTask['category'] }) {
   if (!tasks) return null
-  const open = tasks.filter(t => t.role === role && !t.completed)
+  const open = tasks.filter(t => t.role === role && !t.completed && (!category || t.category === category))
   if (open.length === 0) {
     return <p className="font-[var(--font-crimson)] text-sm text-gray-500 italic">No open {role} tasks.</p>
   }
@@ -580,7 +584,7 @@ export function BarNotesDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTas
 
 // ─── SETUP CHECKLIST ──────────────────────────────────────────────────────────
 
-export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
+export function SetupChecklistDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
   const decorateTime = ev.decorate_time || ev.setup_time
   const lastCall = shiftTime(ev.teardown_time, -30)
 
@@ -604,61 +608,16 @@ export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
         </Section>
       </TwoCol>
 
-      <Section title="Before Host Arrives">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <CheckItem>Tables set per floor plan</CheckItem>
-          <CheckItem>Chairs set</CheckItem>
-          <CheckItem>Linens placed</CheckItem>
-          <CheckItem>Buffet station positioned and ready</CheckItem>
-          <CheckItem>Trash can with liner in place</CheckItem>
-          <CheckItem>Signage placed at entrance</CheckItem>
-          {!!ev.big_screen_tv && <CheckItem>TV powered on and HDMI cable available</CheckItem>}
-          {ev.bar_tab_type === 'Pre-Paid Drink Ticket(s)' && (ev.drink_tickets ?? 0) > 0 && (
-            <CheckItem>Drink tickets staged for host ({ev.drink_tickets} tickets)</CheckItem>
-          )}
-        </div>
+      <Section title="Setup Tasks">
+        <TwoCol>
+          {TASK_ROLES.map(role => (
+            <div key={role}>
+              <p className="font-[var(--font-josefin)] text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{role}</p>
+              <TaskChecklist tasks={tasks} role={role} category="Setup" />
+            </div>
+          ))}
+        </TwoCol>
         {ev.floor_plan_notes && <PolicyNote>Floor Plan: {ev.floor_plan_notes}</PolicyNote>}
-      </Section>
-
-      <Section title="At Host Arrival">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <CheckItem>Greet host and confirm layout</CheckItem>
-          <CheckItem>Walk host through décor policy</CheckItem>
-          <CheckItem>Confirm cake/dessert plan if applicable</CheckItem>
-          <CheckItem>Confirm final guest count</CheckItem>
-          <CheckItem>Confirm beverage setup with host</CheckItem>
-        </div>
-      </Section>
-
-      <Section title="At Guest Arrival">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <CheckItem>Guests entering through glass door only</CheckItem>
-          <CheckItem>Bar service started per beverage option</CheckItem>
-          {ev.bar_tab_type === 'By Consumption' && <CheckItem>Host tab opened in Toast</CheckItem>}
-          <CheckItem>FOH in position to monitor flow</CheckItem>
-        </div>
-      </Section>
-
-      <Section title="During Event">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <CheckItem>Food service timed per run of show</CheckItem>
-          <CheckItem>Monitor guest count — max 75 total / ~50 seated</CheckItem>
-          <CheckItem>Check in with host mid-event</CheckItem>
-        </div>
-      </Section>
-
-      <Section title="Close / Reset">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <CheckItem>Last call at {to12Hour(lastCall)}</CheckItem>
-          <CheckItem>Bar closed at {to12Hour(ev.teardown_time)}</CheckItem>
-          <CheckItem>Host reminded to remove all items and décor</CheckItem>
-          <CheckItem>Tables cleared</CheckItem>
-          <CheckItem>Linens removed and bagged</CheckItem>
-          <CheckItem>Trash checked and replaced</CheckItem>
-          <CheckItem>Floor swept and spot cleaned</CheckItem>
-          <CheckItem>High-tops and tables reset to standard</CheckItem>
-          <CheckItem>Production space returned to standard configuration</CheckItem>
-        </div>
       </Section>
     </PrintDoc>
   )
@@ -668,7 +627,7 @@ export function SetupChecklistDoc({ ev }: { ev: EventForNotes }) {
 // Master control sheet for whoever is running point on the event — readiness,
 // Toast status, main bar impact, and a condensed timeline in one place.
 
-export function LeadsPackDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
+export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventForNotes; tasks?: EventTask[]; risks?: RiskFlag[]; clientHistory?: ClientHistoryEntry[] }) {
   const decorateTime = ev.decorate_time || ev.setup_time
   const lastCall = shiftTime(ev.teardown_time, -30)
   const impact = calcBarImpact(ev)
@@ -697,7 +656,7 @@ export function LeadsPackDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
   return (
     <PrintDoc title="Leads Pack" ev={ev}>
       <TwoCol>
-        <Section title="Event Readiness">
+        <Section title="Planning Readiness">
           <div className="flex items-baseline gap-2">
             <span className="font-[var(--font-josefin)] text-3xl font-bold text-gray-900">{readiness.score}%</span>
             <span className="font-[var(--font-josefin)] text-[10px] uppercase tracking-widest text-gray-400">operational</span>
@@ -741,6 +700,15 @@ export function LeadsPackDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
         </span>
       </div>
 
+      {tasks && tasks.length > 0 && (
+        <div className="flex gap-2 text-sm">
+          <span className="font-[var(--font-josefin)] text-[10px] uppercase tracking-wider text-gray-400 w-36 shrink-0 pt-0.5">Task Completion</span>
+          <span className="font-[var(--font-josefin)] font-bold flex-1 text-gray-900">
+            {tasks.filter(t => !!t.completed).length}/{tasks.length} complete
+          </span>
+        </div>
+      )}
+
       {tasks && (
         <Section title="Open Tasks by Role">
           <TwoCol>
@@ -751,6 +719,49 @@ export function LeadsPackDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
               </div>
             ))}
           </TwoCol>
+        </Section>
+      )}
+
+      <Section title="Financial Tracking">
+        <p className="font-[var(--font-crimson)] text-[11px] text-gray-500 mb-1 italic">Internal visibility only — Toast processes all payments.</p>
+        <TwoCol>
+          <Row label="Total Event Value" value={ev.total_event_value != null ? formatCurrency(ev.total_event_value) : undefined} />
+          <Row label="Deposit Due" value={ev.deposit_due != null ? formatCurrency(ev.deposit_due) : undefined} />
+          <Row label="Deposit Received" value={ev.deposit_received != null ? formatCurrency(ev.deposit_received) : undefined} />
+          <Row label="Deposit Outstanding" value={formatCurrency(Math.max(0, (ev.deposit_due ?? 0) - (ev.deposit_received ?? 0)))} />
+          <Row label="Final Amount Due" value={ev.final_amount_due != null ? formatCurrency(ev.final_amount_due) : undefined} />
+          <Row label="Final Amount Received" value={ev.final_amount_received != null ? formatCurrency(ev.final_amount_received) : undefined} />
+          <Row label="Final Outstanding" value={formatCurrency(Math.max(0, (ev.final_amount_due ?? 0) - (ev.final_amount_received ?? 0)))} />
+        </TwoCol>
+      </Section>
+
+      <Section title="Risk Scanner Summary">
+        {!risks || risks.length === 0 ? (
+          <p className="font-[var(--font-crimson)] text-sm text-gray-600">No active risk flags.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {risks.map((r, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <span
+                  className={`shrink-0 font-[var(--font-josefin)] text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${RISK_LEVEL_COLORS[r.level].text} ${RISK_LEVEL_COLORS[r.level].border}`}
+                >
+                  {r.level}
+                </span>
+                <span className="font-[var(--font-crimson)] text-base text-gray-800 leading-snug">
+                  <strong>{r.category}:</strong> {r.message}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {clientHistory && clientHistory.length > 0 && (
+        <Section title="Repeat Client Intelligence">
+          <p className="font-[var(--font-crimson)] text-base text-gray-800">
+            {clientHistory.length} past event{clientHistory.length === 1 ? '' : 's'} on file —{' '}
+            {clientHistory.filter(h => h.would_repeat_client === 'Yes').length} of {clientHistory.length} marked would-repeat.
+          </p>
         </Section>
       )}
 
