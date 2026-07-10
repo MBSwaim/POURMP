@@ -132,6 +132,46 @@ export function mergeCalculatedItems(items: CalculatedItem[]): CalculatedItem[] 
   return Array.from(map.values())
 }
 
+// An event can carry multiple catering packages (e.g. a kids' menu alongside the
+// adult buffet), each with its own guest count and buffer %. This is the one place
+// that resolves "what packages does this event have, and what did each one order"
+// so every catering output — Builder, plain-text summary, equipment list, Toast
+// Notes, Kitchen Sheet, BEO, etc. — sums the exact same packages the same way
+// instead of quietly falling back to a single legacy package + the event's
+// top-level guest count.
+export interface CateringPackageInput {
+  pkg: { name: string } | null
+  menuItems: MenuItem[]
+  guest_count: number
+  buffer_pct: number
+}
+
+export function resolveCateringPackages<T extends CateringPackageInput>(
+  packages: T[] | undefined,
+  fallback: { pkg: T['pkg']; menuItems: MenuItem[]; guest_count: number; buffer_pct: number } | null
+): CateringPackageInput[] {
+  if (packages && packages.length > 0) return packages
+  if (fallback && fallback.pkg) return [fallback]
+  return []
+}
+
+export function calcMergedCateringItems(
+  packages: CateringPackageInput[],
+  overrides: MenuItemOverrides = {}
+): CalculatedItem[] {
+  const active = packages.filter(p => p.pkg && p.guest_count > 0)
+  return mergeCalculatedItems(
+    active.flatMap(p => calcAllItems(p.menuItems, p.guest_count, p.buffer_pct, overrides))
+  )
+}
+
+export function cateringPackageTitle(packages: CateringPackageInput[]): string {
+  return packages
+    .filter(p => p.pkg && p.guest_count > 0)
+    .map(p => p.pkg!.name)
+    .join(' | ')
+}
+
 export interface SauceRule {
   trigger: string
   sauces: string[]
@@ -170,38 +210,39 @@ export interface ServingwareRule {
   trigger: string
   utensil: string
   vessel: string
-  vesselLabel: string  // display label for plain-text catering summary
   altNote?: string
 }
 
 export const SERVINGWARE_RULES: ServingwareRule[] = [
-  { trigger: 'Cheese Platter',           utensil: 'Tongs',         vessel: '1 per board',        vesselLabel: 'Large White Platter(s)' },
-  { trigger: 'Hummus',                   utensil: 'Serving Spoon', vessel: '1 per bowl',         vesselLabel: 'Large White Bowl' },
-  { trigger: 'French Fries',             utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Chips',                    utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large White Platter(s)' },
-  { trigger: 'Salsa',                    utensil: 'Small Ladle',   vessel: '1 per bowl',         vesselLabel: 'Bowl' },
-  { trigger: 'Queso',                    utensil: 'Small Ladle',   vessel: '1 per bowl',         vesselLabel: 'Bowl' },
-  { trigger: 'Pork Arepa',               utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Green Tomato Arepa',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Black Bean Arepa',         utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Jasmine Rice',             utensil: 'Serving Spoon', vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Thai Fried Chicken',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Thai Slaw',                utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large Bowl' },
-  { trigger: 'Asian Chopped Salad',      utensil: 'Tongs',         vessel: '1 per bowl',         vesselLabel: 'Large Bowl' },
-  { trigger: 'Shrimp Kabob',             utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Thai Chicken Kabob',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer',           altNote: 'or 2 per 1/2 chafing dish' },
-  { trigger: 'Pulled Pork Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Mini Burger Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Buffalo Chicken Slider',   utensil: 'Tongs',         vessel: '1 per chafing dish', vesselLabel: 'Large Chafer' },
-  { trigger: 'Veggies',                  utensil: 'Tongs',         vessel: '1 per platter',      vesselLabel: 'Large White Platter(s)' },
-  { trigger: 'Crudités',                 utensil: 'Tongs',         vessel: '1 per platter',      vesselLabel: 'Large White Platter(s)' },
+  { trigger: 'Cheese Platter',           utensil: 'Tongs',         vessel: '1 per board' },
+  { trigger: 'Hummus',                   utensil: 'Serving Spoon', vessel: '1 per bowl' },
+  { trigger: 'French Fries',             utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Chips',                    utensil: 'Tongs',         vessel: '1 per bowl' },
+  { trigger: 'Salsa',                    utensil: 'Small Ladle',   vessel: '1 per bowl' },
+  { trigger: 'Queso',                    utensil: 'Small Ladle',   vessel: '1 per bowl' },
+  { trigger: 'Pork Arepa',               utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Green Tomato Arepa',       utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Black Bean Arepa',         utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Jasmine Rice',             utensil: 'Serving Spoon', vessel: '1 per chafing dish' },
+  { trigger: 'Thai Fried Chicken',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Thai Slaw',                utensil: 'Tongs',         vessel: '1 per bowl' },
+  { trigger: 'Asian Chopped Salad',      utensil: 'Tongs',         vessel: '1 per bowl' },
+  { trigger: 'Shrimp Kabob',             utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Thai Chicken Kabob',       utensil: 'Tongs',         vessel: '1 per chafing dish', altNote: 'or 2 per 1/2 chafing dish' },
+  { trigger: 'Pulled Pork Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Mini Burger Slider',       utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Buffalo Chicken Slider',   utensil: 'Tongs',         vessel: '1 per chafing dish' },
+  { trigger: 'Veggies',                  utensil: 'Tongs',         vessel: '1 per platter' },
+  { trigger: 'Crudités',                 utensil: 'Tongs',         vessel: '1 per platter' },
 ]
 
+// Single source of truth for the "serving vessel" wording, derived only from the
+// unit_name that calcAllItems already computed (the same value the Catering Builder's
+// Unit column shows). Never keyed off item_name — a per-item label here is what let the
+// Catering Summary claim a full "Large Chafer" for an item the Builder had computed as
+// a "1/2 Chafer". Kitchen shorthand aliases for the two chafer sizes; everything else
+// (Platter, Large Bowl, Round Chafer, ...) passes through unchanged.
 export function vesselLabelFor(item: CalculatedItem): string {
-  const sw = SERVINGWARE_RULES.find(r =>
-    item.item_name.toLowerCase().includes(r.trigger.toLowerCase())
-  )
-  if (sw) return sw.vesselLabel
   if (item.unit_name === '200 Pan') return 'Large Chafer'
   if (item.unit_name === '1/2 Chafer') return 'Half Chafer'
   return item.unit_name ?? ''

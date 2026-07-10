@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { getEventFull } from '@/lib/db'
 import { getDb } from '@/lib/db-internal'
-import { calcAllItems, getApplicableSauces, parseMenuItemOverrides, type MenuItem as CalcMenuItem } from '@/lib/calculations'
+import { getApplicableSauces, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle } from '@/lib/calculations'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 
 export const dynamic = 'force-dynamic'
@@ -52,7 +52,7 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
             <p className="text-sm text-gray-500 mt-1">{todayFormatted}</p>
           </div>
         ) : (
-          events.map(({ event, client, details, pkg, menuItems }) => {
+          events.map(({ event, client, details, pkg, menuItems, packages }) => {
             const clientName = client
               ? [client.first_name, client.last_name].filter(Boolean).join(' ')
               : '—'
@@ -64,15 +64,18 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
             const eventStart = event.event_time
             const eventEnd = event.teardown_time
 
-            // Calculations
+            // Calculations — resolve the same multi-package set the Catering Builder
+            // uses, so this dashboard can't show a stale single-package/guest-count view
             const guestCount = details?.guest_count ?? 0
             const bufferPct = details?.buffer_pct ?? 0
-            const calcItems = menuItems && menuItems.length > 0
-              ? calcAllItems(menuItems as CalcMenuItem[], guestCount, bufferPct, parseMenuItemOverrides(details?.menu_item_overrides_json))
-              : []
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const resolvedPackages = resolveCateringPackages(packages as any, pkg ? { pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct } as any : null)
+            const packageTitle = cateringPackageTitle(resolvedPackages) || pkg?.name
+            const totalGuests = resolvedPackages.filter(p => p.pkg && p.guest_count > 0).reduce((sum, p) => sum + p.guest_count, 0) || guestCount
+            const calcItems = calcMergedCateringItems(resolvedPackages, parseMenuItemOverrides(details?.menu_item_overrides_json))
 
             // Sauces
-            const applicableSauces = menuItems ? getApplicableSauces(menuItems) : []
+            const applicableSauces = getApplicableSauces(resolvedPackages.flatMap(p => p.menuItems))
             const selectedSauceIds = details?.selected_sauces
               ? details.selected_sauces.split(',').map((s: string) => s.trim()).filter(Boolean)
               : []
@@ -134,13 +137,13 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                   {/* Left: Buffet */}
                   <div>
                     <h3 className="text-xs font-bold text-[#C8973A] tracking-widest uppercase mb-3">Buffet</h3>
-                    {pkg ? (
-                      <p className="text-sm font-semibold text-gray-900 mb-1">{pkg.name}</p>
+                    {packageTitle ? (
+                      <p className="text-sm font-semibold text-gray-900 mb-1">{packageTitle}</p>
                     ) : (
                       <p className="text-sm text-gray-500 italic mb-1">No package selected</p>
                     )}
                     <p className="text-xs text-gray-500 mb-3">
-                      {guestCount} guests
+                      {totalGuests} guests
                       {bufferPct > 0 ? ` + ${Math.round(bufferPct * 100)}% buffer` : ''}
                     </p>
 

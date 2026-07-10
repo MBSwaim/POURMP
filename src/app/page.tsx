@@ -21,9 +21,12 @@ export default function Dashboard() {
 
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="max-w-xs sm:max-w-md">
           <p className="text-[10px] text-gray-500 tracking-[0.2em] uppercase mb-1">{dateLabel}</p>
           <h1 className="text-xl font-bold tracking-widest uppercase text-gray-900 leading-none">Dashboard</h1>
+          <p className="mt-1.5 font-crimson italic text-sm text-gray-500 leading-relaxed">
+            Exceptional hospitality is never accidental. It is the result of exceptional preparation.
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link

@@ -2,15 +2,11 @@
 import { shiftTime, to12Hour } from '@/lib/timeUtils'
 import { DRINK_TICKET_PRICE } from '@/lib/constants'
 import {
-  calcAllItems,
-  formatCateringText,
-  formatEquipmentText,
   countChafingDishes,
   vesselLabelFor,
-  parseMenuItemOverrides,
   formatCurrency,
 } from '@/lib/calculations'
-import type { EventForNotes } from '@/lib/noteGenerators'
+import { calcItems, cateringPackages, cateringTitle, activePackageCount, type EventForNotes } from '@/lib/noteGenerators'
 import { calcBarImpact, IMPACT_PRINT_COLORS } from '@/lib/barImpact'
 import { calcReadiness } from '@/lib/readiness'
 import { TOAST_STAGES } from '@/lib/toastStatus'
@@ -54,6 +50,9 @@ function fmtDate(dateStr: string) {
 }
 
 export function PrintDoc({ title, ev, children }: DocProps) {
+  // Same package-aware guest total used for the catering line items below, so the
+  // masthead can never quote a different guest count than the body it's printed on.
+  const totalGuests = cateringPackages(ev).filter(p => p.pkg && p.guest_count > 0).reduce((sum, p) => sum + p.guest_count, 0) || ev.guest_count
   return (
     <div className="print-doc bg-white text-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-200">
       {/* MP Header */}
@@ -71,7 +70,7 @@ export function PrintDoc({ title, ev, children }: DocProps) {
           {fmtDate(ev.event_date)}
           {ev.event_time ? ` · ${to12Hour(ev.event_time)} – ${to12Hour(ev.teardown_time)}` : ''}
           {ev.space ? ` · ${ev.space}` : ''}
-          {ev.guest_count > 0 ? ` · ${ev.guest_count} Guests` : ''}
+          {totalGuests > 0 ? ` · ${totalGuests} Guests` : ''}
         </p>
       </div>
 
@@ -216,6 +215,8 @@ export function RunOfShowDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
   const decorateTime = ev.decorate_time || ev.setup_time
   const foodServed = shiftTime(ev.event_time, -15)
   const lastCall = shiftTime(ev.teardown_time, -30)
+  const foodTitle = cateringTitle(ev)
+  const totalGuests = cateringPackages(ev).filter(p => p.pkg && p.guest_count > 0).reduce((sum, p) => sum + p.guest_count, 0) || ev.guest_count
 
   return (
     <PrintDoc title="Run of Show" ev={ev}>
@@ -254,8 +255,8 @@ export function RunOfShowDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
       </Section>
 
       <Section title="Food Service">
-        <Row label="Package" value={ev.package_name} />
-        <Row label="Guest Count" value={ev.guest_count > 0 ? String(ev.guest_count) : undefined} />
+        <Row label="Package" value={foodTitle || undefined} />
+        <Row label="Guest Count" value={totalGuests > 0 ? String(totalGuests) : undefined} />
         <Row label="Dietary Notes" value={ev.dietary_restrictions} />
         <Row label="Sauce Notes" value={ev.selected_sauces} />
         <Row label="Food Notes" value={ev.food_notes} />
@@ -287,16 +288,11 @@ export function RunOfShowDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTa
 // ─── Catering item renderer (used by KitchenSheetDoc) ────────────────────────
 
 function CateringItems({ ev }: { ev: EventForNotes }) {
-  if (!ev.menuItems || ev.menuItems.length === 0 || !ev.package_name) {
+  const title = cateringTitle(ev)
+  const items = calcItems(ev)
+  if (items.length === 0 || !title) {
     return <p className="font-[var(--font-crimson)] text-base italic text-gray-400">No catering package selected.</p>
   }
-
-  const items = calcAllItems(
-    ev.menuItems as Parameters<typeof calcAllItems>[0],
-    ev.guest_count,
-    (ev.buffer_pct ?? 0) / 100,
-    parseMenuItemOverrides(ev.menu_item_overrides_json),
-  )
 
   const sauceSet = ev.selected_sauces
     ? new Set(ev.selected_sauces.split(',').map(s => s.trim()).filter(Boolean))
@@ -318,7 +314,7 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
   return (
     <div className="space-y-1.5">
       <p className="font-[var(--font-josefin)] text-sm font-bold tracking-wide text-gray-900 mb-2">
-        {ev.package_name.toUpperCase()}
+        {title.toUpperCase()}
       </p>
       {rendered.map((item, i) => {
         const isStaggered = typeof item.total_qty === 'number' && item.total_qty > 1
@@ -370,9 +366,7 @@ function CateringItems({ ev }: { ev: EventForNotes }) {
 // ─── KITCHEN SHEET ────────────────────────────────────────────────────────────
 
 export function KitchenSheetDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTask[] }) {
-  const items = ev.menuItems
-    ? calcAllItems(ev.menuItems as Parameters<typeof calcAllItems>[0], ev.guest_count, (ev.buffer_pct ?? 0) / 100, parseMenuItemOverrides(ev.menu_item_overrides_json))
-    : []
+  const items = calcItems(ev)
   const serveStyle = (() => { try { return JSON.parse(ev.serve_style_json ?? '{}') } catch { return {} } })()
   const chafing = countChafingDishes(items, serveStyle)
 
@@ -601,7 +595,7 @@ export function SetupChecklistDoc({ ev, tasks }: { ev: EventForNotes; tasks?: Ev
         </Section>
         <Section title="Event Info">
           <Row label="Host" value={`${ev.first_name} ${ev.last_name}${ev.company ? ' / ' + ev.company : ''}`} />
-          <Row label="Package" value={ev.package_name} />
+          <Row label="Package" value={cateringTitle(ev) || undefined} />
           <Row label="Beverage" value={ev.bar_tab_type ? `BAR TAB | ${ev.bar_tab_type}` : undefined} />
           {ev.big_screen_tv ? <Row label="AV" value="TV / HDMI requested" /> : null}
           <ImpactRow ev={ev} />
@@ -633,7 +627,7 @@ export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventFor
   const impact = calcBarImpact(ev)
   const readiness = calcReadiness({
     guest_count: ev.guest_count,
-    hasPackage: !!ev.package_name,
+    hasPackage: activePackageCount(ev) > 0,
     bar_tab_type: ev.bar_tab_type,
     setup_notes: ev.setup_notes,
     floor_plan_notes: ev.floor_plan_notes,
@@ -644,8 +638,8 @@ export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventFor
   const dynamicCount = tasks?.filter(t => t.category === 'Dynamic').length ?? 0
   const taskCtx: TaskContext = {
     guestCount: ev.guest_count,
-    hasPackage: !!ev.package_name,
-    packageCount: ev.package_name ? 1 : 0,
+    hasPackage: activePackageCount(ev) > 0,
+    packageCount: activePackageCount(ev),
     barTabType: ev.bar_tab_type,
     drinkTickets: ev.drink_tickets,
     bigScreenTv: ev.big_screen_tv,
@@ -778,7 +772,7 @@ export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventFor
 
       <Section title="Key Info">
         <Row label="Host" value={`${ev.first_name} ${ev.last_name}${ev.company ? ' / ' + ev.company : ''}`} />
-        <Row label="Package" value={ev.package_name} />
+        <Row label="Package" value={cateringTitle(ev) || undefined} />
         <Row label="Beverage" value={ev.bar_tab_type ? `BAR TAB | ${ev.bar_tab_type}` : undefined} />
         {ev.staffing_notes && <Row label="Staffing Notes" value={ev.staffing_notes} />}
       </Section>

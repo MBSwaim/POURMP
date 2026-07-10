@@ -29,8 +29,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <Logo className="w-7 h-7 shrink-0" color="gold" />
           <div>
-            <div className="text-sm font-bold text-[#C8973A] tracking-widest uppercase leading-none">Manhattan Project</div>
-            <div className="text-[9px] text-gray-500 tracking-widest uppercase leading-none mt-0.5">Beer Co. · Events</div>
+            <div
+              className="text-sm font-bold text-[#C8973A] tracking-widest uppercase leading-none"
+              title="Planning • Operations • Unified • Readiness Platform"
+            >
+              POURMP
+            </div>
+            <div
+              className="text-[9px] text-gray-500 tracking-widest uppercase leading-none mt-0.5"
+              title="Manhattan Project's Internal Events & Reservations Operations System"
+            >
+              Manhattan Project · Ops Platform
+            </div>
           </div>
         </div>
         <button

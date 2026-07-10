@@ -1,12 +1,14 @@
 import { to12Hour, shiftTime } from './timeUtils'
 import { DRINK_TICKET_PRICE } from './constants'
 import {
-  calcAllItems,
   formatCateringText,
   formatEquipmentText,
   countChafingDishes,
   parseMenuItemOverrides,
   formatCurrency,
+  resolveCateringPackages,
+  calcMergedCateringItems,
+  cateringPackageTitle,
   type MenuItem,
   type CalculatedItem,
 } from './calculations'
@@ -14,6 +16,7 @@ import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
 import { calcTaskComplexity, TASK_ROLES, type TaskContext } from './tasks'
 import type { RiskFlag } from './riskScanner'
+import type { EventPackageWithItems } from './db'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,8 +73,10 @@ export interface EventForNotes {
   final_amount_due?: number | null
   final_amount_received?: number | null
   final_menu_locked?: number
-  // catering items from the package
+  // catering items from the package — legacy single-package fallback
   menuItems?: MenuItem[]
+  // full multi-package model (event_packages table); source of truth when present
+  packages?: EventPackageWithItems[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -115,9 +120,27 @@ function serveStyleMap(ev: EventForNotes): Record<string, 'all' | 'staggered'> {
   try { return JSON.parse(ev.serve_style_json) } catch { return {} }
 }
 
-function calcItems(ev: EventForNotes): CalculatedItem[] {
-  if (!ev.menuItems || ev.menuItems.length === 0) return []
-  return calcAllItems(ev.menuItems, ev.guest_count, (ev.buffer_pct ?? 0) / 100, parseMenuItemOverrides(ev.menu_item_overrides_json))
+// Resolves the same package list the Catering Builder tab uses: the full
+// multi-package set when the event has one, otherwise the legacy single
+// package + top-level guest count. Every catering-derived line in every Prep
+// Doc goes through this so none of them can drift onto a stale guest count.
+export function cateringPackages(ev: EventForNotes) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return resolveCateringPackages(ev.packages as any, ev.package_name
+    ? { pkg: { name: ev.package_name }, menuItems: ev.menuItems ?? [], guest_count: ev.guest_count, buffer_pct: (ev.buffer_pct ?? 0) / 100 }
+    : null)
+}
+
+export function calcItems(ev: EventForNotes): CalculatedItem[] {
+  return calcMergedCateringItems(cateringPackages(ev), parseMenuItemOverrides(ev.menu_item_overrides_json))
+}
+
+export function cateringTitle(ev: EventForNotes): string {
+  return cateringPackageTitle(cateringPackages(ev)) || ev.package_name || ''
+}
+
+export function activePackageCount(ev: EventForNotes): number {
+  return cateringPackages(ev).filter(p => p.pkg && p.guest_count > 0).length
 }
 
 // ─── TOAST NOTES BUILDER ──────────────────────────────────────────────────────
@@ -146,14 +169,15 @@ export function generateToastNotes(ev: EventForNotes, tasks: BriefTask[] = []): 
   lines.push('')
   lines.push(`DIETARY RESTRICTIONS: ${ev.dietary_restrictions || 'None noted'}`)
 
-  if (items.length > 0 && ev.package_name) {
+  const foodTitle = cateringTitle(ev)
+  if (items.length > 0 && foodTitle) {
     const foodText = formatCateringText(
-      [{ name: ev.package_name, items }],
+      [{ name: foodTitle, items }],
       ev.selected_sauces
     )
     lines.push(foodText)
-  } else if (ev.package_name) {
-    lines.push(ev.package_name.toUpperCase())
+  } else if (foodTitle) {
+    lines.push(foodTitle.toUpperCase())
     lines.push('(Guest count or menu items not set — open event to configure catering)')
   } else {
     lines.push('(No catering package selected)')
@@ -189,8 +213,8 @@ export function generateToastNotes(ev: EventForNotes, tasks: BriefTask[] = []): 
     const dynamicCount = tasks.filter(t => t.category === 'Dynamic').length
     const taskCtx: TaskContext = {
       guestCount: ev.guest_count,
-      hasPackage: !!ev.package_name,
-      packageCount: ev.package_name ? 1 : 0,
+      hasPackage: activePackageCount(ev) > 0,
+      packageCount: activePackageCount(ev),
       barTabType: ev.bar_tab_type,
       drinkTickets: ev.drink_tickets,
       bigScreenTv: ev.big_screen_tv,
@@ -303,6 +327,9 @@ export function generateRunOfShow(ev: EventForNotes): string {
   const eventEnd = to12Hour(ev.teardown_time)
   const foodServed = to12Hour(shiftTime(ev.event_time, -15))
   const lastCall = to12Hour(shiftTime(ev.teardown_time, -30))
+  const packages = cateringPackages(ev)
+  const foodTitle = cateringPackageTitle(packages)
+  const totalGuests = packages.filter(p => p.pkg && p.guest_count > 0).reduce((sum, p) => sum + p.guest_count, 0) || ev.guest_count
 
   lines.push('RUN OF SHOW')
   lines.push(ev.event_name)
@@ -327,8 +354,8 @@ export function generateRunOfShow(ev: EventForNotes): string {
   lines.push('')
 
   lines.push(`FOOD SERVICE — ${foodServed}`)
-  lines.push(`  ${ev.package_name || '(No package selected)'}`)
-  lines.push(`  Guest count: ${ev.guest_count > 0 ? ev.guest_count : '—'}`)
+  lines.push(`  ${foodTitle || '(No package selected)'}`)
+  lines.push(`  Guest count: ${totalGuests > 0 ? totalGuests : '—'}`)
   if (ev.dietary_restrictions) lines.push(`  Dietary: ${ev.dietary_restrictions}`)
   if (ev.selected_sauces)      lines.push(`  Sauces: ${ev.selected_sauces}`)
   if (ev.food_notes)           lines.push(`  Notes: ${ev.food_notes}`)
@@ -382,9 +409,10 @@ export function generateKitchenSheet(ev: EventForNotes): string {
 
   lines.push('CATERING ORDER')
   lines.push('')
-  if (items.length > 0 && ev.package_name) {
+  const kitchenTitle = cateringTitle(ev)
+  if (items.length > 0 && kitchenTitle) {
     const foodText = formatCateringText(
-      [{ name: ev.package_name, items }],
+      [{ name: kitchenTitle, items }],
       ev.selected_sauces
     )
     lines.push(foodText)
@@ -394,7 +422,7 @@ export function generateKitchenSheet(ev: EventForNotes): string {
     const chafing = countChafingDishes(items, serveStyle)
     if (chafing.total > 0) lines.push(`(${chafing.total * 2}) Sternos`)
   } else {
-    lines.push(`Package: ${ev.package_name || '(none selected)'}`)
+    lines.push(`Package: ${kitchenTitle || '(none selected)'}`)
     lines.push(`Guest Count: ${ev.guest_count || '—'}`)
   }
   if (ev.buffer_pct && ev.buffer_pct > 0) {
@@ -626,7 +654,7 @@ export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[], ris
   const impact = calcBarImpact(ev)
   const readiness = calcReadiness({
     guest_count: ev.guest_count,
-    hasPackage: !!ev.package_name,
+    hasPackage: activePackageCount(ev) > 0,
     bar_tab_type: ev.bar_tab_type,
     setup_notes: ev.setup_notes,
     floor_plan_notes: ev.floor_plan_notes,
@@ -637,8 +665,8 @@ export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[], ris
   const dynamicCount = tasks.filter(t => t.category === 'Dynamic').length
   const taskCtx: TaskContext = {
     guestCount: ev.guest_count,
-    hasPackage: !!ev.package_name,
-    packageCount: ev.package_name ? 1 : 0,
+    hasPackage: activePackageCount(ev) > 0,
+    packageCount: activePackageCount(ev),
     barTabType: ev.bar_tab_type,
     drinkTickets: ev.drink_tickets,
     bigScreenTv: ev.big_screen_tv,

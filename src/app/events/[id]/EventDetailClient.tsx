@@ -13,7 +13,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { calcFloorPlan, calcAllItems, mergeCalculatedItems, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency } from '@/lib/calculations'
+import { calcFloorPlan, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import { formatPhoneNumber } from '@/lib/phone'
 import { TOAST_STAGES } from '@/lib/toastStatus'
@@ -794,15 +794,13 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               const bufferPct = details?.buffer_pct ?? 0
               if (guestCount === 0) return null
 
-              const allPkgs = eventPackages.length > 0
-                ? eventPackages
-                : (data.pkg ? [{ pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: event.id, package_id: data.pkg.id, sort_order: 0 }] : [])
               const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
                 try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
               })()
               const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const merged = mergeCalculatedItems(allPkgs.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides) : []))
+              const packages = resolveCateringPackages(eventPackages as any, data.pkg ? { pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: bufferPct } as any : null)
+              const merged = calcMergedCateringItems(packages, itemOverrides)
               const chafing = countChafingDishes(merged, serveStyle)
               const floorPlan = calcFloorPlan(guestCount)
 
@@ -841,16 +839,13 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             {/* Plain-Text Catering & Equipment Summaries */}
             {(() => {
               const guestCount = details?.guest_count ?? 0
-              const allPkgs = eventPackages.length > 0
-                ? eventPackages
-                : (data.pkg ? [{ pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0, id: 0, event_id: event.id, package_id: data.pkg.id, sort_order: 0 }] : [])
-              const activePkgs = allPkgs.filter(ep => ep.pkg && ep.guest_count > 0)
-              if (activePkgs.length === 0) return null
-
-              const combinedTitle = activePkgs.map(ep => ep.pkg!.name).join(' | ')
-              const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const mergedItems = mergeCalculatedItems(activePkgs.flatMap(ep => calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides)))
+              const packages = resolveCateringPackages(eventPackages as any, data.pkg ? { pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0 } as any : null)
+              const combinedTitle = cateringPackageTitle(packages)
+              if (!combinedTitle) return null
+
+              const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
+              const mergedItems = calcMergedCateringItems(packages, itemOverrides)
               const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
                 try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
               })()

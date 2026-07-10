@@ -65,8 +65,18 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
       <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
         <Logo className="w-9 h-9 shrink-0" color="gold" />
         <div>
-          <div className="text-xs font-bold text-[#C8973A] tracking-[0.18em] uppercase leading-tight">Manhattan Project</div>
-          <div className="text-[9px] text-gray-500 tracking-widest uppercase mt-0.5">Beer Co. · Events</div>
+          <div
+            className="text-xs font-bold text-[#C8973A] tracking-[0.18em] uppercase leading-tight"
+            title="Planning • Operations • Unified • Readiness Platform"
+          >
+            POURMP
+          </div>
+          <div
+            className="text-[9px] text-gray-500 tracking-widest uppercase mt-0.5"
+            title="Manhattan Project's Internal Events & Reservations Operations System"
+          >
+            Manhattan Project · Ops Platform
+          </div>
         </div>
       </div>
 

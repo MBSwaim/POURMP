@@ -80,6 +80,7 @@ export function getPrepOutputsData(eventId: number): PrepOutputsData | null {
     final_amount_received: details?.final_amount_received ?? null,
     final_menu_locked: details?.final_menu_locked ?? 0,
     menuItems: data.menuItems as import('./calculations').MenuItem[],
+    packages: data.packages,
   }
 
   return {

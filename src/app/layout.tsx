@@ -19,8 +19,8 @@ const crimson = Crimson_Text({
 })
 
 export const metadata: Metadata = {
-  title: 'MPBC Events',
-  description: 'Manhattan Project Beer Co. Event Management',
+  title: 'POURMP · Manhattan Project',
+  description: "Manhattan Project's Internal Events & Reservations Operations System",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

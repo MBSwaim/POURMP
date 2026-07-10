@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { calcAllItems, mergeCalculatedItems, effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides } from '@/lib/calculations'
+import { effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems } from '@/lib/calculations'
 import { Logo } from '@/components/Logo'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
@@ -96,12 +96,10 @@ function BEODocument({ data }: { data: FullData }) {
   const guestCount = details?.guest_count ?? 0
   const bufferPct  = details?.buffer_pct ?? 0
   const effGuests  = effectiveGuests(guestCount, bufferPct)
-  const allPackages = data.packages && data.packages.length > 0
-    ? data.packages
-    : (pkg ? [{ pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct, id: 0, event_id: 0, package_id: pkg.id, sort_order: 0 }] : [])
-  const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cateringItems = mergeCalculatedItems(allPackages.flatMap(ep => ep.pkg ? calcAllItems(ep.menuItems as any, ep.guest_count, ep.buffer_pct, itemOverrides) : []))
+  const allPackages = resolveCateringPackages(data.packages as any, pkg ? { pkg, menuItems, guest_count: guestCount, buffer_pct: bufferPct } as any : null)
+  const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
+  const cateringItems = calcMergedCateringItems(allPackages, itemOverrides)
 
   const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
     try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
