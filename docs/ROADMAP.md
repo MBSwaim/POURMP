@@ -42,6 +42,13 @@ This roadmap is grounded in gaps actually found in the current codebase (checked
 - **Bundle all Prep Docs into one print job.** Each document (Kitchen Sheet, BEO, FOH Notes, Bar Notes, Setup Checklist...) is printed one at a time from `/prep-docs` today; a single combined PDF per event would save a step during pre-shift prep.
 - **Analytics export.** The rebuilt operational Analytics page (see Version 1.0 Goals above) should support CSV/PDF export for outside reporting.
 - **A single, explicit read-only "Toast total" field** — only if leadership determines a dollar figure is genuinely needed at a glance after the removals above. Entered once per event as a plain number, never a recomputed invoice. Not assumed; see [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) §7.5.
+- **Timeline UI Polish.** The Communication Timeline (Sprint One) is functionally complete and approved, but the tab's visual design is a first pass, not a finished one. Revisit:
+  - Reduce visual clutter in the quick-action button row (14 buttons is a lot of surface area at once).
+  - Group common activity types into logical categories rather than one flat row.
+  - Improve spacing and visual hierarchy of individual timeline entries.
+  - Use a consistent icon family throughout — the emoji-per-type approach was a fast first pass, not necessarily the final answer alongside the rest of the app's existing emoji (see `BRAND_GUIDE.md`).
+  - Consider moving "Log for a different date/time" out of the main flow and into an advanced or custom-entry workflow, rather than a control sitting above the button row by default.
+  - Evaluate whether "Communication Timeline" should eventually be renamed "Event Timeline" — as more activity types get added, the name may start to undersell what it covers.
 
 ---
 
