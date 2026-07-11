@@ -66,7 +66,9 @@ The `clients` table (`first_name`, `last_name`, `email`, `phone`, `company`, `no
 
 That said, POURMP has a real, defensible need for a *minimal* subset: staff on the floor the day of an event need a phone number and a name to reach the client, and the event record needs *something* to identify whose event it is. The problem isn't that contact info exists in POURMP — it's that POURMP maintains it as a full editable customer record (with `notes`, `referral_source`, `company` — fields with zero operational execution value) rather than treating it as a lightweight, event-scoped contact card.
 
-**Recommendation:** Simplify `clients` down to what execution actually needs — name and a day-of phone/email — and drop `referral_source` and `company` (sales/marketing attribution data, squarely Toast's job) and the freeform `notes` field (redundant with `event_notes`, which already exists for exactly this purpose).
+**Recommendation:** Simplify `clients` down to what execution actually needs — name and a day-of phone/email — and drop `referral_source` (sales/marketing attribution data, squarely Toast's job) and the freeform `notes` field (redundant with `event_notes`, which already exists for exactly this purpose).
+
+> **Correction (implementation pass):** this section originally recommended dropping `company` as well. Building the actual cleanup surfaced that `company` is printed on the BEO/Kitchen Sheet/bar-impact "Host" line and is the only identifying field for company/group-booked events with no personal contact name (e.g. "Chili's VIP Dinner," "The Grove") — it has real operational value and was misclassified here as CRM data. [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) §5.2 has been corrected; `company` stays as part of the contact card.
 
 ---
 

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const {
       event_name, event_date, event_time, setup_time, teardown_time, production_close_time, decorate_time, event_duration_mins, status, space,
-      first_name, last_name, email, phone, company, referral_source,
+      first_name, last_name, email, phone, company,
       guest_count, package_id, buffer_pct, food_notes, dietary_restrictions,
       bar_tab_limit, drink_tickets, tab_details, staffing_notes, contract_signed,
       date_flexible, setup_notes, bar_tab_type,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     // create or use existing client
     let client_id = existingClientId
     if (!client_id) {
-      client_id = createClient({ first_name, last_name, email, phone, company, notes: '', referral_source })
+      client_id = createClient({ first_name, last_name, email, phone, company })
     }
 
     const eventId = createEvent({ event_name, event_date, event_time, setup_time, teardown_time, production_close_time, decorate_time, event_duration_mins: Number(event_duration_mins) || 180, status: status || 'New', space, client_id })

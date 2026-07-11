@@ -53,7 +53,6 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
     email: prefill?.email ?? '',
     phone: prefill?.phone ?? '',
     company: '',
-    referral_source: '',
     // details
     guest_count: prefill?.guest_count ?? '',
     package_id: '',
@@ -272,9 +271,6 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
             </Field>
             <Field label="Company">
               <Input value={form.company} onChange={(e) => set('company', e.target.value)} />
-            </Field>
-            <Field label="Referral Source">
-              <Input value={form.referral_source} onChange={(e) => set('referral_source', e.target.value)} placeholder="e.g. Google, Referral, Instagram" />
             </Field>
           </div>
         )}

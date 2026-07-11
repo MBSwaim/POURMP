@@ -42,6 +42,9 @@ function initSchema(db: Database.Database) {
       notes TEXT,
       referral_source TEXT
     );
+    -- company is kept as an operational field (host identity for company/group-booked
+    -- events); notes and referral_source are dropped below as CRM data with no
+    -- execution value (see docs/V1_FEATURE_LOCK.md §5.2).
 
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -292,6 +295,13 @@ function initSchema(db: Database.Database) {
     `ALTER TABLE event_details DROP COLUMN tax_pct`,
     `ALTER TABLE event_details DROP COLUMN gratuity_pct`,
     `ALTER TABLE event_details DROP COLUMN service_fee`,
+    // Client records simplified to an operational contact card (see docs/V1_FEATURE_LOCK.md
+    // §5.2) — referral_source and notes are sales/CRM attribution data with no execution
+    // value. company is kept: it's the operational host identity for company/group-booked
+    // events with no personal contact name (printed on the BEO/Kitchen Sheet/bar-impact
+    // "Host" line).
+    `ALTER TABLE clients DROP COLUMN referral_source`,
+    `ALTER TABLE clients DROP COLUMN notes`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -321,8 +331,6 @@ export interface Client {
   email: string
   phone: string
   company: string
-  notes: string
-  referral_source: string
 }
 
 export interface Event {
@@ -484,10 +492,10 @@ export function getClient(id: number): Client | undefined {
 export function createClient(data: Omit<Client, 'id'>): number {
   const result = getDb()
     .prepare(
-      `INSERT INTO clients (first_name, last_name, email, phone, company, notes, referral_source)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO clients (first_name, last_name, email, phone, company)
+       VALUES (?, ?, ?, ?, ?)`
     )
-    .run(data.first_name, data.last_name, data.email, data.phone, data.company, data.notes, data.referral_source)
+    .run(data.first_name, data.last_name, data.email, data.phone, data.company)
   return result.lastInsertRowid as number
 }
 

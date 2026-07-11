@@ -164,7 +164,7 @@ export function seedHistoricalEvents(db: Database.Database) {
   if (already.c > 0) return
 
   const insertClient = db.prepare(
-    `INSERT INTO clients (first_name, last_name, email, phone, company, notes, referral_source) VALUES (?, ?, '', '', ?, '', 'Historical')`
+    `INSERT INTO clients (first_name, last_name, email, phone, company) VALUES (?, ?, '', '', ?)`
   )
   const insertEvent = db.prepare(
     `INSERT INTO events (event_name, event_date, event_time, setup_time, teardown_time, status, space, client_id, created_at, updated_at) VALUES (?, ?, '', '', ?, ?, '', ?, ?, ?)`

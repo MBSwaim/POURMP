@@ -383,7 +383,6 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               <EditableRow locked={locked} label="Email" value={client?.email ?? ''} type="email" onSave={(v) => saveField('client', 'email', v)} />
               <EditableRow locked={locked} label="Phone" type="tel" value={client?.phone ?? ''} format={formatPhoneNumber} onSave={(v) => saveField('client', 'phone', v)} />
               <EditableRow locked={locked} label="Company" value={client?.company ?? ''} onSave={(v) => saveField('client', 'company', v)} />
-              <EditableRow locked={locked} label="Referral" value={client?.referral_source ?? ''} onSave={(v) => saveField('client', 'referral_source', v)} />
             </InfoCard>
 
             <InfoCard title="Toast Status">

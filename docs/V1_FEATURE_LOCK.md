@@ -85,7 +85,7 @@ Everything in §4 that already exists and already matches this boundary, unchang
 ### 5.2 Simplified before launch
 Per the realignment review's findings:
 
-- **Client records** reduced from a full editable customer profile to a minimal event-scoped contact card (name + day-of phone/email only). `referral_source`, `company`, and the freeform client `notes` field are dropped — they are sales/CRM data with no execution value and belong in Toast.
+- **Client records** reduced from a full editable customer profile to a minimal event-scoped contact card (name, day-of phone/email, and company/group affiliation). `referral_source` and the freeform client `notes` field are dropped — they are sales/CRM data with no execution value and belong in Toast. **Correction from the original review:** `company` is kept, not dropped — implementation found it's the operational fallback identity for company/group-booked events with no personal contact name, printed on the BEO/Kitchen Sheet/bar-impact "Host" line so staff know who they're serving. It stays as part of the contact card, not as CRM data.
 - **Leads intake** collapsed from a multi-status pipeline (New/Contacted/Converted/Dismissed) to a one-shot inquiry queue: a public submission is triaged once and either promoted directly into an Event or dismissed. POURMP does not maintain a parallel lead-nurturing pipeline alongside Toast's.
 - **Catering package selection stays; pricing does not.** The Catering Builder keeps package/guest-count/buffer selection (required for prep math) but drops `price_per_guest`-driven totals from event-facing views.
 - **Analytics rebuilt** around operational metrics (event volume, guest-count trends, package popularity, lead time) instead of revenue, since revenue no longer lives in POURMP once the payments table is removed (§6).
@@ -116,7 +116,7 @@ These exist in the codebase today and are explicitly out of scope for V1.0 — t
 - The five numeric financial fields on `event_details` (`total_event_value`, `deposit_due`, `deposit_received`, `final_amount_due`, `final_amount_received`) and their surfacing in the Events table and Event Overview tab.
 - `tax_pct`, `gratuity_pct`, and `service_fee` fields — these exist only to feed the Charges Summary math being removed; **this supersedes the `ROADMAP.md` item that proposed "wiring tax_pct into totals,"** since the totals themselves are out of scope.
 - Orphaned proposal/policy Settings text (`general_info`, `cancellation_policy`, `MPBC_CONTACT`) — leftover from the customer-facing Proposal PDF removed in v0.7; not reintroduced.
-- Full client CRM fields (`referral_source`, `company`, freeform client `notes`) — see §5.2.
+- Full client CRM fields (`referral_source`, freeform client `notes`) — see §5.2. (`company` is kept — see the correction note there.)
 - The Leads status pipeline as a maintained, multi-stage record — see §5.2.
 
 ### 6.2 Deferred — not duplication, just not required for V1.0
