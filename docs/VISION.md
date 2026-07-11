@@ -29,6 +29,7 @@ POURMP works alongside Toast Catering & Events.
 Toast remains the official system of record for:
 
 - Leads
+- Customer information
 - Proposals
 - Invoices
 - Deposits
@@ -36,6 +37,10 @@ Toast remains the official system of record for:
 - Customer-facing communication
 
 POURMP transforms event information into operational plans, task management, preparation documents, leadership visibility, and consistent event execution.
+
+The short version: **Toast records the event. POURMP prepares the team.**
+
+**[V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) is the authoritative, current definition of what this means in practice for Version 1.0** — which modules POURMP owns, which fields and features were found to duplicate Toast and are being simplified or removed, and what's deliberately out of scope until after 1.0. It was produced by applying this document's philosophy to a full audit of the codebase (see [V1_REALIGNMENT_REVIEW.md](V1_REALIGNMENT_REVIEW.md)) and now governs any scope question this document is too high-level to answer on its own.
 
 ## Vision
 
@@ -108,7 +113,7 @@ The goal is not to replace Toast.
 
 The goal is to make every event easier to plan, easier to execute, easier to manage, and more consistent for both the team and our guests.
 
-See [ROADMAP.md](ROADMAP.md) for the concrete, currently-planned steps toward this vision — Version 1.0 Goals, Future Enhancements, and Long-Term Vision there are the actionable expression of the philosophy stated here.
+See [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) for the authoritative Version 1.0 scope, and [ROADMAP.md](ROADMAP.md) for the tactical, living checklist of what's left to build toward it — both are the actionable expression of the philosophy stated here.
 
 ## Brand Identity
 

@@ -4,6 +4,8 @@
 
 This is the home page for POURMP's project documentation. Start with [README.md](README.md) if you're new here; otherwise jump straight to what you need below.
 
+**[V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) is the authoritative definition of Version 1.0 scope.** Where any other document in this folder conflicts with it, the Feature Lock governs — see that document's own note and [ROADMAP.md](ROADMAP.md)'s header for how this is being reconciled.
+
 ---
 
 ## Overview
@@ -12,6 +14,13 @@ This is the home page for POURMP's project documentation. Start with [README.md]
 |---|---|
 | **[README.md](README.md)** | Project overview — purpose, mission, primary users, relationship to Toast and to Manhattan Project Beer Co., core features, current version, future vision |
 | **[VISION.md](VISION.md)** | The guiding philosophy behind POURMP — core purpose, mission, vision, development philosophy, design principles, long-term vision, and brand identity. The foundation every other document and every future feature decision builds on |
+
+## Version 1.0 Planning
+
+| Doc | What's in it |
+|---|---|
+| **[V1_REALIGNMENT_REVIEW.md](V1_REALIGNMENT_REVIEW.md)** | The architectural audit behind the Version 1.0 scope decision — where POURMP was duplicating Toast, and why. The reasoning; not itself the current plan of record |
+| **[V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md)** | **The authoritative blueprint for Version 1.0** — core mission, guiding principles, core modules, what's in scope, what's explicitly excluded, the post-1.0 roadmap, and success criteria. Supersedes any conflicting scope statement elsewhere in this folder |
 
 ## Project History & Direction
 

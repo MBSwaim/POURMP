@@ -2,7 +2,7 @@
 
 *Technical reference for future contributors.*
 
-Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [ROADMAP.md](ROADMAP.md)
+Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [ROADMAP.md](ROADMAP.md) · [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md)
 
 ## Folder Structure
 
@@ -99,3 +99,4 @@ Both paths call the same catering-resolution helpers (`resolveCateringPackages`,
 5. **Keep `snake_case` at the data boundary.** Don't introduce a camelCase/snake_case translation layer between the database and the API — it doesn't exist today and adding it partially would be worse than not having it.
 6. **New Prep Docs extend `EventForNotes`, they don't bypass it.** See Prep Docs Generation above.
 7. **There is no test suite yet.** Until one exists, be conservative with pure-function refactors (`calculations.ts`, `riskScanner.ts`, `tasks.ts`, `barImpact.ts`, `readiness.ts`) and verify behavior manually against a real event before committing — see the project's `/verify`-style workflow if one is configured for this repo.
+8. **Check new features against [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) before building them.** It's the authoritative definition of what POURMP owns versus Toast. If a proposed feature's job is to record a lead, a customer profile, a proposal, an invoice, or a payment as authoritative, it belongs in Toast, not here — see that document §1 and §6 before writing code, not after.

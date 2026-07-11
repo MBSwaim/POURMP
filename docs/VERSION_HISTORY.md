@@ -89,4 +89,4 @@ This matches the last committed milestone (commit `eb714e9`, 2026-07-09).
 
 A set of uncommitted changes is currently sitting in the working tree — a catering data-consistency fix that makes the Catering Builder the single source of truth for quantities and serving vessels across every Prep Doc output. It is documented under **Unreleased** in [CHANGELOG.md](CHANGELOG.md). Per the rules in [VERSIONING.md](VERSIONING.md), once committed this should ship as **`0.7.1`** — it corrects existing behavior rather than adding a feature.
 
-POURMP has not yet reached `1.0`. See [ROADMAP.md](ROADMAP.md) for what's considered required before that milestone.
+POURMP has not yet reached `1.0`. **[V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) is the authoritative definition of Version 1.0 scope** — see [ROADMAP.md](ROADMAP.md) for the tactical, living checklist of what's considered required before that milestone, including the Toast/POURMP boundary work (removing duplicated financial tracking, simplifying client/lead records, adding the Communication Timeline) the Feature Lock introduced.

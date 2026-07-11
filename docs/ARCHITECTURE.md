@@ -1,8 +1,10 @@
 # POURMP — Architecture
 
-Related: [README.md](README.md) · [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) · [BRAND_GUIDE.md](BRAND_GUIDE.md)
+Related: [README.md](README.md) · [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) · [BRAND_GUIDE.md](BRAND_GUIDE.md) · [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md)
 
-This document describes how POURMP's modules fit together, how data moves between them, and what shared models keep them from drifting out of sync with each other. It reflects the codebase as of `0.7` (plus the pending `0.7.1` catering-consistency fix).
+This document describes how POURMP's modules fit together, how data moves between them, and what shared models keep them from drifting out of sync with each other. It reflects the codebase **as it exists today, as of `0.7`** (plus the pending `0.7.1` catering-consistency fix) — it is a description of current implementation, not a statement of target scope.
+
+> **This document is due for a rewrite once Version 1.0 work lands.** [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) is the authoritative target architecture and has already decided that the `payments` table, the numeric financial fields on `event_details`, and the full `clients`/`leads` CRM-style records described below are being removed or simplified — see that document's §5–§6 and the proposed architecture diagram in [V1_REALIGNMENT_REVIEW.md](V1_REALIGNMENT_REVIEW.md) §9. Until that work is actually done, this document accurately reflects what's running; treat the Sales Tracking (§3) and Reservations/Leads descriptions below as **current-state, not target-state**.
 
 ---
 
@@ -100,6 +102,8 @@ POURMP tracks two distinct kinds of "sales" data, and it's important they aren't
 2. **Invoiced/Collected** (Analytics, year-over-year) — computed from the `payments` table (`amount_due` / `amount_paid`), which staff enter manually as a mirror of what Toast shows. This is *closer* to real money than the projection above, but is still a manual mirror, not a live Toast sync.
 
 The **Toast Status Tracker** (5-stage: Proposal Sent → Confirmed → Invoice Sent → Deposit Received → Final Payment) and the **Financial Tracking** fields on the event (deposit/final due & received) exist for the same reason: giving staff a fast internal answer to "where does Toast say we are with this client" without opening Toast. None of this is authoritative — see [README.md](README.md) for POURMP's relationship to Toast.
+
+> **Slated for consolidation.** The realignment review that produced [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) found that this section describes *three* independent, manually-updated representations of the same facts — the `payments` table, the numeric Financial Tracking fields, and the Toast Status Tracker — that had drifted out of sync with each other (see [V1_REALIGNMENT_REVIEW.md](V1_REALIGNMENT_REVIEW.md) §3). Version 1.0 keeps only the Toast Status Tracker; the `payments` table and the numeric Financial Tracking fields are removed, and the "Projected/Confirmed Sales" proxy below goes with them (Analytics is rebuilt around operational metrics instead).
 
 ### Analytics (`/analytics`)
 Reads `getYearMonthly()` / `getYearTotals()` — pure SQL aggregation over `events` + `payments` for a given calendar year. No calculation-layer logic of its own; it's a reporting view over the same `payments` data described above.
