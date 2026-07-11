@@ -34,7 +34,7 @@ src/
     noteGenerators.ts       Plain-text Prep Doc generators (Toast Notes, Kitchen Sheet, ...)
     prepOutputsData.ts      Shared loader that assembles EventForNotes for every Prep Doc
     alerts.ts, notifyDelivery.ts   Notification engine + delivery channel stubs
-    constants.ts            Venue-specific constants (business hours, table layout, policy text)
+    constants.ts            Venue-specific constants (business hours, table layout, status enums)
     seed.ts                 Initial package/menu-item seed data
 ```
 

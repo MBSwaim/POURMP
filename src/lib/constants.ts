@@ -12,14 +12,6 @@ export type CalcMethod = (typeof CALC_METHODS)[number]
 
 export const DRINK_TICKET_PRICE = 9.00
 
-export const GENERAL_INFO =
-  'All events require a signed contract and 20% deposit to confirm. Final balance is due day of event. Prices are per person and subject to change based on final guest count confirmed 72 hours prior.'
-
-export const CANCELLATION_POLICY =
-  'Cancellations made 14+ days prior: deposit refunded minus 10% processing fee. Cancellations within 7–13 days: 50% of deposit retained. Cancellations within 7 days: deposit non-refundable. No-shows: full event total charged.'
-
-export const MPBC_CONTACT = 'Manhattan Project Beer Co. | events@manhattanproject.beer | (555) 000-0000'
-
 // Business hours — index = day of week (0=Sun)
 // minStart = opening + 1 hour (earliest allowed event start)
 export const BUSINESS_HOURS: Record<number, { open: string; close: string; minStart: string }> = {

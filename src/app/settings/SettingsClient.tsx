@@ -8,9 +8,6 @@ import { formatCurrency } from '@/lib/calculations'
 import type { Package, MenuItem } from '@/lib/db'
 
 interface Settings {
-  general_info: string
-  cancellation_policy: string
-  contact: string
   notif_sms_enabled: string
   notif_email_enabled: string
 }
@@ -22,7 +19,6 @@ interface Props {
 
 export function SettingsClient({ initialSettings, initialPackages }: Props) {
   const [settings, setSettings] = useState(initialSettings)
-  const [savingKey, setSavingKey] = useState<string | null>(null)
   const [packages, setPackages] = useState(initialPackages)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{ name: string; price_per_guest: string; description: string }>({ name: '', price_per_guest: '', description: '' })
@@ -31,22 +27,6 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
   const [newForm, setNewForm] = useState({ name: '', price_per_guest: '', description: '' })
   const [pkgItems, setPkgItems] = useState<Record<string, MenuItem[]>>({})
   const [itemUnits, setItemUnits] = useState<Record<number, string>>({})
-
-  async function saveSetting(key: keyof Settings) {
-    setSavingKey(key)
-    try {
-      await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value: settings[key] }),
-      })
-      toast.success('Saved')
-    } catch {
-      toast.error('Failed to save')
-    } finally {
-      setSavingKey(null)
-    }
-  }
 
   async function toggleNotifSetting(key: 'notif_sms_enabled' | 'notif_email_enabled') {
     const value = settings[key] === 'true' ? 'false' : 'true'
@@ -149,45 +129,6 @@ export function SettingsClient({ initialSettings, initialPackages }: Props) {
 
   return (
     <div className="space-y-6">
-
-      {/* Contact Info */}
-      <SettingsCard title="Business Contact" description="Appears in the footer of every proposal PDF.">
-        <div className="space-y-2">
-          <Input
-            value={settings.contact}
-            onChange={e => setSettings(s => ({ ...s, contact: e.target.value }))}
-            placeholder="Name | email | phone"
-            className="text-sm"
-          />
-          <SaveButton onClick={() => saveSetting('contact')} loading={savingKey === 'contact'} />
-        </div>
-      </SettingsCard>
-
-      {/* Proposal Policies */}
-      <SettingsCard title="Proposal Policies" description="Text included in every proposal PDF. Changes apply to the next generated proposal.">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-widest">General Information</label>
-            <Textarea
-              value={settings.general_info}
-              onChange={e => setSettings(s => ({ ...s, general_info: e.target.value }))}
-              rows={4}
-              className="text-sm resize-none"
-            />
-            <SaveButton onClick={() => saveSetting('general_info')} loading={savingKey === 'general_info'} />
-          </div>
-          <div className="space-y-2 pt-2 border-t border-gray-200">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-widest">Cancellation Policy</label>
-            <Textarea
-              value={settings.cancellation_policy}
-              onChange={e => setSettings(s => ({ ...s, cancellation_policy: e.target.value }))}
-              rows={4}
-              className="text-sm resize-none"
-            />
-            <SaveButton onClick={() => saveSetting('cancellation_policy')} loading={savingKey === 'cancellation_policy'} />
-          </div>
-        </div>
-      </SettingsCard>
 
       {/* Notification Delivery */}
       <SettingsCard title="Notification Delivery" description="In-app alerts are always on. These add backup channels — both are stubbed until a provider is connected, so toggling them on just starts logging what would be sent.">
@@ -414,15 +355,3 @@ function SettingsCard({ title, description, children }: { title: string; descrip
   )
 }
 
-function SaveButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
-  return (
-    <Button
-      size="sm"
-      onClick={onClick}
-      disabled={loading}
-      className="bg-[#C8973A] hover:bg-[#C8973A]/80 text-white"
-    >
-      {loading ? 'Saving…' : 'Save'}
-    </Button>
-  )
-}

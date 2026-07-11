@@ -89,4 +89,4 @@ POURMP uses **emoji, not a custom icon set**, for every feature-level icon a use
 - Write it **POURMP** — all caps, one word. Never "PourMP," "Pourmp," or "Pour MP."
 - The document suite is called **Prep Docs** (not "Prep Tools," an earlier internal name that's no longer accurate — see [CHANGELOG.md](CHANGELOG.md) 0.1–0.2).
 - **Toast** always refers to the third-party product, Toast Catering & Events — never write "the Toast system" or "our Toast" as if it's part of POURMP. POURMP and Toast are two distinct systems that work alongside each other (see [README.md](README.md)).
-- Refer to the venue as **Manhattan Project Beer Co.** on first mention in a document, **MP** or **Manhattan Project** afterward — matching how the codebase itself abbreviates it (`MPBC_CONTACT`, `production_close_time`, etc.).
+- Refer to the venue as **Manhattan Project Beer Co.** on first mention in a document, **MP** or **Manhattan Project** afterward — matching how the codebase itself abbreviates it (`mpbc.db`, `production_close_time`, etc.).
