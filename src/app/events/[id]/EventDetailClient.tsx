@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CateringCalculator } from '@/components/CateringCalculator'
-import { EVENT_STATUSES } from '@/lib/constants'
+import { EVENT_STATUSES, COMMUNICATION_ACTIVITY_TYPES, type CommunicationActivityType } from '@/lib/constants'
 
 const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'Pre-Paid Drink Ticket(s)': 'Includes all beer selections on tap, wine, rosé, sparkling brut, beer- and wine-based cocktails, coffee, and non-alcoholic beverage options.',
@@ -21,7 +21,7 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
-import type { Event, Client, EventDetails, AddOn, EventNote, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
+import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
 
 interface FullData {
   event: Event
@@ -29,6 +29,7 @@ interface FullData {
   details: EventDetails | null | undefined
   addOns: AddOn[]
   notes: EventNote[]
+  communications: EventCommunication[]
   pkg: Package | null
   menuItems: MenuItem[]
   packages: EventPackageWithItems[]
@@ -44,11 +45,22 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'catering'|'floorplan'|'tasks'|'notes'>('overview')
+  const [tab, setTab] = useState<'overview'|'timeline'|'catering'|'floorplan'|'tasks'|'notes'>('overview')
   const [editingClosed, setEditingClosed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
-  const { event, client, details, addOns, notes } = data
+  // Communication Timeline — commPending is the activity type currently showing its
+  // optional-note composer (only the "promptsForNote" types use this); everything
+  // else logs immediately on click. commBackdateOpen/commDate/commTime let staff
+  // log an entry for a date/time other than now (e.g. backfilling an older inquiry).
+  const [commPending, setCommPending] = useState<CommunicationActivityType | null>(null)
+  const [commNote, setCommNote] = useState('')
+  const [commSaving, setCommSaving] = useState(false)
+  const [commBackdateOpen, setCommBackdateOpen] = useState(false)
+  const [commDate, setCommDate] = useState('')
+  const [commTime, setCommTime] = useState('')
+
+  const { event, client, details, addOns, notes, communications } = data
 
   const [floorPlanNotes, setFloorPlanNotes] = useState(details?.floor_plan_notes ?? '')
   const [floorNotesSaving, setFloorNotesSaving] = useState(false)
@@ -239,6 +251,51 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     await reload()
   }
 
+  function toggleCommBackdate() {
+    if (!commBackdateOpen) {
+      const now = new Date()
+      setCommDate(now.toISOString().slice(0, 10))
+      setCommTime(now.toTimeString().slice(0, 5))
+    }
+    setCommBackdateOpen((o) => !o)
+  }
+
+  async function logCommunication(activityType: CommunicationActivityType, note?: string) {
+    setCommSaving(true)
+    try {
+      const occurred_at = commBackdateOpen && commDate
+        ? new Date(`${commDate}T${commTime || '00:00'}`).toISOString()
+        : undefined
+      await fetch('/api/communications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: event.id, activity_type: activityType, occurred_at, notes: note ?? '' }),
+      })
+      toast.success(`Logged: ${activityType}`)
+      setCommPending(null)
+      setCommNote('')
+      await reload()
+    } catch {
+      toast.error('Failed to log activity')
+    } finally {
+      setCommSaving(false)
+    }
+  }
+
+  function handleActivityClick(def: (typeof COMMUNICATION_ACTIVITY_TYPES)[number]) {
+    if (def.promptsForNote) {
+      setCommPending(def.type)
+      setCommNote('')
+    } else {
+      logCommunication(def.type)
+    }
+  }
+
+  async function deleteCommunication(id: number) {
+    await fetch(`/api/communications/${id}`, { method: 'DELETE' })
+    await reload()
+  }
+
   async function addAddOn() {
     if (!newAddOn.item_name) return
     await fetch('/api/add-ons', {
@@ -340,7 +397,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-gray-200 mb-5">
-          {(['overview','catering','floorplan','tasks','notes'] as const).map((id) => (
+          {(['overview','timeline','catering','floorplan','tasks','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -350,7 +407,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              {{ overview: 'Overview', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', notes: 'Notes' }[id]}
+              {{ overview: 'Overview', timeline: 'Timeline', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', notes: 'Notes' }[id]}
             </button>
           ))}
         </div>
@@ -646,6 +703,97 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             </div>
           </InfoCard>
         </div>}
+
+        {/* Timeline Tab */}
+        {tab === 'timeline' && (
+          <InfoCard title="Communication Timeline">
+            <p className="text-[10px] text-gray-500 mb-3 leading-relaxed">
+              The permanent operational history of this event — what&apos;s happened, from first inquiry through completion.
+            </p>
+
+            <button
+              type="button"
+              onClick={toggleCommBackdate}
+              className="text-xs text-gray-500 hover:text-gray-900 underline mb-1.5"
+            >
+              {commBackdateOpen ? 'Logging for a specific date/time' : 'Log for a different date/time'}
+            </button>
+            {commBackdateOpen && (
+              <div className="flex gap-2 items-center mb-3">
+                <Input type="date" value={commDate} onChange={(e) => setCommDate(e.target.value)} className="h-8 text-sm w-auto" />
+                <Input type="time" value={commTime} onChange={(e) => setCommTime(e.target.value)} className="h-8 text-sm w-auto" />
+                <button type="button" onClick={() => setCommBackdateOpen(false)} className="text-xs text-gray-500 hover:text-gray-900">
+                  Use now instead
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {COMMUNICATION_ACTIVITY_TYPES.map((def) => (
+                <button
+                  key={def.type}
+                  type="button"
+                  disabled={commSaving}
+                  onClick={() => handleActivityClick(def)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:border-[#C8973A]/50 hover:bg-[#C8973A]/5 transition-colors disabled:opacity-50"
+                >
+                  <span>{def.emoji}</span>
+                  <span>{def.type}</span>
+                </button>
+              ))}
+            </div>
+
+            {commPending && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2 mb-4">
+                <p className="text-xs font-medium text-gray-700">{commPending} — add a note? (optional)</p>
+                <Textarea
+                  value={commNote}
+                  onChange={(e) => setCommNote(e.target.value)}
+                  rows={2}
+                  placeholder="Optional note..."
+                  className="text-sm"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button size="sm" variant="outline" onClick={() => { setCommPending(null); setCommNote('') }}>Cancel</Button>
+                  <Button size="sm" disabled={commSaving} onClick={() => logCommunication(commPending, commNote)}>Log</Button>
+                </div>
+              </div>
+            )}
+
+            {communications.length === 0 ? (
+              <p className="text-gray-500 text-sm">No activity logged yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {communications.map((c) => {
+                  const def = COMMUNICATION_ACTIVITY_TYPES.find((d) => d.type === c.activity_type)
+                  const dt = new Date(c.occurred_at)
+                  return (
+                    <div key={c.id} className="flex items-start gap-3 text-sm border-b border-gray-200 pb-2 last:border-0">
+                      <span className="text-lg shrink-0">{def?.emoji ?? '•'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-gray-900">{c.activity_type}</p>
+                          <span className="text-xs text-gray-500 whitespace-nowrap tabular-nums">
+                            {dt.toLocaleDateString()} · {dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {c.notes && <p className="text-gray-600 mt-0.5">{c.notes}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteCommunication(c.id)}
+                        className="text-gray-400 hover:text-red-400 shrink-0"
+                        title="Delete entry"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </InfoCard>
+        )}
 
         {/* Catering Tab */}
         <div className={tab === 'catering' ? 'space-y-4' : 'hidden'}>
@@ -1044,7 +1192,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
         {/* Notes Tab */}
         {tab === 'notes' && (
-          <InfoCard title="Activity Log">
+          <InfoCard title="Internal Notes">
             {notes.length === 0 ? (
               <p className="text-gray-500 text-sm">No notes yet.</p>
             ) : (

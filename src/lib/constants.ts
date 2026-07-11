@@ -7,6 +7,30 @@ export type EventStatus = (typeof EVENT_STATUSES)[number]
 export const LEAD_STATUSES = ['New', 'Converted', 'Dismissed'] as const
 export type LeadStatus = (typeof LEAD_STATUSES)[number]
 
+// Communication Timeline — the permanent, chronological operational history of an
+// event (see docs/V1_FEATURE_LOCK.md §4/§5.3). One definition per activity type, in
+// the order they're rendered as buttons (roughly the natural event lifecycle).
+// promptsForNote marks the few types where context is usually the point — those
+// reveal a small optional note field before logging; everything else is a single
+// click with no dialog.
+export const COMMUNICATION_ACTIVITY_TYPES = [
+  { type: 'Inquiry Received',        emoji: '📥', promptsForNote: false },
+  { type: 'Intro Email Sent',        emoji: '📧', promptsForNote: false },
+  { type: 'Follow-up Sent',          emoji: '🔁', promptsForNote: false },
+  { type: 'Phone Call',              emoji: '📞', promptsForNote: true },
+  { type: 'Voicemail Left',          emoji: '🎙️', promptsForNote: true },
+  { type: 'Proposal Sent',           emoji: '📄', promptsForNote: false },
+  { type: 'Deposit Reminder Sent',   emoji: '🔔', promptsForNote: false },
+  { type: 'Deposit Received',        emoji: '💰', promptsForNote: false },
+  { type: 'Menu Discussion',         emoji: '🍽️', promptsForNote: true },
+  { type: 'Menu Finalized',          emoji: '🔒', promptsForNote: false },
+  { type: 'Floor Plan Updated',      emoji: '🗺️', promptsForNote: false },
+  { type: 'Final Confirmation Sent', emoji: '📤', promptsForNote: false },
+  { type: 'Internal Note',           emoji: '🗒️', promptsForNote: true },
+  { type: 'Event Completed',         emoji: '🎉', promptsForNote: false },
+] as const
+export type CommunicationActivityType = (typeof COMMUNICATION_ACTIVITY_TYPES)[number]['type']
+
 export const CALC_METHODS = ['guests_per_unit', 'pieces_per_guest', 'servings_per_guest', 'manual'] as const
 export type CalcMethod = (typeof CALC_METHODS)[number]
 

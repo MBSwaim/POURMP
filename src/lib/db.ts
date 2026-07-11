@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import { seedDatabase, seedHistoricalEvents } from './seed'
-import { LEAD_STATUSES, type LeadStatus } from './constants'
+import { LEAD_STATUSES, type LeadStatus, COMMUNICATION_ACTIVITY_TYPES, type CommunicationActivityType } from './constants'
 import { addDays, format } from 'date-fns'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
@@ -303,6 +303,22 @@ function initSchema(db: Database.Database) {
     // "Host" line).
     `ALTER TABLE clients DROP COLUMN referral_source`,
     `ALTER TABLE clients DROP COLUMN notes`,
+    // Communication Timeline (see docs/V1_FEATURE_LOCK.md §4/§5.3) — the permanent,
+    // chronological operational history of an event, from first inquiry through
+    // completion. Distinct from event_notes (freeform "Internal Notes"): every row
+    // here has a fixed activity_type and its own timestamp, so multiple entries of
+    // the same type (e.g. more than one Phone Call) are expected, not an error.
+    // staff_id is nullable and unused by the UI for now — schema-ready for once
+    // real auth/multi-user accounts land (see ROADMAP.md), not exposed as a picker yet.
+    `CREATE TABLE IF NOT EXISTS event_communications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      activity_type TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      staff_id INTEGER REFERENCES staff_members(id),
+      created_at TEXT NOT NULL
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -468,6 +484,16 @@ export interface EventNote {
   created_at: string
 }
 
+export interface EventCommunication {
+  id: number
+  event_id: number
+  activity_type: CommunicationActivityType
+  occurred_at: string
+  notes: string
+  staff_id: number | null
+  created_at: string
+}
+
 export interface EventWithClient extends Event {
   first_name: string
   last_name: string
@@ -589,11 +615,12 @@ export function getEventFull(id: number) {
   const details = getDb().prepare('SELECT * FROM event_details WHERE event_id = ?').get(id) as EventDetails | undefined
   const addOns = getAddOns(id)
   const notes = getEventNotes(id)
+  const communications = getEventCommunications(id)
   const packages = getEventPackages(id)
   // backward compat: first package = primary
   const pkg = packages[0]?.pkg ?? null
   const menuItems = packages[0]?.menuItems ?? []
-  return { event, client, details, addOns, notes, pkg, menuItems, packages }
+  return { event, client, details, addOns, notes, communications, pkg, menuItems, packages }
 }
 
 export function createEvent(data: {
@@ -724,6 +751,38 @@ export function createEventNote(eventId: number, note: string): number {
     .prepare('INSERT INTO event_notes (event_id, note, created_at) VALUES (?, ?, ?)')
     .run(eventId, note, new Date().toISOString())
   return result.lastInsertRowid as number
+}
+
+// ─── Communication Timeline ────────────────────────────────────────────────────
+
+export function getEventCommunications(eventId: number): EventCommunication[] {
+  return getDb()
+    .prepare('SELECT * FROM event_communications WHERE event_id = ? ORDER BY occurred_at ASC')
+    .all(eventId) as EventCommunication[]
+}
+
+// occurred_at defaults to now but callers may pass a backdated value (see
+// docs/V1_FEATURE_LOCK.md — "Inquiry Received" often predates the event's
+// creation in POURMP). activity_type is validated against the fixed set in
+// constants.ts so this can't silently regrow into a free-text pipeline.
+export function createEventCommunication(eventId: number, data: {
+  activity_type: CommunicationActivityType
+  occurred_at?: string
+  notes?: string
+}): number {
+  const validTypes = COMMUNICATION_ACTIVITY_TYPES.map(t => t.type) as string[]
+  if (!validTypes.includes(data.activity_type)) {
+    throw new Error(`Invalid activity_type: ${data.activity_type}`)
+  }
+  const now = new Date().toISOString()
+  const result = getDb()
+    .prepare('INSERT INTO event_communications (event_id, activity_type, occurred_at, notes, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(eventId, data.activity_type, data.occurred_at || now, data.notes ?? '', now)
+  return result.lastInsertRowid as number
+}
+
+export function deleteEventCommunication(id: number) {
+  getDb().prepare('DELETE FROM event_communications WHERE id = ?').run(id)
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
