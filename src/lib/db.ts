@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import { seedDatabase, seedHistoricalEvents } from './seed'
+import { LEAD_STATUSES, type LeadStatus } from './constants'
 import { addDays, format } from 'date-fns'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
@@ -1409,11 +1410,11 @@ export interface Lead {
   event_type: string
   guest_count: number
   message: string
-  status: string
+  status: LeadStatus
   created_at: string
 }
 
-export function getLeads(status?: string): Lead[] {
+export function getLeads(status?: LeadStatus): Lead[] {
   if (status) {
     return getDb().prepare(`SELECT * FROM leads WHERE status = ? ORDER BY created_at DESC`).all(status) as Lead[]
   }
@@ -1433,7 +1434,13 @@ export function createLead(data: Omit<Lead, 'id' | 'created_at' | 'status'>): nu
   return result.lastInsertRowid as number
 }
 
-export function updateLeadStatus(id: number, status: string) {
+// One-shot triage: a lead moves from 'New' straight to a terminal state ('Converted'
+// or 'Dismissed') — there is no intermediate nurture status. Rejects anything outside
+// LEAD_STATUSES so this can't quietly regrow into a multi-stage pipeline.
+export function updateLeadStatus(id: number, status: LeadStatus) {
+  if (!LEAD_STATUSES.includes(status)) {
+    throw new Error(`Invalid lead status: ${status}`)
+  }
   getDb().prepare(`UPDATE leads SET status = ? WHERE id = ?`).run(status, id)
 }
 

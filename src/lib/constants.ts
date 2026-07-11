@@ -1,6 +1,12 @@
 export const EVENT_STATUSES = ['Confirmed', 'Planning', 'Ready', 'Active', 'Closed'] as const
 export type EventStatus = (typeof EVENT_STATUSES)[number]
 
+// One-shot intake, not a tracked CRM pipeline: a lead is either awaiting triage, or
+// has been resolved one of two ways. There is deliberately no "Contacted"/nurture
+// stage — that kind of lead management belongs in Toast (see docs/V1_FEATURE_LOCK.md).
+export const LEAD_STATUSES = ['New', 'Converted', 'Dismissed'] as const
+export type LeadStatus = (typeof LEAD_STATUSES)[number]
+
 export const CALC_METHODS = ['guests_per_unit', 'pieces_per_guest', 'servings_per_guest', 'manual'] as const
 export type CalcMethod = (typeof CALC_METHODS)[number]
 
