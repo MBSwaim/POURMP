@@ -2,7 +2,6 @@ import { getDashboardStats, getKanbanEvents } from '@/lib/db'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
 import { NotificationSummaryCard } from '@/components/NotificationSummaryCard'
-import { formatCurrency } from '@/lib/calculations'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
@@ -11,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default function Dashboard() {
   const {
     eventsThisMonth, eventsThisWeek, upcomingEvents,
-    projectedSales, confirmedSales, highRiskCount, highBarImpactCount,
+    highRiskCount, highBarImpactCount,
   } = getDashboardStats()
   const kanban = getKanbanEvents()
   const dateLabel = format(new Date(), 'EEEE, MMMM d')
@@ -51,8 +50,6 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="This Month" metrics={[
           { label: 'Total Events', value: String(eventsThisMonth) },
-          { label: 'Projected Sales', value: formatCurrency(projectedSales) },
-          { label: 'Confirmed Sales', value: formatCurrency(confirmedSales) },
         ]} />
         <StatCard label="Next 14 Days" metrics={[
           { label: 'Event Count', value: String(eventsThisWeek) },

@@ -119,7 +119,6 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         <Link href="/calendar" onClick={onClose} className={navClass('/calendar')}>Calendar</Link>
         <Link href="/reservations" onClick={onClose} className={navClass('/reservations')}>Reservations</Link>
         <Link href="/archive" onClick={onClose} className={navClass('/archive')}>Archive</Link>
-        <Link href="/analytics" onClick={onClose} className={navClass('/analytics')}>Analytics</Link>
 
         <Link href="/notifications" onClick={onClose} className={`${navClass('/notifications')} justify-between`}>
           <span>Notifications</span>

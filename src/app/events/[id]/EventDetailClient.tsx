@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { StatusBadge, PaymentStatusBadge } from '@/components/StatusBadge'
+import { StatusBadge } from '@/components/StatusBadge'
 import { CateringCalculator } from '@/components/CateringCalculator'
 import { EVENT_STATUSES } from '@/lib/constants'
 
@@ -21,13 +21,12 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
-import type { Event, Client, EventDetails, Payment, AddOn, EventNote, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
+import type { Event, Client, EventDetails, AddOn, EventNote, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
 
 interface FullData {
   event: Event
   client: Client | null | undefined
   details: EventDetails | null | undefined
-  payments: Payment[]
   addOns: AddOn[]
   notes: EventNote[]
   pkg: Package | null
@@ -49,10 +48,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
   const [editingClosed, setEditingClosed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
-  const { event, client, details, payments, addOns, notes } = data
-
-  const deposit = payments.find(p => p.payment_type === 'deposit') ?? null
-  const finalPayment = payments.find(p => p.payment_type === 'final') ?? null
+  const { event, client, details, addOns, notes } = data
 
   const [floorPlanNotes, setFloorPlanNotes] = useState(details?.floor_plan_notes ?? '')
   const [floorNotesSaving, setFloorNotesSaving] = useState(false)
@@ -379,23 +375,6 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 </div>
               )}
               <EditableRow locked={locked} label="Space" value={event.space} onSave={(v) => saveField('event', 'space', v)} />
-              {(deposit || finalPayment) && (
-                <div className="border-t border-gray-200 pt-2 mt-1 space-y-1">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest">Payments</p>
-                  {deposit && (
-                    <div className="flex justify-between items-center text-sm py-0.5">
-                      <span className="text-gray-500">Deposit</span>
-                      <PaymentStatusBadge status={deposit.status} />
-                    </div>
-                  )}
-                  {finalPayment && (
-                    <div className="flex justify-between items-center text-sm py-0.5">
-                      <span className="text-gray-500">Final</span>
-                      <PaymentStatusBadge status={finalPayment.status} />
-                    </div>
-                  )}
-                </div>
-              )}
             </InfoCard>
 
             <InfoCard title="Client">
@@ -419,33 +398,6 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   onToggle={(checked) => saveField('details', stage.key, checked ? new Date().toISOString().slice(0, 10) : null)}
                 />
               ))}
-            </InfoCard>
-
-            <InfoCard title="Financial Tracking">
-              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
-                Internal visibility only — mirrors what Toast shows for this event. Toast processes all payments; POURMP does not.
-              </p>
-              <EditableRow locked={locked} label="Total Event Value" type="number" value={String(details?.total_event_value ?? '')} display={formatCurrency(details?.total_event_value ?? 0)} onSave={(v) => saveField('details', 'total_event_value', Number(v))} />
-              <EditableRow locked={locked} label="Deposit Due" type="number" value={String(details?.deposit_due ?? '')} display={formatCurrency(details?.deposit_due ?? 0)} onSave={(v) => saveField('details', 'deposit_due', Number(v))} />
-              <EditableRow locked={locked} label="Deposit Received" type="number" value={String(details?.deposit_received ?? '')} display={formatCurrency(details?.deposit_received ?? 0)} onSave={(v) => saveField('details', 'deposit_received', Number(v))} />
-              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
-                <span className="text-gray-500 shrink-0 mr-2">Deposit Received Date</span>
-                <span className="text-right text-gray-900">{details?.toast_deposit_received_date ? new Date(details.toast_deposit_received_date + 'T00:00:00').toLocaleDateString() : '—'}</span>
-              </div>
-              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
-                <span className="text-gray-500 shrink-0 mr-2">Deposit Outstanding</span>
-                <span className="text-right text-gray-900 font-medium">{formatCurrency(Math.max(0, (details?.deposit_due ?? 0) - (details?.deposit_received ?? 0)))}</span>
-              </div>
-              <EditableRow locked={locked} label="Final Amount Due" type="number" value={String(details?.final_amount_due ?? '')} display={formatCurrency(details?.final_amount_due ?? 0)} onSave={(v) => saveField('details', 'final_amount_due', Number(v))} />
-              <EditableRow locked={locked} label="Final Amount Received" type="number" value={String(details?.final_amount_received ?? '')} display={formatCurrency(details?.final_amount_received ?? 0)} onSave={(v) => saveField('details', 'final_amount_received', Number(v))} />
-              <div className="flex justify-between text-sm py-1 border-b border-gray-200">
-                <span className="text-gray-500 shrink-0 mr-2">Final Payment Date</span>
-                <span className="text-right text-gray-900">{details?.toast_final_payment_date ? new Date(details.toast_final_payment_date + 'T00:00:00').toLocaleDateString() : '—'}</span>
-              </div>
-              <div className="flex justify-between text-sm py-1">
-                <span className="text-gray-500 shrink-0 mr-2">Final Balance Outstanding</span>
-                <span className="text-right text-gray-900 font-medium">{formatCurrency(Math.max(0, (details?.final_amount_due ?? 0) - (details?.final_amount_received ?? 0)))}</span>
-              </div>
             </InfoCard>
 
             <InfoCard title="Planning Readiness">

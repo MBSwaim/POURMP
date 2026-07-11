@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { EVENT_STATUSES } from '@/lib/constants'
 import { StatusBadge } from './StatusBadge'
-import { formatCurrency } from '@/lib/calculations'
 import { toast } from 'sonner'
 import type { EventWithClient } from '@/lib/db'
 
@@ -82,9 +81,9 @@ export function KanbanBoard({ initialEvents }: Props) {
                     {ev.first_name} {ev.last_name}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5">{ev.event_date}</p>
-                  {ev.guest_count > 0 && ev.price_per_guest > 0 && (
+                  {ev.guest_count > 0 && (
                     <p className="text-[10px] text-[#C8973A]/80 mt-1 font-medium">
-                      {formatCurrency(ev.guest_count * ev.price_per_guest)}
+                      {ev.guest_count} guests
                     </p>
                   )}
                 </div>

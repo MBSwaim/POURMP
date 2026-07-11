@@ -1,12 +1,11 @@
 import { subMinutes, addDays, format } from 'date-fns'
 import {
   getActiveReservationsForAlerts, getActiveEventsForAlerts, getNotifications,
-  createNotificationIfNew, getStaffMembers, getChecklist, getPayments, getEventDetails,
+  createNotificationIfNew, getStaffMembers, getChecklist, getEventDetails,
   getReservation, getEventRiskAssessment, getOperationalDashboard, getOverdueFinalBalanceEvents,
   type Reservation, type Notification,
 } from './db'
 import { deliverNotification } from './notifyDelivery'
-import { formatCurrency } from './calculations'
 
 // Condition-based alerts reuse the same 14-day window as the Dashboard's "High Bar
 // Impact Events" KPI and the Risk Scanner's own windows — not re-derived here.
@@ -141,15 +140,14 @@ function describeNotification(n: Notification): NotificationFeedItem | null {
     }
   }
   if (n.alert_key === 'kitchen_prep') {
-    const payments = getPayments(n.entity_id)
-    const unverified = payments.some(p => p.status === 'pending' || p.status === 'overdue')
+    const unverified = !details?.toast_deposit_received_date || !details?.toast_final_payment_date
     return {
       ...n,
       title: eventLabel,
       subtitle: '2 Hours Out — Kitchen Prep + Payment + BEO',
       bullets: [
         details?.kitchen_notes ? `Kitchen notes: ${details.kitchen_notes}` : 'No kitchen notes on file',
-        unverified ? '⚠ Payment not fully verified' : '✓ Payment verified',
+        unverified ? '⚠ Payment not yet marked received in Toast' : '✓ Payment marked received in Toast',
         details?.beo_notes ? `BEO notes: ${details.beo_notes}` : 'No BEO notes on file',
       ],
       actionHref: `/prep/beo?eventId=${n.entity_id}`,
@@ -172,7 +170,7 @@ function describeNotification(n: Notification): NotificationFeedItem | null {
       ...n,
       title: eventLabel,
       subtitle: 'Deposit Overdue',
-      bullets: [`Deposit due: ${formatCurrency(details?.deposit_due ?? 0)}`, `Deposit received: ${formatCurrency(details?.deposit_received ?? 0)}`],
+      bullets: ['Event is within 7 days and no deposit has been marked received in Toast.', 'Follow up with the client and confirm/mark it received in Toast.'],
       actionHref: `/events/${n.entity_id}`,
     }
   }
@@ -181,7 +179,7 @@ function describeNotification(n: Notification): NotificationFeedItem | null {
       ...n,
       title: eventLabel,
       subtitle: 'Final Balance Overdue',
-      bullets: [`Final due: ${formatCurrency(details?.final_amount_due ?? 0)}`, `Final received: ${formatCurrency(details?.final_amount_received ?? 0)}`],
+      bullets: ['Event has passed and final payment has not been marked received in Toast.', 'Confirm with Toast and mark it received.'],
       actionHref: `/events/${n.entity_id}`,
     }
   }

@@ -5,7 +5,6 @@ import {
   formatEquipmentText,
   countChafingDishes,
   parseMenuItemOverrides,
-  formatCurrency,
   resolveCateringPackages,
   calcMergedCateringItems,
   cateringPackageTitle,
@@ -54,9 +53,6 @@ export interface EventForNotes {
   beo_notes?: string
   kitchen_notes?: string
   staffing_notes?: string
-  service_fee?: number
-  gratuity_pct?: number
-  tax_pct?: number
   buffer_pct?: number
   contract_signed?: number
   toast_proposal_sent_date?: string | null
@@ -66,12 +62,6 @@ export interface EventForNotes {
   toast_final_payment_date?: string | null
   kids_attending?: number
   dessert_expected?: number
-  // Financial Tracking — manual mirror of what Toast shows (internal visibility only)
-  total_event_value?: number | null
-  deposit_due?: number | null
-  deposit_received?: number | null
-  final_amount_due?: number | null
-  final_amount_received?: number | null
   final_menu_locked?: number
   // catering items from the package — legacy single-package fallback
   menuItems?: MenuItem[]
@@ -699,26 +689,9 @@ export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[], ris
   }
   lines.push('')
 
-  const depositDue = ev.deposit_due ?? null
-  const depositReceived = ev.deposit_received ?? null
-  lines.push('DEPOSIT STATUS')
-  if (depositDue == null && depositReceived == null) {
-    lines.push('  — not yet tracked')
-  } else {
-    const outstanding = Math.max(0, (depositDue ?? 0) - (depositReceived ?? 0))
-    lines.push(`  ${formatCurrency(depositReceived ?? 0)} received of ${formatCurrency(depositDue ?? 0)} due (${formatCurrency(outstanding)} outstanding)`)
-  }
-  lines.push('')
-
-  const finalDue = ev.final_amount_due ?? null
-  const finalReceived = ev.final_amount_received ?? null
-  lines.push('FINAL BALANCE STATUS')
-  if (finalDue == null && finalReceived == null) {
-    lines.push('  — not yet tracked')
-  } else {
-    const outstanding = Math.max(0, (finalDue ?? 0) - (finalReceived ?? 0))
-    lines.push(`  ${formatCurrency(finalReceived ?? 0)} received of ${formatCurrency(finalDue ?? 0)} due (${formatCurrency(outstanding)} outstanding)`)
-  }
+  lines.push('TOAST STATUS')
+  lines.push(`  Deposit received:      ${ev.toast_deposit_received_date ? `✓ ${ev.toast_deposit_received_date}` : '— not yet marked received'}`)
+  lines.push(`  Final payment received: ${ev.toast_final_payment_date ? `✓ ${ev.toast_final_payment_date}` : '— not yet marked received'}`)
   lines.push('')
 
   const completedCount = tasks.filter(t => !!t.completed).length

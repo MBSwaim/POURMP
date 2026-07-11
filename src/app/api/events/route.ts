@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getEvents, createEvent, createClient, upsertEventDetails, addEventPackage, generatePayments, getPackage, isDateBlocked } from '@/lib/db'
+import { getEvents, createEvent, createClient, upsertEventDetails, addEventPackage, isDateBlocked } from '@/lib/db'
 
 export async function GET() {
   try {
@@ -76,14 +76,6 @@ export async function POST(req: Request) {
     // Catering tab immediately instead of only living on the legacy event_details field.
     if (package_id) {
       addEventPackage(eventId, package_id, Number(guest_count) || 0, Number(buffer_pct) || 0)
-    }
-
-    // auto-generate payments if Confirmed
-    if (status === 'Confirmed' && package_id && guest_count) {
-      const pkg = getPackage(package_id)
-      if (pkg) {
-        generatePayments(eventId, Number(guest_count), pkg.price_per_guest, event_date)
-      }
     }
 
     return NextResponse.json({ id: eventId }, { status: 201 })

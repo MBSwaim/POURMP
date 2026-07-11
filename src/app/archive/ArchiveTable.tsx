@@ -2,10 +2,9 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/StatusBadge'
-import { formatCurrency } from '@/lib/calculations'
 import type { EventWithClient } from '@/lib/db'
 
-type SortKey = 'event_name' | 'client' | 'event_date' | 'value' | 'status'
+type SortKey = 'event_name' | 'client' | 'event_date' | 'guest_count' | 'status'
 type SortDir = 'asc' | 'desc'
 
 interface Props {
@@ -46,9 +45,9 @@ export function ArchiveTable({ events }: Props) {
       } else if (sortKey === 'event_date') {
         av = a.event_date ?? ''
         bv = b.event_date ?? ''
-      } else if (sortKey === 'value') {
-        av = (a.guest_count ?? 0) * (a.price_per_guest ?? 0)
-        bv = (b.guest_count ?? 0) * (b.price_per_guest ?? 0)
+      } else if (sortKey === 'guest_count') {
+        av = a.guest_count ?? 0
+        bv = b.guest_count ?? 0
       } else if (sortKey === 'status') {
         av = a.status?.toLowerCase() ?? ''
         bv = b.status?.toLowerCase() ?? ''
@@ -82,10 +81,10 @@ export function ArchiveTable({ events }: Props) {
                 Date <SortIcon col="event_date" sortKey={sortKey} sortDir={sortDir} />
               </th>
               <th
-                className={`text-right px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${sortKey === 'value' ? 'text-[#C8973A]' : 'text-gray-500'}`}
-                onClick={() => handleSort('value')}
+                className={`text-right px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${sortKey === 'guest_count' ? 'text-[#C8973A]' : 'text-gray-500'}`}
+                onClick={() => handleSort('guest_count')}
               >
-                Value <SortIcon col="value" sortKey={sortKey} sortDir={sortDir} />
+                Guests <SortIcon col="guest_count" sortKey={sortKey} sortDir={sortDir} />
               </th>
               <th
                 className={`text-center px-4 py-3 cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${sortKey === 'status' ? 'text-[#C8973A]' : 'text-gray-500'}`}
@@ -111,9 +110,7 @@ export function ArchiveTable({ events }: Props) {
                 </td>
                 <td className="px-4 py-3 text-gray-500 tabular-nums">{ev.event_date}</td>
                 <td className="px-4 py-3 text-right text-[#C8973A] tabular-nums">
-                  {ev.guest_count > 0 && ev.price_per_guest > 0
-                    ? formatCurrency(ev.guest_count * ev.price_per_guest)
-                    : '—'}
+                  {ev.guest_count > 0 ? ev.guest_count : '—'}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <StatusBadge status={ev.status} />

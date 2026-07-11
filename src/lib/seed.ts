@@ -169,9 +169,6 @@ export function seedHistoricalEvents(db: Database.Database) {
   const insertEvent = db.prepare(
     `INSERT INTO events (event_name, event_date, event_time, setup_time, teardown_time, status, space, client_id, created_at, updated_at) VALUES (?, ?, '', '', ?, ?, '', ?, ?, ?)`
   )
-  const insertPayment = db.prepare(
-    `INSERT INTO payments (event_id, payment_type, amount_due, amount_paid, due_date, paid_date, status, notes) VALUES (?, 'other', ?, ?, ?, ?, ?, 'Historical import')`
-  )
 
   const clientMap = new Map<string, number>()
   const now = new Date().toISOString()
@@ -187,12 +184,7 @@ export function seedHistoricalEvents(db: Database.Database) {
       }
 
       const eventStatus = row.status === 'Paid' ? 'Closed' : 'Confirmed'
-      const evRes = insertEvent.run(row.event_name, row.date, '', eventStatus, clientId, now, now)
-      const eventId = evRes.lastInsertRowid as number
-
-      const payStatus = row.status === 'Paid' ? 'paid' : row.status === 'Past Due' ? 'overdue' : 'pending'
-      const paidDate = row.status === 'Paid' ? row.date : ''
-      insertPayment.run(eventId, row.invoice, row.collected, row.date, paidDate, payStatus)
+      insertEvent.run(row.event_name, row.date, '', eventStatus, clientId, now, now)
     }
   })
 

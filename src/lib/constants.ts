@@ -1,18 +1,9 @@
 export const EVENT_STATUSES = ['Confirmed', 'Planning', 'Ready', 'Active', 'Closed'] as const
 export type EventStatus = (typeof EVENT_STATUSES)[number]
 
-export const PAYMENT_TYPES = ['deposit', 'final', 'other'] as const
-export type PaymentType = (typeof PAYMENT_TYPES)[number]
-
-export const PAYMENT_STATUSES = ['pending', 'paid', 'overdue'] as const
-export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
-
 export const CALC_METHODS = ['guests_per_unit', 'pieces_per_guest', 'servings_per_guest', 'manual'] as const
 export type CalcMethod = (typeof CALC_METHODS)[number]
 
-export const DEPOSIT_PCT = 0.20
-export const FINAL_PCT = 0.80
-export const DEPOSIT_DAYS_BEFORE = 7
 export const DRINK_TICKET_PRICE = 9.00
 
 export const GENERAL_INFO =
@@ -70,8 +61,3 @@ export const STATUS_COLORS: Record<string, string> = {
   Closed: 'bg-slate-500',
 }
 
-export const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-500',
-  paid: 'bg-green-500',
-  overdue: 'bg-red-500',
-}

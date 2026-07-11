@@ -4,7 +4,6 @@ import { DRINK_TICKET_PRICE } from '@/lib/constants'
 import {
   countChafingDishes,
   vesselLabelFor,
-  formatCurrency,
 } from '@/lib/calculations'
 import { calcItems, cateringPackages, cateringTitle, activePackageCount, type EventForNotes } from '@/lib/noteGenerators'
 import { calcBarImpact, IMPACT_PRINT_COLORS } from '@/lib/barImpact'
@@ -715,19 +714,6 @@ export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventFor
           </TwoCol>
         </Section>
       )}
-
-      <Section title="Financial Tracking">
-        <p className="font-[var(--font-crimson)] text-[11px] text-gray-500 mb-1 italic">Internal visibility only — Toast processes all payments.</p>
-        <TwoCol>
-          <Row label="Total Event Value" value={ev.total_event_value != null ? formatCurrency(ev.total_event_value) : undefined} />
-          <Row label="Deposit Due" value={ev.deposit_due != null ? formatCurrency(ev.deposit_due) : undefined} />
-          <Row label="Deposit Received" value={ev.deposit_received != null ? formatCurrency(ev.deposit_received) : undefined} />
-          <Row label="Deposit Outstanding" value={formatCurrency(Math.max(0, (ev.deposit_due ?? 0) - (ev.deposit_received ?? 0)))} />
-          <Row label="Final Amount Due" value={ev.final_amount_due != null ? formatCurrency(ev.final_amount_due) : undefined} />
-          <Row label="Final Amount Received" value={ev.final_amount_received != null ? formatCurrency(ev.final_amount_received) : undefined} />
-          <Row label="Final Outstanding" value={formatCurrency(Math.max(0, (ev.final_amount_due ?? 0) - (ev.final_amount_received ?? 0)))} />
-        </TwoCol>
-      </Section>
 
       <Section title="Risk Scanner Summary">
         {!risks || risks.length === 0 ? (

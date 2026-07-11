@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button'
 import { effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems } from '@/lib/calculations'
 import { Logo } from '@/components/Logo'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
-import type { Event, Client, EventDetails, Payment, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
+import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
 
 interface FullData {
   event: Event
   client: Client | null | undefined
   details: EventDetails | null | undefined
-  payments: Payment[]
   addOns: AddOn[]
   pkg: Package | null
   menuItems: MenuItem[]

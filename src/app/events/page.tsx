@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import { getEvents, getAvailableYears } from '@/lib/db'
-import { formatCurrency } from '@/lib/calculations'
 import Link from 'next/link'
 import { EventsTable } from './EventsTable'
 import { EventsPageSearch } from './EventsPageSearch'
@@ -29,8 +28,7 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
   const today = now.toISOString().slice(0, 10)
   const upcoming  = allEvents.filter(e => e.event_date >= today).length
   const confirmed = allEvents.filter(e => e.status === 'Confirmed').length
-  const totalValue = allEvents.reduce((sum, e) =>
-    sum + (e.guest_count && e.price_per_guest ? e.guest_count * e.price_per_guest : 0), 0)
+  const totalGuests = allEvents.reduce((sum, e) => sum + (e.guest_count ?? 0), 0)
 
   return (
     <div className="px-4 py-5 space-y-5 max-w-7xl mx-auto">
@@ -86,8 +84,8 @@ export default function EventsPage({ searchParams }: { searchParams: { year?: st
             <p className="text-xl font-bold tabular-nums">{isCurrentYear ? upcoming : confirmed}</p>
           </div>
           <div className="rounded-xl bg-white border border-gray-200 border-l-2 border-l-[#C8973A] px-4 py-3">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Value</p>
-            <p className="text-xl font-bold text-[#C8973A] tabular-nums">{formatCurrency(totalValue)}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.18em] mb-1.5">Total Guests</p>
+            <p className="text-xl font-bold text-[#C8973A] tabular-nums">{totalGuests}</p>
           </div>
         </div>
       )}

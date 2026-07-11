@@ -1,8 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import { seedDatabase, seedHistoricalEvents } from './seed'
-import { DEPOSIT_PCT, FINAL_PCT, DEPOSIT_DAYS_BEFORE } from './constants'
-import { subDays, addDays, format, parseISO } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { calcBarImpact } from './barImpact'
 import { calcReadiness } from './readiness'
 import { generateTasksForEvent, CRITICAL_DYNAMIC_TASK_KEYS, type TaskContext } from './tasks'
@@ -73,18 +72,6 @@ function initSchema(db: Database.Database) {
       contract_signed INTEGER DEFAULT 0,
       date_flexible INTEGER DEFAULT 0,
       setup_notes TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-      payment_type TEXT,
-      amount_due REAL,
-      amount_paid REAL DEFAULT 0,
-      due_date TEXT,
-      paid_date TEXT,
-      status TEXT DEFAULT 'pending',
-      notes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS packages (
@@ -291,6 +278,20 @@ function initSchema(db: Database.Database) {
       'dyn_dessert','dyn_drink_tickets','dyn_tv_hdmi','dyn_buffet','dyn_individual_tabs',
       'dyn_by_consumption','dyn_dietary','dyn_over_capacity','dyn_multi_package','dyn_large_group'
     )`,
+    // V1.0 Toast/POURMP realignment (see docs/V1_FEATURE_LOCK.md) — the payments table,
+    // the numeric Financial Tracking fields, and the fee-grid fields all duplicated what
+    // Toast already tracks, and had drifted out of sync with the Toast Status Tracker
+    // (see docs/V1_REALIGNMENT_REVIEW.md §3). The Toast Status Tracker above is now the
+    // only financial-status representation in POURMP.
+    `DROP TABLE IF EXISTS payments`,
+    `ALTER TABLE event_details DROP COLUMN total_event_value`,
+    `ALTER TABLE event_details DROP COLUMN deposit_due`,
+    `ALTER TABLE event_details DROP COLUMN deposit_received`,
+    `ALTER TABLE event_details DROP COLUMN final_amount_due`,
+    `ALTER TABLE event_details DROP COLUMN final_amount_received`,
+    `ALTER TABLE event_details DROP COLUMN tax_pct`,
+    `ALTER TABLE event_details DROP COLUMN gratuity_pct`,
+    `ALTER TABLE event_details DROP COLUMN service_fee`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -358,9 +359,6 @@ export interface EventDetails {
   date_flexible: number
   setup_notes: string
   bar_tab_type: string
-  service_fee: number
-  gratuity_pct: number
-  tax_pct: number
   floor_plan_notes: string
   big_screen_tv: number
   selected_sauces: string
@@ -378,11 +376,6 @@ export interface EventDetails {
   toast_final_payment_date: string | null
   kids_attending: number
   dessert_expected: number
-  total_event_value: number | null
-  deposit_due: number | null
-  deposit_received: number | null
-  final_amount_due: number | null
-  final_amount_received: number | null
   final_menu_locked: number
 }
 
@@ -427,18 +420,6 @@ export interface EventPackage {
 export interface EventPackageWithItems extends EventPackage {
   pkg: Package | null
   menuItems: MenuItem[]
-}
-
-export interface Payment {
-  id: number
-  event_id: number
-  payment_type: string
-  amount_due: number
-  amount_paid: number
-  due_date: string
-  paid_date: string
-  status: string
-  notes: string
 }
 
 export interface Package {
@@ -488,12 +469,6 @@ export interface EventWithClient extends Event {
   package_id: string
   package_name: string
   price_per_guest: number
-  deposit_status: string | null
-  final_status: string | null
-  deposit_due: number | null
-  deposit_received: number | null
-  final_amount_due: number | null
-  final_amount_received: number | null
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
@@ -553,20 +528,14 @@ const PRIMARY_PACKAGE_FIELDS = `
 `
 
 export function getEvents(year?: number): EventWithClient[] {
-  refreshOverduePayments()
   const yearClause = year ? `WHERE strftime('%Y', e.event_date) = '${year}'` : ''
   return getDb().prepare(`
     SELECT e.*,
       c.first_name, c.last_name, c.email, c.phone, c.company,
-      ${PRIMARY_PACKAGE_FIELDS},
-      ed.deposit_due, ed.deposit_received, ed.final_amount_due, ed.final_amount_received,
-      dep.status as deposit_status,
-      fin.status as final_status
+      ${PRIMARY_PACKAGE_FIELDS}
     FROM events e
     LEFT JOIN clients c ON c.id = e.client_id
     ${PRIMARY_PACKAGE_JOIN}
-    LEFT JOIN payments dep ON dep.event_id = e.id AND dep.payment_type = 'deposit'
-    LEFT JOIN payments fin ON fin.event_id = e.id AND fin.payment_type = 'final'
     ${yearClause}
     ORDER BY e.event_date DESC
   `).all() as EventWithClient[]
@@ -609,14 +578,13 @@ export function getEventFull(id: number) {
   if (!event) return null
   const client = event.client_id ? getClient(event.client_id) : null
   const details = getDb().prepare('SELECT * FROM event_details WHERE event_id = ?').get(id) as EventDetails | undefined
-  const payments = getPayments(id)
   const addOns = getAddOns(id)
   const notes = getEventNotes(id)
   const packages = getEventPackages(id)
   // backward compat: first package = primary
   const pkg = packages[0]?.pkg ?? null
   const menuItems = packages[0]?.menuItems ?? []
-  return { event, client, details, payments, addOns, notes, pkg, menuItems, packages }
+  return { event, client, details, addOns, notes, pkg, menuItems, packages }
 }
 
 export function createEvent(data: {
@@ -689,68 +657,6 @@ export function upsertEventDetails(eventId: number, data: Partial<Omit<EventDeta
   }
 }
 
-// ─── Payments ─────────────────────────────────────────────────────────────────
-
-export function getPayments(eventId: number): Payment[] {
-  return getDb().prepare('SELECT * FROM payments WHERE event_id = ? ORDER BY payment_type').all(eventId) as Payment[]
-}
-
-export function createPayment(data: Omit<Payment, 'id'>): number {
-  const result = getDb()
-    .prepare(
-      `INSERT INTO payments (event_id, payment_type, amount_due, amount_paid, due_date, paid_date, status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      data.event_id, data.payment_type, data.amount_due, data.amount_paid,
-      data.due_date, data.paid_date, data.status, data.notes
-    )
-  return result.lastInsertRowid as number
-}
-
-export function updatePayment(id: number, data: Partial<Omit<Payment, 'id'>>) {
-  const fields = Object.keys(data).map((k) => `${k} = ?`).join(', ')
-  getDb().prepare(`UPDATE payments SET ${fields} WHERE id = ?`).run(...Object.values(data), id)
-}
-
-export function generatePayments(eventId: number, guestCount: number, pricePerGuest: number, eventDate: string) {
-  const existing = getPayments(eventId)
-  if (existing.length > 0) return
-
-  const total = guestCount * pricePerGuest
-  const depositAmt = total * DEPOSIT_PCT
-  const finalAmt = total * FINAL_PCT
-  const depositDue = format(subDays(parseISO(eventDate), DEPOSIT_DAYS_BEFORE), 'yyyy-MM-dd')
-
-  createPayment({
-    event_id: eventId,
-    payment_type: 'deposit',
-    amount_due: depositAmt,
-    amount_paid: 0,
-    due_date: depositDue,
-    paid_date: '',
-    status: 'pending',
-    notes: '',
-  })
-  createPayment({
-    event_id: eventId,
-    payment_type: 'final',
-    amount_due: finalAmt,
-    amount_paid: 0,
-    due_date: eventDate,
-    paid_date: '',
-    status: 'pending',
-    notes: '',
-  })
-}
-
-export function refreshOverduePayments() {
-  const today = format(new Date(), 'yyyy-MM-dd')
-  getDb()
-    .prepare(`UPDATE payments SET status = 'overdue' WHERE status = 'pending' AND due_date < ?`)
-    .run(today)
-}
-
 // ─── Packages ─────────────────────────────────────────────────────────────────
 
 export function getPackages(): Package[] {
@@ -814,7 +720,6 @@ export function createEventNote(eventId: number, note: string): number {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function getDashboardStats() {
-  refreshOverduePayments()
   const db = getDb()
   const today = format(new Date(), 'yyyy-MM-dd')
   const monthStart = today.substring(0, 7) + '-01'
@@ -828,20 +733,6 @@ export function getDashboardStats() {
   const eventsThisWeek = (db.prepare(
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
   ).get(today, in14) as { c: number }).c
-
-  // Projected/Confirmed Sales — guest_count * price_per_guest proxy, summed across every
-  // catering package on the event (event_packages is the source of truth for catering;
-  // an event with a kids' menu alongside the adult buffet has two rows here, and both
-  // count). Scoped to this calendar month.
-  const salesQuery = `
-    SELECT COALESCE(SUM(ep.guest_count * p.price_per_guest), 0) as total
-    FROM events e
-    JOIN event_packages ep ON ep.event_id = e.id
-    LEFT JOIN packages p ON p.id = ep.package_id
-    WHERE e.event_date >= ? AND e.event_date <= ?
-  `
-  const projectedSales = (db.prepare(salesQuery).get(monthStart, monthEnd) as { total: number }).total
-  const confirmedSales = (db.prepare(`${salesQuery} AND e.status = 'Confirmed'`).get(monthStart, monthEnd) as { total: number }).total
 
   // High Risk / High Bar Impact — next 14 days. Reuses the Risk Scanner (for the app's
   // canonical "High Risk" definition) and the Operational Dashboard's bar-impact bucket
@@ -863,7 +754,7 @@ export function getDashboardStats() {
 
   return {
     eventsThisMonth, eventsThisWeek, upcomingEvents,
-    projectedSales, confirmedSales, highRiskCount, highBarImpactCount,
+    highRiskCount, highBarImpactCount,
   }
 }
 
@@ -892,11 +783,6 @@ export interface OpsEventSummary {
   setupReady: boolean
   breakdownPending: boolean
   operationallyReady: boolean
-  // Financial Tracking visibility — manual mirror of what Toast shows (internal only)
-  depositDue: number | null
-  depositReceived: number | null
-  finalAmountDue: number | null
-  finalAmountReceived: number | null
 }
 
 export interface OperationalDashboard {
@@ -910,7 +796,6 @@ export interface OperationalDashboard {
   highBarImpact: OpsEventSummary[]
   needsAttention: OpsEventSummary[]
   readyThisWeekCount: number
-  outstandingRevenue: number
 }
 
 const RISK_READINESS_THRESHOLD = 70
@@ -933,7 +818,6 @@ function isWithinAttentionWindow(eventDate: string, eventTime: string, now: Date
 
 export function getOperationalDashboard(): OperationalDashboard {
   const db = getDb()
-  refreshOverduePayments()
 
   const now = new Date()
   const today = format(now, 'yyyy-MM-dd')
@@ -950,7 +834,6 @@ export function getOperationalDashboard(): OperationalDashboard {
            ed.guest_count, ed.bar_tab_type, ed.drink_tickets, ed.setup_notes, ed.floor_plan_notes,
            ed.dietary_restrictions, ed.staffing_notes, ed.contract_signed,
            ed.toast_invoice_sent_date, ed.toast_deposit_received_date,
-           ed.deposit_due, ed.deposit_received, ed.final_amount_due, ed.final_amount_received,
            (SELECT p.name FROM event_packages ep JOIN packages p ON p.id = ep.package_id
               WHERE ep.event_id = e.id AND ep.package_id != '' ORDER BY ep.sort_order LIMIT 1) AS package_name,
            (SELECT COUNT(*) FROM event_packages ep WHERE ep.event_id = e.id AND ep.package_id != '') AS package_count
@@ -966,8 +849,6 @@ export function getOperationalDashboard(): OperationalDashboard {
     setup_notes: string | null; floor_plan_notes: string | null; dietary_restrictions: string | null
     staffing_notes: string | null; contract_signed: number | null
     toast_invoice_sent_date: string | null; toast_deposit_received_date: string | null
-    deposit_due: number | null; deposit_received: number | null
-    final_amount_due: number | null; final_amount_received: number | null
     package_name: string | null; package_count: number
   }>
 
@@ -978,7 +859,6 @@ export function getOperationalDashboard(): OperationalDashboard {
   const highRisk: OpsEventSummary[] = []
   const highBarImpact: OpsEventSummary[] = []
   const needsAttention: OpsEventSummary[] = []
-  let outstandingRevenue = 0
 
   for (const row of rows) {
     const evForCalc: EventForNotes = {
@@ -1051,9 +931,6 @@ export function getOperationalDashboard(): OperationalDashboard {
     const needsAttentionFlag = withinAttentionWindow
       && (taskCompletionPct < TASK_ATTENTION_COMPLETION_THRESHOLD || setupIncomplete > 0 || criticalDynamicIncomplete > 0 || criticalRiskPresent)
 
-    outstandingRevenue += Math.max(0, (row.deposit_due ?? 0) - (row.deposit_received ?? 0))
-      + Math.max(0, (row.final_amount_due ?? 0) - (row.final_amount_received ?? 0))
-
     const summary: OpsEventSummary = {
       id: row.id,
       event_name: row.event_name,
@@ -1073,10 +950,6 @@ export function getOperationalDashboard(): OperationalDashboard {
       setupReady,
       breakdownPending,
       operationallyReady,
-      depositDue: row.deposit_due,
-      depositReceived: row.deposit_received,
-      finalAmountDue: row.final_amount_due,
-      finalAmountReceived: row.final_amount_received,
     }
 
     if (row.event_date >= weekStart && row.event_date <= weekEnd) thisWeek.push(summary)
@@ -1097,7 +970,7 @@ export function getOperationalDashboard(): OperationalDashboard {
 
   return {
     weekStart, weekEnd, thisWeek, awaitingDeposit, awaitingMenu, awaitingInvoice, highRisk, highBarImpact, needsAttention,
-    readyThisWeekCount, outstandingRevenue,
+    readyThisWeekCount,
   }
 }
 
@@ -1364,42 +1237,6 @@ export function getArchivedEvents(year?: number) {
       ${yearFilter}
     ORDER BY e.event_date DESC
   `).all(currentMonth) as EventWithClient[]
-}
-
-// ─── Analytics ────────────────────────────────────────────────────────────────
-
-export interface YOYMonthData {
-  month: number
-  event_count: number
-  invoiced: number
-  collected: number
-}
-
-export function getYearMonthly(year: number): YOYMonthData[] {
-  return getDb().prepare(`
-    SELECT
-      CAST(strftime('%m', e.event_date) AS INTEGER) as month,
-      COUNT(DISTINCT e.id) as event_count,
-      COALESCE(SUM(p.amount_due), 0) as invoiced,
-      COALESCE(SUM(p.amount_paid), 0) as collected
-    FROM events e
-    LEFT JOIN payments p ON p.event_id = e.id
-    WHERE strftime('%Y', e.event_date) = ?
-    GROUP BY month
-    ORDER BY month
-  `).all(String(year)) as YOYMonthData[]
-}
-
-export function getYearTotals(year: number) {
-  return getDb().prepare(`
-    SELECT
-      COUNT(DISTINCT e.id) as event_count,
-      COALESCE(SUM(p.amount_due), 0) as invoiced,
-      COALESCE(SUM(p.amount_paid), 0) as collected
-    FROM events e
-    LEFT JOIN payments p ON p.event_id = e.id
-    WHERE strftime('%Y', e.event_date) = ?
-  `).get(String(year)) as { event_count: number; invoiced: number; collected: number }
 }
 
 // ─── Blocked Dates ────────────────────────────────────────────────────────────
@@ -1901,9 +1738,11 @@ export function getActiveEventsForAlerts(): (Event & { alert_offsets_json: strin
   `).all(today) as (Event & { alert_offsets_json: string; guest_count: number | null })[]
 }
 
-/** Non-Closed events whose date has arrived/passed with an unpaid final balance — for the
- * "final balance overdue" alert. Deliberately looks at past events (unlike getActiveEventsForAlerts),
- * since the final balance is only ever "overdue" once the event has already happened. */
+/** Non-Closed events whose date has arrived/passed with final payment not yet marked received
+ * in the Toast Status Tracker — for the "final balance overdue" alert. Deliberately looks at
+ * past events (unlike getActiveEventsForAlerts), since final payment is only ever "overdue"
+ * once the event has already happened. Status-only, per the Toast Status Tracker (Toast
+ * remains system of record for the actual balance) — see docs/V1_FEATURE_LOCK.md. */
 export function getOverdueFinalBalanceEvents(): Array<{ id: number; event_name: string; event_date: string }> {
   const today = format(new Date(), 'yyyy-MM-dd')
   return getDb().prepare(`
@@ -1911,7 +1750,6 @@ export function getOverdueFinalBalanceEvents(): Array<{ id: number; event_name: 
     FROM events e
     LEFT JOIN event_details ed ON ed.event_id = e.id
     WHERE e.status != 'Closed' AND e.event_date <= ?
-      AND ed.final_amount_due IS NOT NULL
-      AND (ed.final_amount_received IS NULL OR ed.final_amount_received < ed.final_amount_due)
+      AND ed.toast_final_payment_date IS NULL
   `).all(today) as Array<{ id: number; event_name: string; event_date: string }>
 }

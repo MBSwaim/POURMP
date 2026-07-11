@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/lib/calculations'
 import { EVENT_STATUSES } from '@/lib/constants'
 // EVENT_STATUSES used in status dropdown
 import type { EventWithClient } from '@/lib/db'
@@ -81,10 +80,7 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
             <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Date</th>
             <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Guests</th>
             <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Package</th>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Value</th>
             <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Status</th>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Deposit</th>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium tracking-widest uppercase text-xs">Final</th>
           </tr>
         </thead>
         <tbody>
@@ -114,11 +110,6 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                 <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{ev.event_date}</td>
                 <td className="px-4 py-3 text-gray-700">{ev.guest_count ?? <span className="text-gray-600">—</span>}</td>
                 <td className="px-4 py-3 text-gray-700">{ev.package_name ?? <span className="text-gray-600">—</span>}</td>
-                <td className="px-4 py-3 text-gray-700">
-                  {ev.guest_count && ev.price_per_guest
-                    ? formatCurrency(ev.guest_count * ev.price_per_guest)
-                    : <span className="text-gray-600">—</span>}
-                </td>
 
                 {/* Status dropdown */}
                 <td className="px-4 py-3">
@@ -169,29 +160,6 @@ export function EventsTable({ initialEvents, year, isCurrentYear, statusFilter }
                       </div>
                     )}
                   </div>
-                </td>
-
-                <td className="px-4 py-3">
-                  {ev.deposit_due == null && ev.deposit_received == null ? (
-                    <span className="text-gray-600">—</span>
-                  ) : (
-                    <div className="leading-tight">
-                      <div className="text-gray-900">{formatCurrency(ev.deposit_received ?? 0)} Paid</div>
-                      <div className="text-xs text-gray-500">
-                        {formatCurrency(Math.max(0, (ev.deposit_due ?? 0) - (ev.deposit_received ?? 0)))} Outstanding
-                      </div>
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {ev.final_amount_due == null && ev.final_amount_received == null ? (
-                    <span className="text-gray-600">—</span>
-                  ) : (
-                    <div className="leading-tight">
-                      <div className="text-gray-900">{formatCurrency(ev.final_amount_due ?? 0)} Due</div>
-                      <div className="text-xs text-gray-500">{formatCurrency(ev.final_amount_received ?? 0)} Paid</div>
-                    </div>
-                  )}
                 </td>
               </tr>
             )
