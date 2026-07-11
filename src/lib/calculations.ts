@@ -248,20 +248,32 @@ export function vesselLabelFor(item: CalculatedItem): string {
   return item.unit_name ?? ''
 }
 
+// Display-only pluralization for a vessel label (e.g. "Large Chafer" -> "Large Chafers"
+// when qty !== 1). Deliberately local to whichever compact summary needs plural wording —
+// vesselLabelFor's singular form stays the one every Prep Doc/Toast Notes/Kitchen Sheet
+// output already agrees on, so this never changes their wording.
+export function pluralizeVessel(label: string, qty: number): string {
+  if (!label || qty === 1) return label
+  return label.endsWith('s') ? label : `${label}s`
+}
+
+// Single source of truth for "which sauces apply to this item, given what's selected."
+// selectedSauces is the event's saved CSV (details.selected_sauces) — pass undefined/null
+// to mean "show every applicable sauce, selectable or not" (used where nothing has been
+// saved yet).
+export function saucesForItem(itemName: string, selectedSauces?: string | null): string[] {
+  const sauceSet = selectedSauces
+    ? new Set(selectedSauces.split(',').map(s => s.trim()).filter(Boolean))
+    : null
+  return SAUCE_RULES
+    .filter(r => itemName.toLowerCase().includes(r.trigger.toLowerCase()))
+    .flatMap(r => r.sauces.filter(s => !r.selectable || !sauceSet || sauceSet.has(s)))
+}
+
 export function formatCateringText(
   sections: Array<{ name: string; items: CalculatedItem[] }>,
   selectedSauces?: string
 ): string {
-  const sauceSet = selectedSauces
-    ? new Set(selectedSauces.split(',').map(s => s.trim()).filter(Boolean))
-    : null
-
-  function saucesFor(itemName: string): string[] {
-    return SAUCE_RULES
-      .filter(r => itemName.toLowerCase().includes(r.trigger.toLowerCase()))
-      .flatMap(r => r.sauces.filter(s => !r.selectable || !sauceSet || sauceSet.has(s)))
-  }
-
   return sections.map(({ name, items }) => {
     const lines = [name.toUpperCase()]
     for (const item of items) {
@@ -271,7 +283,7 @@ export function formatCateringText(
       const vesselPart = vessel ? `${vessel} of ` : ''
       const stagger = item.total_qty > 1 ? '  — Serve 1 @ a time' : ''
       lines.push(`(${item.total_qty}) ${vesselPart}${item.item_name}${pcs}${stagger}`)
-      for (const sauce of saucesFor(item.item_name)) {
+      for (const sauce of saucesForItem(item.item_name, selectedSauces)) {
         lines.push(`    - ${sauce}`)
       }
       if (item.half_pan_qty) {

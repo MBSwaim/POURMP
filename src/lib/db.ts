@@ -525,21 +525,46 @@ export function updateClient(id: number, data: Partial<Omit<Client, 'id'>>) {
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 
+// Primary (first-added) catering package per event — event_packages is the source of
+// truth for catering, so list/card views that show one package name + one guest count
+// per event (Events table, Kanban, Archive) read the first package (by sort_order) from
+// there, not the legacy event_details.package_id. The COALESCE against ed/p falls back to
+// that legacy field only for the rare historical event that predates the event_packages
+// migration in db.ts's initSchema().
+//
+// The `prime` subquery relies on SQLite's documented bare-column-with-MIN() behavior:
+// https://www.sqlite.org/lang_select.html#bare_columns_in_an_aggregate_query — package_id
+// and guest_count are guaranteed to come from the same row that produced MIN(sort_order).
+const PRIMARY_PACKAGE_JOIN = `
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    LEFT JOIN packages p ON p.id = ed.package_id
+    LEFT JOIN (
+      SELECT event_id, package_id, guest_count, MIN(sort_order)
+      FROM event_packages
+      GROUP BY event_id
+    ) prime ON prime.event_id = e.id
+    LEFT JOIN packages p2 ON p2.id = prime.package_id
+`
+const PRIMARY_PACKAGE_FIELDS = `
+      COALESCE(prime.guest_count, ed.guest_count) as guest_count,
+      COALESCE(prime.package_id, ed.package_id) as package_id,
+      COALESCE(p2.name, p.name) as package_name,
+      COALESCE(p2.price_per_guest, p.price_per_guest) as price_per_guest
+`
+
 export function getEvents(year?: number): EventWithClient[] {
   refreshOverduePayments()
   const yearClause = year ? `WHERE strftime('%Y', e.event_date) = '${year}'` : ''
   return getDb().prepare(`
     SELECT e.*,
       c.first_name, c.last_name, c.email, c.phone, c.company,
-      ed.guest_count, ed.package_id,
+      ${PRIMARY_PACKAGE_FIELDS},
       ed.deposit_due, ed.deposit_received, ed.final_amount_due, ed.final_amount_received,
-      p.name as package_name, p.price_per_guest,
       dep.status as deposit_status,
       fin.status as final_status
     FROM events e
     LEFT JOIN clients c ON c.id = e.client_id
-    LEFT JOIN event_details ed ON ed.event_id = e.id
-    LEFT JOIN packages p ON p.id = ed.package_id
+    ${PRIMARY_PACKAGE_JOIN}
     LEFT JOIN payments dep ON dep.event_id = e.id AND dep.payment_type = 'deposit'
     LEFT JOIN payments fin ON fin.event_id = e.id AND fin.payment_type = 'final'
     ${yearClause}
@@ -630,7 +655,17 @@ export function updateEvent(id: number, data: Partial<Omit<Event, 'id' | 'create
 }
 
 export function deleteEvent(id: number) {
-  getDb().prepare('DELETE FROM events WHERE id = ?').run(id)
+  const db = getDb()
+  const tx = db.transaction(() => {
+    // These tables key on event_id without an enforced FK, so ON DELETE CASCADE
+    // on `events` doesn't reach them — clean them up explicitly.
+    db.prepare('DELETE FROM event_packages WHERE event_id = ?').run(id)
+    db.prepare('DELETE FROM event_setup_checklist WHERE event_id = ?').run(id)
+    db.prepare('DELETE FROM drink_ticket_log WHERE event_id = ?').run(id)
+    db.prepare(`DELETE FROM notifications WHERE entity_type = 'event' AND entity_id = ?`).run(id)
+    db.prepare('DELETE FROM events WHERE id = ?').run(id)
+  })
+  tx()
 }
 
 // ─── Event Details ────────────────────────────────────────────────────────────
@@ -794,13 +829,15 @@ export function getDashboardStats() {
     `SELECT COUNT(*) as c FROM events WHERE event_date >= ? AND event_date <= ?`
   ).get(today, in14) as { c: number }).c
 
-  // Projected/Confirmed Sales — same guest_count * price_per_guest proxy already used
-  // for the "Value" column on the Events table, scoped to this calendar month.
+  // Projected/Confirmed Sales — guest_count * price_per_guest proxy, summed across every
+  // catering package on the event (event_packages is the source of truth for catering;
+  // an event with a kids' menu alongside the adult buffet has two rows here, and both
+  // count). Scoped to this calendar month.
   const salesQuery = `
-    SELECT COALESCE(SUM(ed.guest_count * p.price_per_guest), 0) as total
+    SELECT COALESCE(SUM(ep.guest_count * p.price_per_guest), 0) as total
     FROM events e
-    LEFT JOIN event_details ed ON ed.event_id = e.id
-    LEFT JOIN packages p ON p.id = ed.package_id
+    JOIN event_packages ep ON ep.event_id = e.id
+    LEFT JOIN packages p ON p.id = ep.package_id
     WHERE e.event_date >= ? AND e.event_date <= ?
   `
   const projectedSales = (db.prepare(salesQuery).get(monthStart, monthEnd) as { total: number }).total
@@ -1302,12 +1339,11 @@ export function getEventRisks(eventId: number): RiskFlag[] {
 export function getKanbanEvents() {
   const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
   return getDb().prepare(`
-    SELECT e.*, c.first_name, c.last_name, ed.guest_count, ed.package_id,
-           p.name as package_name, p.price_per_guest
+    SELECT e.*, c.first_name, c.last_name,
+      ${PRIMARY_PACKAGE_FIELDS}
     FROM events e
     LEFT JOIN clients c ON c.id = e.client_id
-    LEFT JOIN event_details ed ON ed.event_id = e.id
-    LEFT JOIN packages p ON p.id = ed.package_id
+    ${PRIMARY_PACKAGE_JOIN}
     WHERE e.status != 'Closed'
        OR strftime('%Y-%m', e.event_date) = ?
     ORDER BY e.event_date ASC
@@ -1318,12 +1354,11 @@ export function getArchivedEvents(year?: number) {
   const currentMonth = new Date().toISOString().slice(0, 7)
   const yearFilter = year ? `AND strftime('%Y', e.event_date) = '${year}'` : ''
   return getDb().prepare(`
-    SELECT e.*, c.first_name, c.last_name, ed.guest_count, ed.package_id,
-           p.name as package_name, p.price_per_guest
+    SELECT e.*, c.first_name, c.last_name,
+      ${PRIMARY_PACKAGE_FIELDS}
     FROM events e
     LEFT JOIN clients c ON c.id = e.client_id
-    LEFT JOIN event_details ed ON ed.event_id = e.id
-    LEFT JOIN packages p ON p.id = ed.package_id
+    ${PRIMARY_PACKAGE_JOIN}
     WHERE e.status = 'Closed'
       AND strftime('%Y-%m', e.event_date) < ?
       ${yearFilter}

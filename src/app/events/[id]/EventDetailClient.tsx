@@ -13,7 +13,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { calcFloorPlan, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle } from '@/lib/calculations'
+import { calcFloorPlan, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle, vesselLabelFor, pluralizeVessel, saucesForItem } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import { formatPhoneNumber } from '@/lib/phone'
 import { TOAST_STAGES } from '@/lib/toastStatus'
@@ -120,7 +120,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     if (d.packages) setEventPackages(d.packages)
   }
 
-  async function addPackage() {
+  async function addPackage(): Promise<number> {
     const res = await fetch('/api/event-packages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -128,6 +128,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     })
     const { id } = await res.json()
     setEventPackages(prev => [...prev, { id, event_id: event.id, package_id: '', guest_count: 0, buffer_pct: 0, sort_order: prev.length, pkg: null, menuItems: [] }])
+    return id
   }
 
   async function removePackage(id: number) {
@@ -147,6 +148,39 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     })
     const fresh = await fetch(`/api/events/${event.id}`).then(r => r.json())
     if (fresh.packages) setEventPackages(fresh.packages)
+  }
+
+  // Manual per-item overrides and sauce selections are keyed by item_name and shared
+  // across the whole event, not scoped to one package — swapping a package's own
+  // package_id for a different one silently orphans whatever was entered for the old
+  // package's items. Warn before that happens; returns false if the user cancels.
+  function packageChangeIsSafe(currentPackageId: string): boolean {
+    if (!currentPackageId) return true
+    const hasOverrides = !!(details?.menu_item_overrides_json && details.menu_item_overrides_json !== '{}')
+    const hasSauces = !!(details?.selected_sauces && details.selected_sauces.trim() !== '')
+    if (!hasOverrides && !hasSauces) return true
+    return window.confirm(
+      'This event has manually entered item overrides and/or sauce selections tied to the current package. ' +
+      'Changing the package will make those customizations no longer apply. Continue?'
+    )
+  }
+
+  // Overview's Package field and the Catering tab's first package row are the same
+  // underlying event_packages record — this is the one function that writes to it, so
+  // the two tabs can never fall out of sync the way Overview's old details.package_id
+  // field and the Catering tab used to.
+  async function setPrimaryPackage(newPackageId: string, resetSelect: () => void) {
+    const primary = eventPackages[0]
+    if (primary) {
+      if (newPackageId !== primary.package_id && !packageChangeIsSafe(primary.package_id)) {
+        resetSelect()
+        return
+      }
+      await updatePackage(primary.id, { package_id: newPackageId })
+    } else {
+      const newId = await addPackage()
+      await updatePackage(newId, { package_id: newPackageId, guest_count: details?.guest_count ?? 0, buffer_pct: details?.buffer_pct ?? 0 })
+    }
   }
 
   async function saveStatus(status: string) {
@@ -452,12 +486,12 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Package</span>
                   {locked ? (
-                    <span className="text-sm text-gray-900 text-right">{packages.find(p => p.id === details?.package_id)?.name ?? '—'}</span>
+                    <span className="text-sm text-gray-900 text-right">{eventPackages[0]?.pkg?.name ?? '—'}</span>
                   ) : (
                     <select
-                      key={details?.package_id ?? ''}
-                      defaultValue={details?.package_id ?? ''}
-                      onBlur={(e) => saveField('details', 'package_id', e.target.value)}
+                      key={eventPackages[0]?.package_id ?? ''}
+                      defaultValue={eventPackages[0]?.package_id ?? ''}
+                      onBlur={(e) => setPrimaryPackage(e.target.value, () => { e.target.value = eventPackages[0]?.package_id ?? '' })}
                       className="bg-transparent border-b border-gray-300 text-right text-sm text-gray-900 focus:outline-none"
                     >
                       <option value="">— none —</option>
@@ -465,6 +499,9 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                     </select>
                   )}
                 </div>
+                {eventPackages.length > 1 && (
+                  <p className="text-xs text-gray-500 italic">+{eventPackages.length - 1} more package{eventPackages.length > 2 ? 's' : ''} — see Catering tab</p>
+                )}
                 <EditableRow locked={locked} label="Guests" value={String(details?.guest_count ?? '')} type="number" onSave={(v) => saveField('details', 'guest_count', Number(v))} />
                 <EditableRow locked={locked} label="Extra Headcount %" value={String((details?.buffer_pct ?? 0) * 100)} type="number" onSave={(v) => saveField('details', 'buffer_pct', Number(v) / 100)} />
                 <EditableRow locked={locked} label="Food Notes / Allergies" value={details?.food_notes ?? ''} onSave={(v) => saveField('details', 'food_notes', v)} />
@@ -533,6 +570,66 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
             </InfoCard>
 
           </div>
+
+          {/* Event Food Summary — quick-scan read of the same catering data the
+              Catering tab edits. Computed via the shared resolveCateringPackages /
+              calcMergedCateringItems helpers so it can never show something the
+              Builder disagrees with. */}
+          {(() => {
+            const guestCount = details?.guest_count ?? 0
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const foodPackages = resolveCateringPackages(eventPackages as any, data.pkg ? { pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0 } as any : null)
+            const packageTitle = cateringPackageTitle(foodPackages)
+            const itemOverrides = parseMenuItemOverrides(details?.menu_item_overrides_json)
+            const items = calcMergedCateringItems(foodPackages, itemOverrides).filter(i => typeof i.total_qty === 'number' && i.total_qty > 0)
+            const serveStyle: Record<string, 'all' | 'staggered'> = (() => {
+              try { return JSON.parse(details?.serve_style_json || '{}') } catch { return {} }
+            })()
+
+            return (
+              <InfoCard title="Event Food Summary" fullWidth>
+                <div className="space-y-3 text-sm">
+                  <FoodSummarySection heading="Dietary Restrictions">
+                    <FoodSummaryBullet>{details?.dietary_restrictions || 'None noted'}</FoodSummaryBullet>
+                  </FoodSummarySection>
+
+                  <FoodSummarySection heading="Selected Package">
+                    <FoodSummaryBullet>{packageTitle || 'None selected'}</FoodSummaryBullet>
+                  </FoodSummarySection>
+
+                  {items.length > 0 && (
+                    <FoodSummarySection heading="Menu Items">
+                      <div className="space-y-2">
+                        {items.map(item => {
+                          const qty = item.total_qty as number
+                          const vessel = vesselLabelFor(item)
+                          const style = serveStyle[item.item_name] ?? (qty > 1 ? 'staggered' : 'all')
+                          const sauces = saucesForItem(item.item_name, details?.selected_sauces)
+                          return (
+                            <div key={item.item_name}>
+                              <FoodSummaryBullet>{item.item_name}</FoodSummaryBullet>
+                              <div className="pl-4 mt-0.5 space-y-0.5">
+                                <FoodSummarySubBullet>{qty} {pluralizeVessel(vessel, qty)}</FoodSummarySubBullet>
+                                {item.piece_count !== undefined && <FoodSummarySubBullet>{item.piece_count} pieces</FoodSummarySubBullet>}
+                                {item.half_pan_qty ? <FoodSummarySubBullet>+ {item.half_pan_qty} Half Chafer</FoodSummarySubBullet> : null}
+                                {style === 'staggered' && qty > 1 && <FoodSummarySubBullet>Serve 1 {vessel.toLowerCase()} at a time</FoodSummarySubBullet>}
+                                {sauces.map(s => <FoodSummarySubBullet key={s}>{s}</FoodSummarySubBullet>)}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </FoodSummarySection>
+                  )}
+
+                  <FoodSummarySection heading="Operational Notes">
+                    {details?.food_notes && <FoodSummaryBullet>Notes: {details.food_notes}</FoodSummaryBullet>}
+                    <FoodSummaryBullet>{CATERING_DISCLAIMER}</FoodSummaryBullet>
+                  </FoodSummarySection>
+                </div>
+              </InfoCard>
+            )
+          })()}
 
           {/* Add-ons */}
           <InfoCard title="Add-ons" fullWidth>
@@ -629,8 +726,16 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Package</label>
                         <select
+                          key={ep.package_id}
                           defaultValue={ep.package_id}
-                          onBlur={e => updatePackage(ep.id, { package_id: e.target.value })}
+                          onBlur={e => {
+                            const newValue = e.target.value
+                            if (newValue !== ep.package_id && !packageChangeIsSafe(ep.package_id)) {
+                              e.target.value = ep.package_id
+                              return
+                            }
+                            updatePackage(ep.id, { package_id: newValue })
+                          }}
                           className="bg-white border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:border-[#C8973A]"
                         >
                           <option value="">— none —</option>
@@ -729,27 +834,6 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   ) : null}
                   {details.tab_details && (
                     <p className="text-gray-500 text-xs mt-2 leading-relaxed">{details.tab_details}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Food Notes & Restrictions */}
-            {(details?.dietary_restrictions || details?.food_notes) && (
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">Food Notes & Restrictions</h3>
-                <div className="space-y-2 text-sm">
-                  {details.dietary_restrictions && (
-                    <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-red-600 mb-0.5">Dietary Restrictions</p>
-                      <p className="text-gray-900 leading-relaxed">{details.dietary_restrictions}</p>
-                    </div>
-                  )}
-                  {details.food_notes && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-0.5">Food Notes</p>
-                      <p className="text-gray-900 leading-relaxed">{details.food_notes}</p>
-                    </div>
                   )}
                 </div>
               </div>
@@ -1044,6 +1128,35 @@ function InfoCard({ title, children, fullWidth }: { title: string; children: Rea
     <div className={`rounded-xl border border-gray-200 bg-white p-4 ${fullWidth ? 'col-span-2' : ''}`}>
       <h3 className="text-xs font-bold tracking-widest uppercase text-[#C8973A] mb-3">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+// Small, scan-friendly building blocks for the Event Food Summary — bold heading +
+// plain bullets, deliberately no cards/badges/pills nested inside the outer InfoCard.
+function FoodSummarySection({ heading, children }: { heading: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">{heading}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  )
+}
+
+function FoodSummaryBullet({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-gray-800">
+      <span className="text-gray-400 shrink-0">•</span>
+      <span>{children}</span>
+    </div>
+  )
+}
+
+function FoodSummarySubBullet({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-gray-600 text-xs">
+      <span className="text-gray-300 shrink-0">◦</span>
+      <span>{children}</span>
     </div>
   )
 }
