@@ -172,6 +172,24 @@ export function cateringPackageTitle(packages: CateringPackageInput[]): string {
     .join(' | ')
 }
 
+// Canonical total guest count across an event's catering packages. event_packages is
+// the source of truth for guest count (see docs/EVENT_DETAILS_DATA_AUDIT.md §C) — most
+// existing consumers still read the legacy single-package event_details.guest_count
+// directly instead, which is exactly the drift that audit documents. This is the one
+// place that sum should be computed going forward. legacyGuestCount is only used as a
+// fallback when there are no packages with a guest count set (e.g. a historical event
+// that predates the event_packages migration), matching the pattern already proven in
+// generateRunOfShow's totalGuests calculation (noteGenerators.ts).
+//
+// Not yet called by any consumer — see docs/EVENT_DETAILS_DATA_AUDIT.md §G for the
+// planned, one-consumer-at-a-time migration order.
+export function getTotalGuestCount(packages: CateringPackageInput[], legacyGuestCount = 0): number {
+  const total = packages
+    .filter(p => p.pkg && p.guest_count > 0)
+    .reduce((sum, p) => sum + p.guest_count, 0)
+  return total > 0 ? total : legacyGuestCount
+}
+
 export interface SauceRule {
   trigger: string
   sauces: string[]
