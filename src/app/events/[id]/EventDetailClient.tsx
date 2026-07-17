@@ -21,7 +21,7 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
-import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask } from '@/lib/db'
+import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask, EventCommunityGiving } from '@/lib/db'
 
 interface FullData {
   event: Event
@@ -33,6 +33,7 @@ interface FullData {
   pkg: Package | null
   menuItems: MenuItem[]
   packages: EventPackageWithItems[]
+  communityGiving: EventCommunityGiving | null
 }
 
 interface Props {
@@ -60,7 +61,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
   const [commDate, setCommDate] = useState('')
   const [commTime, setCommTime] = useState('')
 
-  const { event, client, details, addOns, notes, communications } = data
+  const { event, client, details, addOns, notes, communications, communityGiving } = data
 
   const [floorPlanNotes, setFloorPlanNotes] = useState(details?.floor_plan_notes ?? '')
   const [floorNotesSaving, setFloorNotesSaving] = useState(false)
@@ -218,7 +219,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     toast.success('Done editing')
   }
 
-  async function saveField(section: 'event' | 'client' | 'details', key: string, value: unknown) {
+  async function saveField(section: 'event' | 'client' | 'details' | 'community_giving', key: string, value: unknown) {
     try {
       let body: Record<string, unknown> = { [section]: { [key]: value } }
 
@@ -326,6 +327,12 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
+    await reload()
+  }
+
+  async function removeCommunityGiving() {
+    if (!confirm('Remove this Community Giving record?')) return
+    await fetch(`/api/events/${event.id}/community-giving`, { method: 'DELETE' })
     await reload()
   }
 
@@ -581,6 +588,37 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 <EditableRow locked={locked} label="Drink Tickets" value={String(details?.drink_tickets ?? '')} type="number" onSave={(v) => saveField('details', 'drink_tickets', Number(v))} />
               )}
               <ExpandableText locked={locked} label="Tab Details" value={details?.tab_details ?? ''} onSave={(v) => saveField('details', 'tab_details', v)} />
+            </InfoCard>
+
+            <InfoCard title="Community Giving">
+              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
+                Optional — a record here means community giving occurred for this event. Separate from pricing, discounts, comps, or Toast payment status.
+              </p>
+              <EditableRow locked={locked} label="Recipient Organization" value={communityGiving?.recipient_org ?? ''} onSave={(v) => saveField('community_giving', 'recipient_org', v)} />
+              <EditableRow
+                locked={locked}
+                label="Estimated Value"
+                type="number"
+                value={String(communityGiving?.estimated_value ?? '')}
+                display={communityGiving?.estimated_value != null ? formatCurrency(communityGiving.estimated_value) : ''}
+                onSave={(v) => saveField('community_giving', 'estimated_value', v === '' ? null : Number(v))}
+              />
+              <EditableRow
+                locked={locked}
+                label="Giving Date"
+                type="date"
+                value={communityGiving?.giving_date ?? ''}
+                onSave={(v) => saveField('community_giving', 'giving_date', v || null)}
+              />
+              <EditableRow locked={locked} label="Approved By" value={communityGiving?.approved_by ?? ''} onSave={(v) => saveField('community_giving', 'approved_by', v)} />
+              <ExpandableText locked={locked} label="Description" value={communityGiving?.description ?? ''} onSave={(v) => saveField('community_giving', 'description', v)} />
+              {communityGiving && (
+                <div className="pt-2 mt-1 flex justify-end">
+                  <button onClick={removeCommunityGiving} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+                    Remove Community Giving Record
+                  </button>
+                </div>
+              )}
             </InfoCard>
 
           </div>

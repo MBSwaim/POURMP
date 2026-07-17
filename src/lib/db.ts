@@ -320,6 +320,24 @@ function initSchema(db: Database.Database) {
       staff_id INTEGER REFERENCES staff_members(id),
       created_at TEXT NOT NULL
     )`,
+    // Community Giving (Version 1.0, Milestone 4.1) — one optional record per event,
+    // following the same 1:1 pattern as event_debriefs. The record's mere existence
+    // means community giving occurred for that event; there is no separate Yes/No
+    // flag. estimated_value is an estimate of value given away, not revenue, a price,
+    // a discount, a comp, or a waived charge — it must never be read by any pricing,
+    // revenue, or Toast-related calculation. approved_by is plain text because staff
+    // accounts/authentication don't exist yet (see ROADMAP.md).
+    `CREATE TABLE IF NOT EXISTS event_community_giving (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER UNIQUE NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      recipient_org TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      estimated_value REAL,
+      giving_date TEXT,
+      approved_by TEXT DEFAULT '',
+      created_at TEXT,
+      updated_at TEXT
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -430,6 +448,22 @@ export interface EventDebrief {
   staffing_notes: string
   would_repeat_client: string
   recommendations: string
+  created_at: string
+  updated_at: string
+}
+
+// Community Giving — see the event_community_giving migration comment in initSchema()
+// for the full scoping rationale. estimated_value is never revenue, a price, a
+// discount, a comp, or a waived charge, and must never feed a pricing/revenue/Toast
+// calculation.
+export interface EventCommunityGiving {
+  id: number
+  event_id: number
+  recipient_org: string
+  description: string
+  estimated_value: number | null
+  giving_date: string | null
+  approved_by: string
   created_at: string
   updated_at: string
 }
@@ -621,7 +655,8 @@ export function getEventFull(id: number) {
   // backward compat: first package = primary
   const pkg = packages[0]?.pkg ?? null
   const menuItems = packages[0]?.menuItems ?? []
-  return { event, client, details, addOns, notes, communications, pkg, menuItems, packages }
+  const communityGiving = getCommunityGiving(id) ?? null
+  return { event, client, details, addOns, notes, communications, pkg, menuItems, packages, communityGiving }
 }
 
 export function createEvent(data: {
@@ -1636,6 +1671,35 @@ export function upsertDebrief(eventId: number, data: Omit<EventDebrief, 'id' | '
     `).run(eventId, data.actual_guest_count, data.went_well, data.issues, data.catering_accuracy,
       data.bar_impact_accuracy, data.staffing_notes, data.would_repeat_client, data.recommendations, now, now)
   }
+}
+
+// ─── Community Giving ─────────────────────────────────────────────────────────
+// See the event_community_giving migration comment in initSchema() for scope. One
+// optional record per event (V1.0) — its existence is the "did giving occur" signal,
+// there is no separate boolean flag. Never read by pricing/revenue/Toast calculations.
+
+export function getCommunityGiving(eventId: number): EventCommunityGiving | undefined {
+  return getDb().prepare(`SELECT * FROM event_community_giving WHERE event_id = ?`).get(eventId) as EventCommunityGiving | undefined
+}
+
+export function upsertCommunityGiving(eventId: number, data: Partial<Omit<EventCommunityGiving, 'id' | 'event_id' | 'created_at' | 'updated_at'>>): void {
+  const now = new Date().toISOString()
+  const existing = getCommunityGiving(eventId)
+  if (existing) {
+    const fields = Object.keys(data).map((k) => `${k} = ?`).join(', ')
+    getDb().prepare(`UPDATE event_community_giving SET ${fields}, updated_at = ? WHERE event_id = ?`).run(...Object.values(data), now, eventId)
+  } else {
+    const keys = ['event_id', ...Object.keys(data), 'created_at', 'updated_at']
+    const vals = [eventId, ...Object.values(data), now, now]
+    const placeholders = keys.map(() => '?').join(', ')
+    getDb()
+      .prepare(`INSERT INTO event_community_giving (${keys.join(', ')}) VALUES (${placeholders})`)
+      .run(...vals)
+  }
+}
+
+export function deleteCommunityGiving(eventId: number): void {
+  getDb().prepare(`DELETE FROM event_community_giving WHERE event_id = ?`).run(eventId)
 }
 
 // Repeat-event intelligence: past closed events + debriefs for the same client, excluding the current event
