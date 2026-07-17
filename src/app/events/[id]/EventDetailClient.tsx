@@ -612,6 +612,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               />
               <EditableRow locked={locked} label="Approved By" value={communityGiving?.approved_by ?? ''} onSave={(v) => saveField('community_giving', 'approved_by', v)} />
               <ExpandableText locked={locked} label="Description" value={communityGiving?.description ?? ''} onSave={(v) => saveField('community_giving', 'description', v)} />
+              <ExpandableText locked={locked} label="Internal Notes (not for reporting)" value={communityGiving?.internal_notes ?? ''} onSave={(v) => saveField('community_giving', 'internal_notes', v)} />
               {communityGiving && (
                 <div className="pt-2 mt-1 flex justify-end">
                   <button onClick={removeCommunityGiving} className="text-xs text-red-400 hover:text-red-600 transition-colors">

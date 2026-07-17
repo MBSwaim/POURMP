@@ -338,6 +338,11 @@ function initSchema(db: Database.Database) {
       created_at TEXT,
       updated_at TEXT
     )`,
+    // Internal operational context for a Community Giving record (e.g. "sponsor
+    // requested," "replaced previous donation") — staff-facing only. Never surfaced
+    // in Prep Docs, dashboard metrics, or any calculation, same as the rest of
+    // Community Giving.
+    `ALTER TABLE event_community_giving ADD COLUMN internal_notes TEXT DEFAULT ''`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -464,6 +469,7 @@ export interface EventCommunityGiving {
   estimated_value: number | null
   giving_date: string | null
   approved_by: string
+  internal_notes: string
   created_at: string
   updated_at: string
 }
