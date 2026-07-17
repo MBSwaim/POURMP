@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems } from '@/lib/calculations'
+import { effectiveGuests, formatCurrency, calcFloorPlan, SAUCE_RULES, getServingware, countChafingDishes, calcSupplies, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems, getTotalGuestCount } from '@/lib/calculations'
 import { Logo } from '@/components/Logo'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
@@ -92,7 +92,8 @@ export function BEOClient({ events, initialEventId = '' }: { events: EventWithCl
 function BEODocument({ data }: { data: FullData }) {
   const { event, client, details, addOns, pkg, menuItems } = data
 
-  const guestCount = details?.guest_count ?? 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const guestCount = getTotalGuestCount((data.packages ?? []) as any, details?.guest_count ?? 0)
   const bufferPct  = details?.buffer_pct ?? 0
   const effGuests  = effectiveGuests(guestCount, bufferPct)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

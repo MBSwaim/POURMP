@@ -8,6 +8,7 @@ import { calcReadiness } from './readiness'
 import { generateTasksForEvent, CRITICAL_DYNAMIC_TASK_KEYS, type TaskContext } from './tasks'
 import { scanEventRisks, highestRiskLevel, type RiskFlag, type RiskLevel } from './riskScanner'
 import type { EventForNotes } from './noteGenerators'
+import { getTotalGuestCount } from './calculations'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -811,7 +812,7 @@ export function getDashboardStats() {
   const highBarImpactCount = getOperationalDashboard().highBarImpact
     .filter(e => e.event_date <= in14).length
 
-  const upcomingEvents = db.prepare(`
+  const upcomingEventsRaw = db.prepare(`
     SELECT e.*, c.first_name, c.last_name, ed.guest_count
     FROM events e
     LEFT JOIN clients c ON c.id = e.client_id
@@ -819,6 +820,14 @@ export function getDashboardStats() {
     WHERE e.event_date >= ? AND e.event_date <= ?
     ORDER BY e.event_date ASC
   `).all(today, in14) as Array<Event & { first_name: string; last_name: string; guest_count: number }>
+
+  // guest_count here is the legacy event_details field selected above — resolve it to
+  // the canonical total across event_packages (see docs/EVENT_DETAILS_DATA_AUDIT.md §C).
+  const upcomingEvents = upcomingEventsRaw.map(row => ({
+    ...row,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    guest_count: getTotalGuestCount(getEventPackages(row.id) as any, row.guest_count ?? 0),
+  }))
 
   return {
     eventsThisMonth, eventsThisWeek, upcomingEvents,
@@ -929,6 +938,10 @@ export function getOperationalDashboard(): OperationalDashboard {
   const needsAttention: OpsEventSummary[] = []
 
   for (const row of rows) {
+    // row.guest_count is the legacy event_details field selected above — resolve it to
+    // the canonical total across event_packages (see docs/EVENT_DETAILS_DATA_AUDIT.md §C).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalGuestCount = getTotalGuestCount(getEventPackages(row.id) as any, row.guest_count ?? 0)
     const evForCalc: EventForNotes = {
       id: row.id,
       event_name: row.event_name,
@@ -945,7 +958,7 @@ export function getOperationalDashboard(): OperationalDashboard {
       last_name: row.last_name ?? '',
       email: '',
       company: row.company ?? '',
-      guest_count: row.guest_count ?? 0,
+      guest_count: totalGuestCount,
       package_name: row.package_name ?? '',
       bar_tab_type: row.bar_tab_type ?? '',
       drink_tickets: row.drink_tickets ?? 0,
@@ -953,7 +966,7 @@ export function getOperationalDashboard(): OperationalDashboard {
 
     const hasPackage = row.package_count > 0
     const readiness = calcReadiness({
-      guest_count: row.guest_count ?? 0,
+      guest_count: totalGuestCount,
       hasPackage,
       bar_tab_type: row.bar_tab_type,
       setup_notes: row.setup_notes,
@@ -1005,7 +1018,7 @@ export function getOperationalDashboard(): OperationalDashboard {
       event_date: row.event_date,
       event_time: row.event_time ?? '',
       status: row.status,
-      guest_count: row.guest_count ?? 0,
+      guest_count: totalGuestCount,
       client_name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.company || '—',
       barImpactLevel: barLevel,
       readinessScore: readiness.score,
@@ -1116,6 +1129,10 @@ export function getEventRiskAssessment(): EventRiskAssessment {
   const events: EventRiskSummary[] = []
 
   for (const row of rows) {
+    // row.guest_count is the legacy event_details field selected above — resolve it to
+    // the canonical total across event_packages (see docs/EVENT_DETAILS_DATA_AUDIT.md §C).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalGuestCount = getTotalGuestCount(getEventPackages(row.id) as any, row.guest_count ?? 0)
     const evForCalc: EventForNotes = {
       id: row.id,
       event_name: row.event_name,
@@ -1132,7 +1149,7 @@ export function getEventRiskAssessment(): EventRiskAssessment {
       last_name: row.last_name ?? '',
       email: '',
       company: row.company ?? '',
-      guest_count: row.guest_count ?? 0,
+      guest_count: totalGuestCount,
       package_name: '',
       bar_tab_type: row.bar_tab_type ?? '',
       drink_tickets: row.drink_tickets ?? 0,
@@ -1154,7 +1171,7 @@ export function getEventRiskAssessment(): EventRiskAssessment {
 
     const risks = scanEventRisks({
       isBooked: row.status !== 'Closed',
-      guestCount: row.guest_count ?? 0,
+      guestCount: totalGuestCount,
       hasPackage: row.package_count > 0,
       depositReceived: !!row.toast_deposit_received_date,
       barImpactLevel,
@@ -1179,7 +1196,7 @@ export function getEventRiskAssessment(): EventRiskAssessment {
         event_time: row.event_time ?? '',
         status: row.status,
         client_name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.company || '—',
-        guest_count: row.guest_count ?? 0,
+        guest_count: totalGuestCount,
         risks,
         highestLevel: highestRiskLevel(risks),
       })
@@ -1234,6 +1251,11 @@ export function getEventRisks(eventId: number): RiskFlag[] {
   } | undefined
   if (!row) return []
 
+  // row.guest_count is the legacy event_details field selected above — resolve it to
+  // the canonical total across event_packages (see docs/EVENT_DETAILS_DATA_AUDIT.md §C).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const totalGuestCount = getTotalGuestCount(getEventPackages(row.id) as any, row.guest_count ?? 0)
+
   const otherActiveEventsSameDate = (db.prepare(
     `SELECT COUNT(*) as c FROM events WHERE event_date = ? AND status != 'Closed' AND id != ?`
   ).get(row.event_date, eventId) as { c: number }).c
@@ -1242,7 +1264,7 @@ export function getEventRisks(eventId: number): RiskFlag[] {
     id: row.id, event_name: row.event_name, event_date: row.event_date, event_time: row.event_time ?? '',
     setup_time: '', decorate_time: '', teardown_time: row.teardown_time ?? '', production_close_time: '',
     event_duration_mins: 180, space: row.space ?? '', status: row.status,
-    first_name: '', last_name: '', email: '', guest_count: row.guest_count ?? 0,
+    first_name: '', last_name: '', email: '', guest_count: totalGuestCount,
     bar_tab_type: row.bar_tab_type ?? '', drink_tickets: row.drink_tickets ?? 0,
   }).level
 
@@ -1259,7 +1281,7 @@ export function getEventRisks(eventId: number): RiskFlag[] {
 
   return scanEventRisks({
     isBooked: row.status !== 'Closed',
-    guestCount: row.guest_count ?? 0,
+    guestCount: totalGuestCount,
     hasPackage: row.package_count > 0,
     depositReceived: !!row.toast_deposit_received_date,
     barImpactLevel,
@@ -1642,6 +1664,10 @@ function buildTaskContext(eventId: number): TaskContext | null {
   const { event, details, packages } = full
   const hasPackage = packages.some(p => !!p.package_id)
   const packageCount = packages.filter(p => !!p.package_id).length
+  // packages is the source of truth for guest count (see docs/EVENT_DETAILS_DATA_AUDIT.md
+  // §C); details?.guest_count is only used as the legacy fallback.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const totalGuestCount = getTotalGuestCount(packages as any, details?.guest_count ?? 0)
 
   const evForImpact: EventForNotes = {
     id: event.id,
@@ -1658,14 +1684,14 @@ function buildTaskContext(eventId: number): TaskContext | null {
     first_name: '',
     last_name: '',
     email: '',
-    guest_count: details?.guest_count ?? 0,
+    guest_count: totalGuestCount,
     bar_tab_type: details?.bar_tab_type ?? '',
     drink_tickets: details?.drink_tickets ?? 0,
   }
   const barImpactLevel = calcBarImpact(evForImpact).level
 
   return {
-    guestCount: details?.guest_count ?? 0,
+    guestCount: totalGuestCount,
     hasPackage,
     packageCount,
     barTabType: details?.bar_tab_type ?? null,

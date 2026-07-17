@@ -13,7 +13,7 @@ const BAR_TAB_DESCRIPTIONS: Record<string, string> = {
   'By Consumption': 'All event beverages are to be rung to the event tab and charged according to actual consumption.',
   'Individual Tabs': 'Guests will open individual tabs directly at the bar for drink selections only.',
 }
-import { calcFloorPlan, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle, vesselLabelFor, pluralizeVessel, saucesForItem } from '@/lib/calculations'
+import { calcFloorPlan, countChafingDishes, calcSupplies, formatCateringText, formatEquipmentText, parseMenuItemOverrides, formatCurrency, resolveCateringPackages, calcMergedCateringItems, cateringPackageTitle, vesselLabelFor, pluralizeVessel, saucesForItem, getTotalGuestCount } from '@/lib/calculations'
 import { to12Hour, computeEventTimes, shiftTime } from '@/lib/timeUtils'
 import { formatPhoneNumber } from '@/lib/phone'
 import { TOAST_STAGES } from '@/lib/toastStatus'
@@ -72,8 +72,14 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
   const isClosed = event.status === 'Closed'
   const locked = isClosed && !editingClosed
 
+  // Canonical total guest count across this event's catering packages — event_packages
+  // is the source of truth (see docs/EVENT_DETAILS_DATA_AUDIT.md §C); details?.guest_count
+  // is only used as the legacy fallback when no packages have a guest count set.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const totalGuestCount = getTotalGuestCount(eventPackages as any, details?.guest_count ?? 0)
+
   const readiness = calcReadiness({
-    guest_count: details?.guest_count ?? 0,
+    guest_count: totalGuestCount,
     hasPackage: eventPackages.some(ep => !!ep.package_id),
     bar_tab_type: details?.bar_tab_type,
     setup_notes: details?.setup_notes,
@@ -102,12 +108,12 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     last_name: client?.last_name ?? '',
     email: '',
     company: client?.company ?? '',
-    guest_count: details?.guest_count ?? 0,
+    guest_count: totalGuestCount,
     bar_tab_type: details?.bar_tab_type ?? '',
     drink_tickets: details?.drink_tickets ?? 0,
   }).level
   const taskContext: TaskContext = {
-    guestCount: details?.guest_count ?? 0,
+    guestCount: totalGuestCount,
     hasPackage,
     packageCount,
     barTabType: details?.bar_tab_type,
@@ -584,7 +590,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
               calcMergedCateringItems helpers so it can never show something the
               Builder disagrees with. */}
           {(() => {
-            const guestCount = details?.guest_count ?? 0
+            const guestCount = totalGuestCount
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const foodPackages = resolveCateringPackages(eventPackages as any, data.pkg ? { pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0 } as any : null)
             const packageTitle = cateringPackageTitle(foodPackages)
@@ -973,7 +979,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             {/* Supplies Summary */}
             {(() => {
-              const guestCount = details?.guest_count ?? 0
+              const guestCount = totalGuestCount
               const bufferPct = details?.buffer_pct ?? 0
               if (guestCount === 0) return null
 
@@ -1021,7 +1027,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
             {/* Plain-Text Catering & Equipment Summaries */}
             {(() => {
-              const guestCount = details?.guest_count ?? 0
+              const guestCount = totalGuestCount
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const packages = resolveCateringPackages(eventPackages as any, data.pkg ? { pkg: data.pkg, menuItems: data.menuItems, guest_count: guestCount, buffer_pct: details?.buffer_pct ?? 0 } as any : null)
               const combinedTitle = cateringPackageTitle(packages)
@@ -1048,7 +1054,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
 
         {/* Floor Plan Tab */}
         {tab === 'floorplan' && (() => {
-          const rec = calcFloorPlan(details?.guest_count ?? 0)
+          const rec = calcFloorPlan(totalGuestCount)
           const tvOn = !!(details?.big_screen_tv)
           return (
             <div className="space-y-4">

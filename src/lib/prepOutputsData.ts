@@ -2,6 +2,7 @@ import { getEventFull, getDrinkTicketLog, getDebrief, getClientDebriefHistory, s
 import type { DrinkTicketLog, EventDebrief, EventTask } from './db'
 import type { RiskFlag } from './riskScanner'
 import type { EventForNotes } from './noteGenerators'
+import { getTotalGuestCount } from './calculations'
 
 export interface ClientHistoryEntry {
   id: number; event_name: string; event_date: string; actual_guest_count: number | null
@@ -44,7 +45,8 @@ export function getPrepOutputsData(eventId: number): PrepOutputsData | null {
     email: client?.email ?? '',
     phone: client?.phone ?? '',
     company: client?.company ?? '',
-    guest_count: details?.guest_count ?? 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    guest_count: getTotalGuestCount(data.packages as any, details?.guest_count ?? 0),
     package_name: pkg?.name ?? '',
     price_per_guest: pkg?.price_per_guest ?? 0,
     food_notes: details?.food_notes ?? '',

@@ -1,13 +1,15 @@
 'use client'
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Event, EventWithClient } from '@/lib/db'
+import type { Event, EventWithClient, EventPackageWithItems } from '@/lib/db'
 import { to12Hour } from '@/lib/timeUtils'
+import { getTotalGuestCount } from '@/lib/calculations'
 
 interface EventFull {
   event: Event
   details: { big_screen_tv?: number; guest_count?: number; bar_tab_type?: string; beo_notes?: string; kitchen_notes?: string } | null | undefined
   client: { first_name?: string; last_name?: string } | null | undefined
+  packages?: EventPackageWithItems[]
 }
 
 const CHECKLIST_ITEMS = [
@@ -132,9 +134,11 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
                 {event.event_time && (
                   <p className="font-semibold text-gray-900">{to12Hour(event.event_time)}</p>
                 )}
-                {eventFull?.details?.guest_count ? (
-                  <p>{eventFull.details.guest_count} guests</p>
-                ) : null}
+                {(() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const totalGuestCount = getTotalGuestCount((eventFull?.packages ?? []) as any, eventFull?.details?.guest_count ?? 0)
+                  return totalGuestCount > 0 ? <p>{totalGuestCount} guests</p> : null
+                })()}
               </div>
             </div>
           </div>

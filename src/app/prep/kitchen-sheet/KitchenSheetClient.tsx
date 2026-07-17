@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { effectiveGuests, getApplicableSauces, getServingware, countChafingDishes, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems } from '@/lib/calculations'
+import { effectiveGuests, getApplicableSauces, getServingware, countChafingDishes, parseMenuItemOverrides, resolveCateringPackages, calcMergedCateringItems, getTotalGuestCount } from '@/lib/calculations'
 import type { ApplicableSauce } from '@/lib/calculations'
 import { to12Hour, shiftTime } from '@/lib/timeUtils'
 import type { Event, Client, EventDetails, AddOn, Package, MenuItem, EventWithClient, EventPackageWithItems } from '@/lib/db'
@@ -95,7 +95,8 @@ export function KitchenSheetClient({ events, initialEventId = '' }: { events: Ev
 function PrepSheet({ data }: { data: FullData }) {
   const { event, client, details, addOns, pkg, menuItems } = data
 
-  const guestCount = details?.guest_count ?? 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const guestCount = getTotalGuestCount((data.packages ?? []) as any, details?.guest_count ?? 0)
   const bufferPct = details?.buffer_pct ?? 0
   const effGuests = effectiveGuests(guestCount, bufferPct)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
