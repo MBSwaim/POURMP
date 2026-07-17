@@ -62,6 +62,8 @@ export function getPrepOutputsData(eventId: number): PrepOutputsData | null {
     menu_item_overrides_json: details?.menu_item_overrides_json ?? '',
     beo_notes: details?.beo_notes ?? '',
     kitchen_notes: details?.kitchen_notes ?? '',
+    foh_notes: details?.foh_notes ?? '',
+    bar_notes: details?.bar_notes ?? '',
     staffing_notes: details?.staffing_notes ?? '',
     buffer_pct: details?.buffer_pct ?? 0,
     contract_signed: details?.contract_signed ?? 0,

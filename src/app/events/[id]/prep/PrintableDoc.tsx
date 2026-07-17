@@ -515,6 +515,12 @@ export function FOHNotesDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTas
           <p className="font-[var(--font-crimson)] text-base text-gray-800">{ev.staffing_notes}</p>
         </Section>
       )}
+
+      {ev.foh_notes && (
+        <Section title="FOH Notes">
+          <p className="font-[var(--font-crimson)] text-base text-gray-800">{ev.foh_notes}</p>
+        </Section>
+      )}
     </PrintDoc>
   )
 }
@@ -571,6 +577,12 @@ export function BarNotesDoc({ ev, tasks }: { ev: EventForNotes; tasks?: EventTas
         <BulletItem>No capped open bars — budget control via pre-paid drink tickets only.</BulletItem>
         <BulletItem>In accordance with responsible alcohol service practices, Manhattan Project Beer Co. reserves the right to refuse service to any guest who appears intoxicated. Guests and hosts are expected to comply with all applicable alcohol laws. Management decision on service is final.</BulletItem>
       </Section>
+
+      {ev.bar_notes && (
+        <Section title="Bar Notes">
+          <p className="font-[var(--font-crimson)] text-base text-gray-800">{ev.bar_notes}</p>
+        </Section>
+      )}
     </PrintDoc>
   )
 }

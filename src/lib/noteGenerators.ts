@@ -52,6 +52,8 @@ export interface EventForNotes {
   menu_item_overrides_json?: string
   beo_notes?: string
   kitchen_notes?: string
+  foh_notes?: string
+  bar_notes?: string
   staffing_notes?: string
   buffer_pct?: number
   contract_signed?: number
