@@ -343,6 +343,21 @@ function initSchema(db: Database.Database) {
     // in Prep Docs, dashboard metrics, or any calculation, same as the rest of
     // Community Giving.
     `ALTER TABLE event_community_giving ADD COLUMN internal_notes TEXT DEFAULT ''`,
+    // Toast BEO PDF upload — store the original PDF (path under data/uploads/beo/)
+    // plus scraped highlights JSON. One active upload per event; replacing
+    // overwrites. Toast remains system of record; this is an ops convenience for
+    // keeping the BEO on the event and seeding execution fields.
+    `CREATE TABLE IF NOT EXISTS event_beo_uploads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER UNIQUE NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      original_filename TEXT NOT NULL,
+      stored_filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL DEFAULT 'application/pdf',
+      file_size INTEGER NOT NULL DEFAULT 0,
+      parsed_json TEXT NOT NULL DEFAULT '{}',
+      raw_text TEXT DEFAULT '',
+      uploaded_at TEXT NOT NULL
+    )`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -460,6 +475,18 @@ export interface EventDebrief {
 // for the full scoping rationale. estimated_value is never revenue, a price, a
 // discount, a comp, or a waived charge, and must never feed a pricing/revenue/Toast
 // calculation.
+export interface EventBeoUpload {
+  id: number
+  event_id: number
+  original_filename: string
+  stored_filename: string
+  mime_type: string
+  file_size: number
+  parsed_json: string
+  raw_text: string
+  uploaded_at: string
+}
+
 export interface EventCommunityGiving {
   id: number
   event_id: number
@@ -701,6 +728,11 @@ export function updateEvent(id: number, data: Partial<Omit<Event, 'id' | 'create
 
 export function deleteEvent(id: number) {
   const db = getDb()
+  // Remove stored BEO PDF from disk before the DB row goes away.
+  try {
+    const beo = getBeoUpload(id)
+    if (beo) removeBeoUploadFile(beo.stored_filename)
+  } catch { /* best-effort */ }
   const tx = db.transaction(() => {
     // These tables key on event_id without an enforced FK, so ON DELETE CASCADE
     // on `events` doesn't reach them — clean them up explicitly.
@@ -1704,6 +1736,83 @@ export function upsertCommunityGiving(eventId: number, data: Partial<Omit<EventC
 
 export function deleteCommunityGiving(eventId: number): void {
   getDb().prepare(`DELETE FROM event_community_giving WHERE event_id = ?`).run(eventId)
+}
+
+// ─── Toast BEO PDF uploads ────────────────────────────────────────────────────
+
+export function getBeoUploadDir(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs') as typeof import('fs')
+  const dir = path.join(process.cwd(), 'data', 'uploads', 'beo')
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+export function getBeoUploadPath(storedFilename: string): string {
+  return path.join(getBeoUploadDir(), storedFilename)
+}
+
+export function removeBeoUploadFile(storedFilename: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs') as typeof import('fs')
+  const filePath = getBeoUploadPath(storedFilename)
+  try { fs.unlinkSync(filePath) } catch { /* already gone */ }
+}
+
+export function getBeoUpload(eventId: number): EventBeoUpload | undefined {
+  return getDb()
+    .prepare('SELECT * FROM event_beo_uploads WHERE event_id = ?')
+    .get(eventId) as EventBeoUpload | undefined
+}
+
+export function upsertBeoUpload(
+  eventId: number,
+  data: {
+    original_filename: string
+    stored_filename: string
+    mime_type: string
+    file_size: number
+    parsed_json: string
+    raw_text: string
+  }
+): EventBeoUpload {
+  const existing = getBeoUpload(eventId)
+  const now = new Date().toISOString()
+  if (existing) {
+    // Drop the previous file when replacing
+    if (existing.stored_filename !== data.stored_filename) {
+      removeBeoUploadFile(existing.stored_filename)
+    }
+    getDb()
+      .prepare(
+        `UPDATE event_beo_uploads
+         SET original_filename = ?, stored_filename = ?, mime_type = ?, file_size = ?,
+             parsed_json = ?, raw_text = ?, uploaded_at = ?
+         WHERE event_id = ?`
+      )
+      .run(
+        data.original_filename, data.stored_filename, data.mime_type, data.file_size,
+        data.parsed_json, data.raw_text, now, eventId
+      )
+  } else {
+    getDb()
+      .prepare(
+        `INSERT INTO event_beo_uploads
+         (event_id, original_filename, stored_filename, mime_type, file_size, parsed_json, raw_text, uploaded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        eventId, data.original_filename, data.stored_filename, data.mime_type,
+        data.file_size, data.parsed_json, data.raw_text, now
+      )
+  }
+  return getBeoUpload(eventId)!
+}
+
+export function deleteBeoUpload(eventId: number): void {
+  const existing = getBeoUpload(eventId)
+  if (existing) removeBeoUploadFile(existing.stored_filename)
+  getDb().prepare('DELETE FROM event_beo_uploads WHERE event_id = ?').run(eventId)
 }
 
 // Repeat-event intelligence: past closed events + debriefs for the same client, excluding the current event

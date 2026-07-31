@@ -2,6 +2,7 @@ import { getDashboardStats, getKanbanEvents } from '@/lib/db'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
 import { NotificationSummaryCard } from '@/components/NotificationSummaryCard'
+import { DashboardBeoDrop } from '@/components/DashboardBeoDrop'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
@@ -45,6 +46,9 @@ export default function Dashboard() {
 
       {/* Notification Center summary */}
       <NotificationSummaryCard />
+
+      {/* Toast BEO import — scrape + attach to the matching event */}
+      <DashboardBeoDrop />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">

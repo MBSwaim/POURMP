@@ -40,3 +40,9 @@ next-env.d.ts
 /data/*.db-shm
 /data/*.db-wal
 /data/backups/
+
+# uploaded BEO PDFs (local ops files — never commit)
+/data/uploads/
+
+# sample / customer BEO PDFs dropped in the repo root for parser tuning
+/*.pdf
