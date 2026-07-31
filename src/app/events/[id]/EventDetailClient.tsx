@@ -87,7 +87,6 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
     floor_plan_notes: details?.floor_plan_notes,
     dietary_restrictions: details?.dietary_restrictions,
     staffing_notes: details?.staffing_notes,
-    contract_signed: details?.contract_signed,
   })
   const readinessColors = readinessColor(readiness.score)
 

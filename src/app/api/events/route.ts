@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       event_name, event_date, event_time, setup_time, teardown_time, production_close_time, decorate_time, event_duration_mins, status, space,
       first_name, last_name, email, phone, company,
       guest_count, package_id, buffer_pct, food_notes, dietary_restrictions,
-      bar_tab_limit, drink_tickets, tab_details, staffing_notes, contract_signed,
+      bar_tab_limit, drink_tickets, tab_details, staffing_notes,
       date_flexible, setup_notes, bar_tab_type,
       client_id: existingClientId,
     } = body
@@ -65,7 +65,6 @@ export async function POST(req: Request) {
       drink_tickets: Number(drink_tickets) || 0,
       tab_details,
       staffing_notes,
-      contract_signed: contract_signed ? 1 : 0,
       date_flexible: date_flexible ? 1 : 0,
       setup_notes,
       bar_tab_type,

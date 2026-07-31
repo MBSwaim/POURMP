@@ -66,7 +66,6 @@ export function getPrepOutputsData(eventId: number): PrepOutputsData | null {
     bar_notes: details?.bar_notes ?? '',
     staffing_notes: details?.staffing_notes ?? '',
     buffer_pct: details?.buffer_pct ?? 0,
-    contract_signed: details?.contract_signed ?? 0,
     toast_proposal_sent_date: details?.toast_proposal_sent_date ?? null,
     toast_confirmed_date: details?.toast_confirmed_date ?? null,
     toast_invoice_sent_date: details?.toast_invoice_sent_date ?? null,

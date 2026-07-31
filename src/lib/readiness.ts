@@ -12,7 +12,6 @@ export interface ReadinessInput {
   floor_plan_notes?: string | null
   dietary_restrictions?: string | null
   staffing_notes?: string | null
-  contract_signed?: number | boolean | null
 }
 
 export interface ReadinessCheck {
@@ -37,7 +36,6 @@ export function calcReadiness(input: ReadinessInput): ReadinessResult {
     { label: 'Setup / floor plan notes provided', passed: !!(input.setup_notes?.trim() || input.floor_plan_notes?.trim()) },
     { label: 'Dietary restrictions reviewed', passed: !!input.dietary_restrictions?.trim() },
     { label: 'Staffing / coordinator notes provided', passed: !!input.staffing_notes?.trim() },
-    { label: 'Contract signed', passed: !!input.contract_signed },
     { label: 'Guest count within venue capacity', passed: floorPlan ? !floorPlan.isOverCapacity : true },
   ]
 

@@ -644,7 +644,6 @@ export function LeadsPackDoc({ ev, tasks, risks, clientHistory }: { ev: EventFor
     floor_plan_notes: ev.floor_plan_notes,
     dietary_restrictions: ev.dietary_restrictions,
     staffing_notes: ev.staffing_notes,
-    contract_signed: ev.contract_signed,
   })
   const dynamicCount = tasks?.filter(t => t.category === 'Dynamic').length ?? 0
   const taskCtx: TaskContext = {

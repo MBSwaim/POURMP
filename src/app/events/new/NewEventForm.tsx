@@ -64,7 +64,6 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
     tab_details: '',
     bar_tab_type: '',
     staffing_notes: '',
-    contract_signed: false,
     date_flexible: false,
     setup_notes: '',
   })
@@ -402,14 +401,6 @@ export function NewEventForm({ packages, clients, prefill }: Props) {
           <Field label="Staffing Notes">
             <Textarea value={form.staffing_notes} onChange={(e) => set('staffing_notes', e.target.value)} rows={2} placeholder="Staff count, servers, coordinator notes… (guests order at the main bar — no dedicated event bartenders)" />
           </Field>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="contract"
-              checked={form.contract_signed as boolean}
-              onCheckedChange={(v) => set('contract_signed', Boolean(v))}
-            />
-            <Label htmlFor="contract" className="cursor-pointer">Contract Signed</Label>
-          </div>
         </div>
       </Section>
 

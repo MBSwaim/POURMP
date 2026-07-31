@@ -404,7 +404,6 @@ export interface EventDetails {
   drink_tickets: number
   tab_details: string
   staffing_notes: string
-  contract_signed: number
   date_flexible: number
   setup_notes: string
   bar_tab_type: string
@@ -950,7 +949,7 @@ export function getOperationalDashboard(): OperationalDashboard {
     SELECT e.id, e.event_name, e.event_date, e.event_time, e.teardown_time, e.space, e.status,
            c.first_name, c.last_name, c.company,
            ed.guest_count, ed.bar_tab_type, ed.drink_tickets, ed.setup_notes, ed.floor_plan_notes,
-           ed.dietary_restrictions, ed.staffing_notes, ed.contract_signed,
+           ed.dietary_restrictions, ed.staffing_notes,
            ed.toast_invoice_sent_date, ed.toast_deposit_received_date,
            (SELECT p.name FROM event_packages ep JOIN packages p ON p.id = ep.package_id
               WHERE ep.event_id = e.id AND ep.package_id != '' ORDER BY ep.sort_order LIMIT 1) AS package_name,
@@ -965,7 +964,7 @@ export function getOperationalDashboard(): OperationalDashboard {
     space: string; status: string; first_name: string | null; last_name: string | null; company: string | null
     guest_count: number | null; bar_tab_type: string | null; drink_tickets: number | null
     setup_notes: string | null; floor_plan_notes: string | null; dietary_restrictions: string | null
-    staffing_notes: string | null; contract_signed: number | null
+    staffing_notes: string | null
     toast_invoice_sent_date: string | null; toast_deposit_received_date: string | null
     package_name: string | null; package_count: number
   }>
@@ -1014,7 +1013,6 @@ export function getOperationalDashboard(): OperationalDashboard {
       floor_plan_notes: row.floor_plan_notes,
       dietary_restrictions: row.dietary_restrictions,
       staffing_notes: row.staffing_notes,
-      contract_signed: row.contract_signed,
     })
     const barLevel = calcBarImpact(evForCalc).level
 

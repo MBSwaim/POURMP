@@ -56,7 +56,6 @@ export interface EventForNotes {
   bar_notes?: string
   staffing_notes?: string
   buffer_pct?: number
-  contract_signed?: number
   toast_proposal_sent_date?: string | null
   toast_confirmed_date?: string | null
   toast_invoice_sent_date?: string | null
@@ -652,7 +651,6 @@ export function generatePreShiftBrief(ev: EventForNotes, tasks: BriefTask[], ris
     floor_plan_notes: ev.floor_plan_notes,
     dietary_restrictions: ev.dietary_restrictions,
     staffing_notes: ev.staffing_notes,
-    contract_signed: ev.contract_signed,
   })
   const dynamicCount = tasks.filter(t => t.category === 'Dynamic').length
   const taskCtx: TaskContext = {
