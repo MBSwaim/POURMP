@@ -523,7 +523,11 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                 {eventPackages.length > 1 && (
                   <p className="text-xs text-gray-500 italic">+{eventPackages.length - 1} more package{eventPackages.length > 2 ? 's' : ''} — see Catering tab</p>
                 )}
-                <EditableRow locked={locked} label="Guests" value={String(details?.guest_count ?? '')} type="number" onSave={(v) => saveField('details', 'guest_count', Number(v))} />
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Guests</span>
+                  <span className="text-gray-900 text-right">{totalGuestCount || '—'}</span>
+                </div>
+                <p className="text-xs text-gray-500 italic">Summed across all packages — edit on the Catering tab.</p>
                 <EditableRow locked={locked} label="Extra Headcount %" value={String((details?.buffer_pct ?? 0) * 100)} type="number" onSave={(v) => saveField('details', 'buffer_pct', Number(v) / 100)} />
                 <EditableRow locked={locked} label="Food Notes / Allergies" value={details?.food_notes ?? ''} onSave={(v) => saveField('details', 'food_notes', v)} />
                 <EditableRow locked={locked} label="Dietary Restrictions" value={details?.dietary_restrictions ?? ''} onSave={(v) => saveField('details', 'dietary_restrictions', v)} />
