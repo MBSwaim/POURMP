@@ -34,9 +34,13 @@ Concretely, per client-facing fact:
 | Who the lead/customer is | Toast |
 | Whether they've signed / paid | Toast |
 | What they were quoted / invoiced | Toast |
+| Catering packages and pricing (what's charged) | Toast |
+| Contracts | Toast |
 | What the event needs from the team to run well | **POURMP** |
 | What the team has done to prepare, and what's left | **POURMP** |
 | What was communicated internally about this event | **POURMP** |
+
+This table is the elevator-pitch version. The full, per-data-element ownership matrix — every major data area classified as Toast-owned/read-only, POURMP-owned/editable, POURMP-derived, or linked-without-duplication — lives in [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md) §3.
 
 ---
 
@@ -49,6 +53,13 @@ Concretely, per client-facing fact:
 5. **No feature ships half-finished.** A stub page or a field nobody reads is worse than no feature at all — it's the exact shape of drift this review process exists to catch.
 6. **Additive, non-destructive change.** Consistent with existing practice (`DEVELOPMENT_GUIDE.md`), schema and feature changes moving toward this lock should preserve historical data (export/backup before removal) rather than silently drop it.
 7. **Every screen answers one of two questions.** *Global: "What events need my attention today?"* or *Event Workspace: "Everything I need to execute this event."* A screen that doesn't clearly answer one of these — or tries to answer both at once — is a sign of feature sprawl and should be reworked or reconsidered before it ships. Adopted during the V1 architecture refactor as the standing test for every future page/screen decision.
+8. **Classify every data element before building it.** Before proposing any new field, workflow, status, or document, identify whether Toast already owns that information. Every data element POURMP touches falls into exactly one of four categories — apply this test before writing a line of schema or UI:
+   1. **Toast-owned, read-only in POURMP** — POURMP never edits it and, ideally, never stores an independent copy of it at all.
+   2. **POURMP-owned and editable** — a genuinely operational fact with no Toast equivalent; POURMP is the only place it lives.
+   3. **Derived by POURMP from authoritative information** — a computed value (a score, a recommendation, a total) that is never itself hand-entered or treated as a source of truth.
+   4. **Linked to Toast without duplication** — POURMP points at or mirrors status from Toast rather than re-storing the underlying fact. (Without a live Toast API, today's Toast Status Tracker is a manually-maintained stand-in for this category, not a true link — treat "linked" as the target, not yet the literal mechanism.)
+
+   Do not create a competing source of truth. If a proposed feature doesn't cleanly fit one of these four, that's a signal to stop and resolve the ambiguity before building, not after. See [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md) §3 for the full classification of every existing data area against this test, including the handful of existing items it found still need remediation.
 
 ---
 

@@ -34,6 +34,35 @@ This roadmap is grounded in gaps actually found in the current codebase (checked
 
 ---
 
+## V1 Architecture Refactor (Event Workspace)
+*Introduced by [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md), grounded in [EVENT_DETAILS_DATA_AUDIT.md](EVENT_DETAILS_DATA_AUDIT.md)'s data-layer findings. A systematic pass to organize POURMP around a canonical data model and an Event Workspace navigation model, applying the two principles in [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) §3.7–3.8. Executed one phase at a time, each with its own review gate before the next begins — do not batch phases.*
+
+1. ~~Fix the Overview "Guests" field regression~~ — **shipped.** The Overview tab's "Guests" field had become a silent no-op after the guest-count consumer migration; replaced with a read-only display of the canonical total.
+2. **Unify the two setup checklists.** `event_setup_checklist` (8 items, standalone `/prep/checklist`) and `event_tasks`' Setup category (15 tasks, authoritative for Operations/Risk Scanner) track substantively the same physical facts with zero code connecting them. Retire `event_setup_checklist` in favor of `event_tasks`, migrate `/prep/checklist` to read from it. **Next phase, not yet started.**
+3. **Reconcile the Communication Timeline, Toast Status Tracker, and `contract_signed`.** Three overlapping representations of Toast-owned milestones currently coexist with no code connecting them (see [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md) §2):
+   - Communication Timeline entries (`'Deposit Received'`, `'Proposal Sent'`, `'Final Confirmation Sent'`, etc.) are purely historical log entries with no connection to the Toast Status Tracker fields that actually drive Deposit Risk, the Operations "Awaiting Deposit" bucket, and alerts.
+   - **`event_details.contract_signed` is a confirmed Toast/POURMP boundary violation, not just a UX inconsistency.** It's an independent manual checkbox with no connection to `toast_confirmed_date`. The Toast proposal confirmation is the authoritative event — `toast_confirmed_date` is POURMP's manually-maintained proxy that the confirmation occurred in Toast, until a live Toast integration exists. `contract_signed` should ultimately be **deprecated**, not maintained as a second representation of the same Toast-owned fact.
+   - Resolution direction: connect Timeline logging to the Toast Status Tracker where they describe the same milestone (or make the two visually/linguistically impossible to conflate), and retire `contract_signed` in favor of reading `toast_confirmed_date` directly wherever it's currently consumed (Readiness Score, etc.).
+   - **Any future UI language here must make clear POURMP is recording or manually synchronizing a Toast milestone — never that POURMP itself creates or confirms the contract.**
+   - Design direction only — not yet implemented.
+4. **Reconcile the "assemble the whole event" functions.** `getOperationalDashboard()` and `getEventRiskAssessment()`/`getEventRisks()` each independently re-implement a narrower join than `getEventFull()`/`getPrepOutputsData()`, and disagree on task auto-generation side effects — a reproducible case where two views of the same event's task completion can show different numbers depending on which page was opened first. Extract one shared assembly helper.
+5. **Resolve planned-vs-actual drink tickets and the `final_menu_locked` tri-representation.** `event_details.drink_tickets` (planned) and `drink_ticket_log.tickets_issued` (actual) seed once then drift independently; `final_menu_locked` is edited but never consumed downstream.
+6. **Decompose `EventDetailClient.tsx`** (1,569 lines, monolithic) into per-tab components, mirroring the existing `TasksTab.tsx` extraction. Pure structural prep, no behavior change.
+7. **Build the Event Workspace navigation.** Staged per [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md) §7 (Stages A–D): add a Prep Docs tab to the Workspace, extract a shared layout shell, consolidate BEO/Kitchen Sheet/Checklist (sequenced after phase 2), then remove the now-redundant global "Prep Docs" sidebar link.
+8. **Address the four-parallel-state-signals finding.** `events.status`, `calcReadiness()`'s score, the Toast Status Tracker, and task-completion-derived `operationallyReady` can all legitimately disagree for the same event at the same time, with nothing flagging the contradiction. Not a merge — make the relationships explicit and visually unambiguous once phases 2–5 land.
+
+**Toast Boundary Cleanup Items** *(surfaced by the ownership matrix, [EVENT_WORKSPACE_DESIGN_PROPOSAL.md](EVENT_WORKSPACE_DESIGN_PROPOSAL.md) §2 — separate scoped cleanup, not part of the numbered phase sequence above)*
+
+- **Deprecate `packages.price_per_guest` as a user-facing field.** Pricing is Toast-owned. This field should ultimately be removed from package-selection dropdowns and the Settings package editor, and must not drive financial totals, invoicing, or operational decisions in POURMP (Sprint Zero already removed it from every event-facing dollar total — this closes the remaining display/editor surfaces). Approach once scheduled:
+  1. Identify every remaining consumer (a fresh, grep-based audit — same rigor as the guest-count consolidation).
+  2. Mark the field deprecated in code/comments.
+  3. Remove it from package dropdowns and the Settings editor.
+  4. Preserve the underlying schema field only temporarily, only if legacy records or existing migrations require it.
+  5. Remove the schema field only after usage reaches zero — no earlier.
+  - Design direction only — not yet implemented.
+
+---
+
 ## Future Enhancements
 *Features planned after Version 1.0 — see [V1_FEATURE_LOCK.md](V1_FEATURE_LOCK.md) §7 for the full ordered list*
 
