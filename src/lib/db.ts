@@ -1600,26 +1600,21 @@ export function deleteLead(id: number) {
   getDb().prepare(`DELETE FROM leads WHERE id = ?`).run(id)
 }
 
-// ─── Setup Checklist ──────────────────────────────────────────────────────────
+// ─── Setup Checklist (legacy, event_setup_checklist) ──────────────────────────
+// The interactive Setup Checklist experience (/prep/checklist) now reads and
+// writes event_tasks instead — see the "Setup Checklist" section further down.
+// getChecklist is kept only because src/lib/alerts.ts's "4 hours out" setup
+// checklist notification still reads event_setup_checklist directly; repointing
+// that notification to event_tasks is the already-tracked, separate follow-up
+// phase (alerts.ts is explicitly out of scope here). Nothing writes to
+// event_setup_checklist anymore, so that notification's completion count will
+// read stale until that follow-up lands.
 
 export function getChecklist(eventId: number): Record<string, string | null> {
   const rows = getDb().prepare(
     `SELECT item_key, checked_at FROM event_setup_checklist WHERE event_id = ?`
   ).all(eventId) as { item_key: string; checked_at: string | null }[]
   return Object.fromEntries(rows.map(r => [r.item_key, r.checked_at]))
-}
-
-export function setChecklistItem(eventId: number, itemKey: string, checked: boolean) {
-  const now = checked ? new Date().toISOString() : null
-  getDb().prepare(`
-    INSERT INTO event_setup_checklist (event_id, item_key, checked, checked_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(event_id, item_key) DO UPDATE SET checked = excluded.checked, checked_at = excluded.checked_at
-  `).run(eventId, itemKey, checked ? 1 : 0, now)
-}
-
-export function resetChecklist(eventId: number) {
-  getDb().prepare(`DELETE FROM event_setup_checklist WHERE event_id = ?`).run(eventId)
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -1926,6 +1921,16 @@ export function addManualTask(eventId: number, data: { category: string; label: 
 
 export function deleteTask(id: number): void {
   getDb().prepare(`DELETE FROM event_tasks WHERE id = ?`).run(id)
+}
+
+// Bulk-uncompletes every task in the given categories for an event — the
+// interactive Setup Checklist's "Leadership: Reset" action, scoped to Setup
+// and Breakdown only (Dynamic tasks aren't shown on that screen).
+export function resetEventTasks(eventId: number, categories: string[]): void {
+  const placeholders = categories.map(() => '?').join(',')
+  getDb()
+    .prepare(`UPDATE event_tasks SET completed = 0, completed_at = NULL WHERE event_id = ? AND category IN (${placeholders})`)
+    .run(eventId, ...categories)
 }
 
 // ─── Staff Members ────────────────────────────────────────────────────────────

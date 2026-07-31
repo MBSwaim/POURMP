@@ -45,6 +45,7 @@ const TASK_RULES: TaskRule[] = [
   // ── Setup (always generated) — Manhattan Project operational standard ──
   { key: 'setup_review_beo',        category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Review BEO, event notes, and floor plan' },
   { key: 'setup_kitchen_menu',      category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Confirm kitchen menu and food timing' },
+  { key: 'setup_food_ready',        category: 'Setup', role: 'Kitchen', condition: () => true, label: () => 'Confirm all food is hot and ready 15 minutes before event start' },
   { key: 'setup_bar_tab_type',      category: 'Setup', role: 'Lead',    condition: () => true, label: () => 'Confirm bar tab, tickets, or individual tabs' },
   { key: 'setup_bar_team_brief',    category: 'Setup', role: 'Bar',     condition: () => true, label: () => 'Confirm with bar team tab name and bar type' },
   { key: 'setup_safety_signage',    category: 'Setup', role: 'FOH',     condition: () => true, label: () => 'Set safety boundaries and reserved signage' },

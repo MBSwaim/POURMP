@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Event, EventWithClient, EventPackageWithItems } from '@/lib/db'
+import { toast } from 'sonner'
+import type { Event, EventWithClient, EventPackageWithItems, EventTask } from '@/lib/db'
 import { to12Hour } from '@/lib/timeUtils'
 import { getTotalGuestCount } from '@/lib/calculations'
 
@@ -12,90 +13,114 @@ interface EventFull {
   packages?: EventPackageWithItems[]
 }
 
-const CHECKLIST_ITEMS = [
-  { key: 'tablecloths',   phase: 'Setup',    label: 'Cover all tables with black tablecloths',               note: 'Check BEO for any exemptions' },
-  { key: 'menus',         phase: 'Setup',    label: 'Beer list & wine list on every table',                  note: 'For guests to review before ordering' },
-  { key: 'ropes',         phase: 'Setup',    label: 'Black velvet ropes at all marked positions',            note: null },
-  { key: 'lights_music',  phase: 'Setup',    label: 'Lights dimmed · Music on Source 2, volume ≥ 90',        note: null },
-  { key: 'garage_door',   phase: 'Setup',    label: 'Garage door: open only if weather 65°–75°',             note: 'One warning for chain misuse, then close' },
-  { key: 'tv',            phase: 'Setup',    label: 'Big Screen TV set up and tested',                       note: null, requiresTv: true },
-  { key: 'buffet_hot',    phase: 'Kitchen',  label: 'All food set, hot, and ready 15 min before event start', note: null },
-  { key: 'buffet_equip',  phase: 'Kitchen',  label: 'All servingware, utensils & sauces in place',           note: null },
-  { key: 'linens_wash',   phase: 'Teardown', label: 'Start linens in washing machine immediately',           note: 'Do not wait — do it as soon as event ends' },
-]
+// Display-only labels for this FOH-facing screen. Version 1 is Front of House
+// only, so ownership is framed in FOH operational terms rather than by
+// department — the underlying event_tasks.role values (and every other
+// consumer of them, like the Kitchen Sheet) are unchanged; this map only
+// affects what badge shows here.
+const FOH_ROLE_LABELS: Record<string, string> = {
+  Lead: 'Shift Lead',
+  FOH: 'Event Team',
+  Bar: 'Bar',
+  Kitchen: 'Coordination',
+}
 
-const PHASE_ORDER = ['Setup', 'Kitchen', 'Teardown']
+// This screen covers Setup and Breakdown only — the same scope the legacy
+// checklist covered. Dynamic tasks remain visible on the Event Workspace's
+// Tasks tab for anyone who needs them.
+const CHECKLIST_CATEGORIES = ['Setup', 'Breakdown'] as const
 
 interface Props {
   events: EventWithClient[]
   initialEventId: string
   eventFull: EventFull | null
-  initialChecked: Record<string, string | null>
+  initialTasks: EventTask[]
 }
 
-export function ChecklistClient({ events, initialEventId, eventFull: initialEventFull, initialChecked }: Props) {
+export function ChecklistClient({ events, initialEventId, eventFull: initialEventFull, initialTasks }: Props) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState(initialEventId)
   const [eventFull, setEventFull] = useState<EventFull | null>(initialEventFull)
-  const [checked, setChecked] = useState<Record<string, string | null>>(initialChecked)
-  const [, startTransition] = useTransition()
-
-  const hasTv = !!(eventFull?.details?.big_screen_tv)
-  const visibleItems = CHECKLIST_ITEMS.filter(item => !item.requiresTv || hasTv)
-
-  const totalCount = visibleItems.length
-  const doneCount = visibleItems.filter(item => checked[item.key] != null).length
-  const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
-  const allDone = doneCount === totalCount
-
-  async function loadEvent(id: string) {
-    setSelectedId(id)
-    setChecked({})
-    setEventFull(null)
-    if (!id) return
-    router.push(`/prep/checklist?event=${id}`)
-    const [evRes, clRes] = await Promise.all([
-      fetch(`/api/events/${id}`),
-      fetch(`/api/checklist/${id}`),
-    ])
-    const evData = await evRes.json()
-    const clData = await clRes.json()
-    setEventFull(evData)
-    setChecked(clData.checked ?? {})
-  }
-
-  async function toggle(itemKey: string) {
-    if (!selectedId) return
-    const isChecked = checked[itemKey] != null
-    const newChecked = { ...checked }
-    if (isChecked) {
-      delete newChecked[itemKey]
-    } else {
-      newChecked[itemKey] = new Date().toISOString()
-    }
-    setChecked(newChecked)
-    startTransition(() => {})
-    await fetch(`/api/checklist/${selectedId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_key: itemKey, checked: !isChecked }),
-    })
-  }
-
-  async function resetAll() {
-    if (!selectedId || !confirm('Reset all checklist items for this event?')) return
-    await fetch(`/api/checklist/${selectedId}`, { method: 'DELETE' })
-    setChecked({})
-  }
+  const [tasks, setTasks] = useState<EventTask[]>(initialTasks)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetReason, setResetReason] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   const event = eventFull?.event
   const client = eventFull?.client
   const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(' ') : null
 
-  const phases = PHASE_ORDER.map(phase => ({
-    phase,
-    items: visibleItems.filter(i => i.phase === phase),
+  const visibleTasks = tasks.filter(t => (CHECKLIST_CATEGORIES as readonly string[]).includes(t.category))
+  const totalCount = visibleTasks.length
+  const doneCount = visibleTasks.filter(t => t.completed).length
+  const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
+  const allDone = totalCount > 0 && doneCount === totalCount
+
+  const groups = CHECKLIST_CATEGORIES.map(category => ({
+    category,
+    items: visibleTasks.filter(t => t.category === category),
   })).filter(g => g.items.length > 0)
+
+  async function loadEvent(id: string) {
+    setSelectedId(id)
+    setTasks([])
+    setEventFull(null)
+    setResetOpen(false)
+    if (!id) return
+    router.push(`/prep/checklist?event=${id}`)
+    const [evRes, taskRes] = await Promise.all([
+      fetch(`/api/events/${id}`),
+      fetch(`/api/events/${id}/tasks`),
+    ])
+    const evData = await evRes.json()
+    const taskData = await taskRes.json()
+    setEventFull(evData)
+    setTasks(Array.isArray(taskData) ? taskData : [])
+  }
+
+  async function toggle(task: EventTask) {
+    const next = !task.completed
+    const completedAt = next ? new Date().toISOString() : null
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: next ? 1 : 0, completed_at: completedAt } : t))
+    await fetch(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: next }),
+    })
+  }
+
+  async function confirmReset() {
+    if (!selectedId || !event) return
+    if (resetConfirmText.trim().toLowerCase() !== event.event_name.trim().toLowerCase()) {
+      toast.error('Type the event name exactly to confirm.')
+      return
+    }
+    if (!resetReason.trim()) {
+      toast.error('Your name and a reason are required to reset.')
+      return
+    }
+    setResetting(true)
+    await fetch(`/api/events/${selectedId}/tasks/reset`, { method: 'POST' })
+    await fetch(`/api/communications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_id: Number(selectedId),
+        activity_type: 'Internal Note',
+        occurred_at: new Date().toISOString(),
+        notes: `Event Setup checklist reset — ${resetReason.trim()}`,
+      }),
+    })
+    setTasks(prev => prev.map(t =>
+      (CHECKLIST_CATEGORIES as readonly string[]).includes(t.category) ? { ...t, completed: 0, completed_at: null } : t
+    ))
+    setResetting(false)
+    setResetOpen(false)
+    setResetConfirmText('')
+    setResetReason('')
+    toast.success('Checklist reset')
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
@@ -161,17 +186,17 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
             </div>
           </div>
 
-          {/* Checklist phases */}
-          {phases.map(({ phase, items }) => (
-            <div key={phase}>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-2">{phase}</p>
+          {/* Checklist groups */}
+          {groups.map(({ category, items }) => (
+            <div key={category}>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-2">{category}</p>
               <div className="space-y-2">
-                {items.map(item => {
-                  const isChecked = checked[item.key] != null
+                {items.map(task => {
+                  const isChecked = !!task.completed
                   return (
                     <button
-                      key={item.key}
-                      onClick={() => toggle(item.key)}
+                      key={task.id}
+                      onClick={() => toggle(task)}
                       className={`w-full text-left flex items-start gap-3 px-4 py-4 rounded-xl border transition-all active:scale-[0.98]
                         ${isChecked
                           ? 'bg-green-50 border-green-200 text-green-800'
@@ -186,11 +211,11 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium leading-snug ${isChecked ? 'line-through opacity-60' : ''}`}>
-                          {item.label}
+                          {task.label}
                         </p>
-                        {item.note && !isChecked && (
-                          <p className="text-xs text-gray-500 mt-0.5 leading-snug">{item.note}</p>
-                        )}
+                        <p className="text-[10px] text-gray-500 mt-0.5 uppercase tracking-wide">
+                          {FOH_ROLE_LABELS[task.role] ?? task.role}
+                        </p>
                       </div>
                     </button>
                   )
@@ -217,11 +242,50 @@ export function ChecklistClient({ events, initialEventId, eventFull: initialEven
             </div>
           )}
 
-          {/* Reset */}
-          <div className="text-center pt-2">
-            <button onClick={resetAll} className="text-xs text-gray-600 hover:text-gray-500 transition-colors">
-              Reset checklist
-            </button>
+          {/* Leadership Actions */}
+          <div className="pt-2 border-t border-gray-200">
+            {!resetOpen ? (
+              <div className="text-center pt-3">
+                <button onClick={() => setResetOpen(true)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                  Leadership: Reset this checklist
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 space-y-2">
+                <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Reset Event Setup Checklist</p>
+                <p className="text-xs text-red-700">
+                  This is a Shift Lead / leadership action. Type the event name, then your name and reason, to confirm.
+                </p>
+                <input
+                  value={resetConfirmText}
+                  onChange={e => setResetConfirmText(e.target.value)}
+                  placeholder={`Type "${event.event_name}" to confirm`}
+                  className="w-full bg-white border border-red-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-red-400"
+                />
+                <textarea
+                  value={resetReason}
+                  onChange={e => setResetReason(e.target.value)}
+                  placeholder="Your name and reason for resetting"
+                  rows={2}
+                  className="w-full bg-white border border-red-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-red-400 resize-none"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => { setResetOpen(false); setResetConfirmText(''); setResetReason('') }}
+                    className="text-xs text-gray-600 px-3 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmReset}
+                    disabled={resetting}
+                    className="text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg px-3 py-1.5 transition-colors"
+                  >
+                    {resetting ? 'Resetting…' : 'Reset Checklist'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
