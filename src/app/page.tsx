@@ -1,5 +1,4 @@
-import { getDashboardStats, getKanbanEvents } from '@/lib/db'
-import { KanbanBoard } from '@/components/KanbanBoard'
+import { getDashboardStats } from '@/lib/db'
 import { UpcomingEventsCard } from '@/components/UpcomingEventsCard'
 import { NotificationSummaryCard } from '@/components/NotificationSummaryCard'
 import { DashboardBeoDrop } from '@/components/DashboardBeoDrop'
@@ -13,7 +12,6 @@ export default function Dashboard() {
     eventsThisMonth, eventsThisWeek, upcomingEvents,
     highRiskCount, highBarImpactCount,
   } = getDashboardStats()
-  const kanban = getKanbanEvents()
   const dateLabel = format(new Date(), 'EEEE, MMMM d')
 
   return (
@@ -64,15 +62,6 @@ export default function Dashboard() {
 
       {/* Upcoming Events */}
       <UpcomingEventsCard events={upcomingEvents} />
-
-      {/* Event Status Board */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-3">
-          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">Pipeline</p>
-          <div className="flex-1 border-t border-gray-200" />
-        </div>
-        <KanbanBoard initialEvents={kanban} />
-      </section>
 
     </div>
   )
