@@ -48,6 +48,7 @@ Concretely, per client-facing fact:
 4. **Every feature answers the execution question.** Before anything is added: *"Does this make planning easier, execution smoother, communication clearer, operational visibility stronger, or the guest experience better?"* (`VISION.md`). If the true answer is "no, but it would be convenient to not open Toast," that is not sufficient justification.
 5. **No feature ships half-finished.** A stub page or a field nobody reads is worse than no feature at all — it's the exact shape of drift this review process exists to catch.
 6. **Additive, non-destructive change.** Consistent with existing practice (`DEVELOPMENT_GUIDE.md`), schema and feature changes moving toward this lock should preserve historical data (export/backup before removal) rather than silently drop it.
+7. **Every screen answers one of two questions.** *Global: "What events need my attention today?"* or *Event Workspace: "Everything I need to execute this event."* A screen that doesn't clearly answer one of these — or tries to answer both at once — is a sign of feature sprawl and should be reworked or reconsidered before it ships. Adopted during the V1 architecture refactor as the standing test for every future page/screen decision.
 
 ---
 
