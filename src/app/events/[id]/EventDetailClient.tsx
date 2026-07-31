@@ -22,6 +22,7 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
+import { BeoUploadCard } from './BeoUploadCard'
 import { PrepOutputsClient } from './prep/PrepOutputsClient'
 import type { PrepOutputsData } from '@/lib/prepOutputsData'
 import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask, EventCommunityGiving } from '@/lib/db'
@@ -649,6 +650,8 @@ export function EventDetailClient({ data: initialData, packages, initialTasks, p
                 </div>
               )}
             </InfoCard>
+
+            <BeoUploadCard eventId={event.id} locked={locked} onApplied={reload} />
 
           </div>
 
