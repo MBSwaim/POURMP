@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,17 @@ import { PrepOutputsClient } from './prep/PrepOutputsClient'
 import type { PrepOutputsData } from '@/lib/prepOutputsData'
 import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask, EventCommunityGiving } from '@/lib/db'
 
+// The Workspace's tab set and the canonical Prep Outputs pipeline's document set —
+// duplicated here rather than imported from PrepOutputsClient, since this phase's
+// approved scope is limited to this file and today/page.tsx. Used only to validate
+// the ?tab= and ?doc= query params before they seed initial state; anything missing
+// or not in these lists falls back to the existing defaults (overview / Run of Show).
+const WORKSPACE_TABS = ['overview', 'timeline', 'catering', 'floorplan', 'tasks', 'prep', 'notes'] as const
+type WorkspaceTab = typeof WORKSPACE_TABS[number]
+
+const PREP_DOC_KEYS = ['toast', 'brief', 'impact', 'ros', 'kitchen', 'foh', 'bar', 'leads', 'handoff', 'setup', 'debrief'] as const
+type PrepDocKey = typeof PREP_DOC_KEYS[number]
+
 interface FullData {
   event: Event
   client: Client | null | undefined
@@ -49,7 +61,17 @@ export function EventDetailClient({ data: initialData, packages, initialTasks, p
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'timeline'|'catering'|'floorplan'|'tasks'|'prep'|'notes'>('overview')
+
+  // Deep-link support for Today's quick links (?tab=prep&doc=kitchen, etc.). Read once
+  // to seed initial state only — manual tab clicks after arrival behave exactly as
+  // they did before this phase, and a plain /events/[id] with no params is unaffected.
+  const searchParams = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const initialWorkspaceTab: WorkspaceTab = rawTab && (WORKSPACE_TABS as readonly string[]).includes(rawTab) ? (rawTab as WorkspaceTab) : 'overview'
+  const rawDoc = searchParams.get('doc')
+  const initialPrepDocTab: PrepDocKey = rawDoc && (PREP_DOC_KEYS as readonly string[]).includes(rawDoc) ? (rawDoc as PrepDocKey) : 'ros'
+
+  const [tab, setTab] = useState<WorkspaceTab>(initialWorkspaceTab)
   const [editingClosed, setEditingClosed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
@@ -412,7 +434,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks, p
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-gray-200 mb-5">
-          {(['overview','timeline','catering','floorplan','tasks','prep','notes'] as const).map((id) => (
+          {WORKSPACE_TABS.map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -1254,7 +1276,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks, p
               clientHistory={prepData.clientHistory}
               tasks={prepData.tasks}
               risks={prepData.risks}
-              initialTab="ros"
+              initialTab={initialPrepDocTab}
             />
           ) : (
             <p className="text-gray-500 text-sm">Prep docs aren&apos;t available for this event.</p>

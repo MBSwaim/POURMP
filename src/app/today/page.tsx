@@ -230,16 +230,16 @@ export default async function TodayPage({ searchParams }: { searchParams: { date
                     View Event →
                   </Link>
                   <Link
-                    href={`/prep/kitchen-sheet?event=${event.id}`}
+                    href={`/events/${event.id}?tab=prep&doc=kitchen`}
                     className="text-xs font-semibold text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     Kitchen Sheet →
                   </Link>
                   <Link
-                    href={`/prep/beo?event=${event.id}`}
+                    href={`/events/${event.id}?tab=prep&doc=ros`}
                     className="text-xs font-semibold text-gray-700 hover:text-gray-900 transition-colors"
                   >
-                    BEO →
+                    Run of Show →
                   </Link>
                 </div>
               </div>
