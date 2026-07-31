@@ -21,6 +21,8 @@ import { calcReadiness, readinessColor } from '@/lib/readiness'
 import { calcBarImpact } from '@/lib/barImpact'
 import { calcTaskComplexity, COMPLEXITY_COLORS, type TaskContext } from '@/lib/tasks'
 import { TasksTab } from './TasksTab'
+import { PrepOutputsClient } from './prep/PrepOutputsClient'
+import type { PrepOutputsData } from '@/lib/prepOutputsData'
 import type { Event, Client, EventDetails, AddOn, EventNote, EventCommunication, Package, MenuItem, EventPackageWithItems, EventTask, EventCommunityGiving } from '@/lib/db'
 
 interface FullData {
@@ -40,13 +42,14 @@ interface Props {
   data: FullData
   packages: Package[]
   initialTasks: EventTask[]
+  prepData: PrepOutputsData | null
 }
 
-export function EventDetailClient({ data: initialData, packages, initialTasks }: Props) {
+export function EventDetailClient({ data: initialData, packages, initialTasks, prepData }: Props) {
   const [data, setData] = useState(initialData)
   const [newNote, setNewNote] = useState('')
   const [newAddOn, setNewAddOn] = useState({ item_name: '', qty: '', unit: '', price_each: '', notes: '' })
-  const [tab, setTab] = useState<'overview'|'timeline'|'catering'|'floorplan'|'tasks'|'notes'>('overview')
+  const [tab, setTab] = useState<'overview'|'timeline'|'catering'|'floorplan'|'tasks'|'prep'|'notes'>('overview')
   const [editingClosed, setEditingClosed] = useState(false)
   const [eventPackages, setEventPackages] = useState<EventPackageWithItems[]>(initialData.packages ?? [])
 
@@ -409,7 +412,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
       <div>
         {/* Tab bar */}
         <div className="flex gap-1 border-b border-gray-200 mb-5">
-          {(['overview','timeline','catering','floorplan','tasks','notes'] as const).map((id) => (
+          {(['overview','timeline','catering','floorplan','tasks','prep','notes'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -419,7 +422,7 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
                   : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              {{ overview: 'Overview', timeline: 'Timeline', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', notes: 'Notes' }[id]}
+              {{ overview: 'Overview', timeline: 'Timeline', catering: 'Catering', floorplan: 'Floor Plan', tasks: 'Tasks', prep: 'Prep Docs', notes: 'Notes' }[id]}
             </button>
           ))}
         </div>
@@ -1236,6 +1239,26 @@ export function EventDetailClient({ data: initialData, packages, initialTasks }:
         {/* Tasks Tab */}
         {tab === 'tasks' && (
           <TasksTab eventId={event.id} initialTasks={initialTasks} taskContext={taskContext} />
+        )}
+
+        {/* Prep Docs Tab — same canonical pipeline as the standalone /events/[id]/prep
+            and /prep-docs routes (getPrepOutputsData), so this can never disagree with
+            what those entry points show. Lands on Run of Show first since that's the
+            single doc that orients the whole event, not any one department. */}
+        {tab === 'prep' && (
+          prepData ? (
+            <PrepOutputsClient
+              ev={prepData.ev}
+              initialTicketLog={prepData.ticketLog}
+              initialDebrief={prepData.debrief}
+              clientHistory={prepData.clientHistory}
+              tasks={prepData.tasks}
+              risks={prepData.risks}
+              initialTab="ros"
+            />
+          ) : (
+            <p className="text-gray-500 text-sm">Prep docs aren&apos;t available for this event.</p>
+          )
         )}
 
         {/* Notes Tab */}

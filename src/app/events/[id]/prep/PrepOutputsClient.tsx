@@ -34,10 +34,13 @@ interface Props {
   clientHistory: ClientHistoryEntry[]
   tasks: EventTask[]
   risks: RiskFlag[]
+  // Which document tab to land on first. Callers that omit this keep the existing
+  // 'toast' default — only the Event Workspace's Prep Docs tab overrides it today.
+  initialTab?: TabKey
 }
 
-export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory, tasks, risks }: Props) {
-  const [active, setActive] = useState<TabKey>('toast')
+export function PrepOutputsClient({ ev, initialTicketLog, initialDebrief, clientHistory, tasks, risks, initialTab }: Props) {
+  const [active, setActive] = useState<TabKey>(initialTab ?? 'toast')
   const activeTab = TABS.find(t => t.key === active)!
 
   async function copyToClipboard() {
