@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { JourneyCard } from '@/components/library/JourneyCard'
 import { ShiftProgressTrack } from '../_components/ShiftProgressTrack'
 import {
   TAPROOM_SHIFTS,
@@ -11,7 +12,6 @@ export const dynamic = 'force-dynamic'
 
 export default function TaproomAcademyPage() {
   const current = getCurrentShift()
-  const doneCount = current.lessons.filter(l => l.state === 'complete').length
 
   return (
     <div className="px-4 py-5 space-y-6 max-w-3xl mx-auto">
@@ -38,25 +38,18 @@ export default function TaproomAcademyPage() {
         </p>
       </div>
 
-      {/* Where you are */}
-      <div className="rounded-2xl border border-[#b07d2e]/40 bg-[#fffdf8] px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#b07d2e]">You are currently on</p>
-          <p className="text-lg font-semibold text-[#1b1b1b] mt-0.5">
-            Shift {current.number}: {current.title}
-          </p>
-          <p className="text-xs text-[#777] mt-1 italic">“{current.confidenceStatement}”</p>
-          <p className="text-xs text-[#777] mt-1">
-            {doneCount}/{current.lessons.length} lessons complete this shift
-          </p>
-        </div>
-        <Link
-          href="/academy/taproom/1"
-          className="shrink-0 inline-flex items-center justify-center rounded-full bg-[#111] text-white text-xs font-bold uppercase tracking-widest px-5 py-2.5 hover:bg-[#1b1b1b] transition-colors"
-        >
-          Continue Training →
-        </Link>
-      </div>
+      {/* Where you are — C-001 Journey Card, replacing the old inline prototype */}
+      <JourneyCard
+        journeyTitle="Taproom Core Certification"
+        state="active"
+        currentPosition={`Shift ${current.number} of ${TAPROOM_SHIFTS.length}: ${current.title}`}
+        currentStep={current.number}
+        totalSteps={TAPROOM_SHIFTS.length}
+        currentMilestone={current.confidenceStatement}
+        todaysFocus={current.todaysFocus}
+        coachingMessage={current.coachingMessage}
+        primaryActionHref="/academy/taproom/1"
+      />
 
       {/* Shift progression */}
       <div className="space-y-2">

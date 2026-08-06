@@ -31,6 +31,11 @@ export interface Shift {
   confidenceStatement: string
   summary: string
   isGraduation?: boolean
+  // Prepares the data model for future Learning Experience content (e.g. the
+  // Journey Card's "Today's Focus" and coaching message fields). Intentionally
+  // left unpopulated on every shift below — no curriculum content is invented.
+  todaysFocus?: string
+  coachingMessage?: string
   lessons: Lesson[]
 }
 
