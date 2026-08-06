@@ -16,7 +16,7 @@ export default function AcademyPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <AcademyCard
           name="Taproom Academy"
-          description="Guided new-hire training for the taproom floor, shift by shift."
+          description="Core Certification — a five-shift journey from new hire to independently running a standard shift."
           href="/academy/taproom"
           status="active"
         />
