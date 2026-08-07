@@ -89,6 +89,11 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
           <GlobalEventSearch onNavigate={onClose} />
         </div>
 
+        <Link href="/admin" onClick={onClose} className={navClass('/admin')}>
+          <span className="text-sm leading-none">🧭</span>
+          Admin
+        </Link>
+
         {/* Today + date picker group */}
         <Link href="/today" onClick={onClose} className={todayClass()}>
           <span className="text-sm leading-none">📅</span>
