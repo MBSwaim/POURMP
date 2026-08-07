@@ -7,10 +7,13 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import type { Reservation, StaffMember } from '@/lib/db'
-import { RESERVATION_STATUSES, TAPROOM_TABLES, TABLE_COMBOS } from '@/lib/constants'
+import { RESERVATION_STATUSES, TAPROOM_TABLES } from '@/lib/constants'
 import { formatPhoneNumber } from '@/lib/phone'
+import { ReservationFloorPlan } from '@/components/ReservationFloorPlan'
+import { useTableSelection } from '@/lib/useTableSelection'
+import { WEST_DALLAS_RESERVATION_LAYOUT } from '@/lib/floorPlans/westDallasReservationLayout'
 
-const TABLE_CAPACITIES = Array.from(new Set(TAPROOM_TABLES.map((t) => t.seats))).sort((a, b) => a - b)
+const RESERVABLE_TABLE_NUMBERS = TAPROOM_TABLES.map((t) => t.number)
 
 const STATUS_COLORS: Record<string, string> = {
   Confirmed: 'bg-green-50 text-green-700 border-green-200',
@@ -318,121 +321,42 @@ export function ReservationsClient({ initialReservations }: { initialReservation
   )
 }
 
-const SEATS_BY_TABLE: Map<number, number> = new Map(TAPROOM_TABLES.map((t) => [t.number, t.seats]))
-
-function useTableSelection(value: string, onChange: (v: string) => void, partySize?: number) {
-  const selected = new Set((value || '').split(',').map((s) => s.trim()).filter(Boolean))
-  const totalSeats = Array.from(selected).reduce((sum, n) => sum + (SEATS_BY_TABLE.get(Number(n)) ?? 0), 0)
-  const short = selected.size > 0 && !!partySize && totalSeats < partySize
-
-  function toggle(num: number) {
-    const key = String(num)
-    const next = new Set(selected)
-    next.has(key) ? next.delete(key) : next.add(key)
-    onChange(Array.from(next).map(Number).sort((a, b) => a - b).join(','))
-  }
-
-  function toggleCombo(tables: readonly number[]) {
-    const keys = tables.map(String)
-    const allSelected = keys.every((k) => selected.has(k))
-    const next = new Set(selected)
-    keys.forEach((k) => allSelected ? next.delete(k) : next.add(k))
-    onChange(Array.from(next).map(Number).sort((a, b) => a - b).join(','))
-  }
-
-  const summary = selected.size > 0
-    ? Array.from(selected).map(Number).sort((a, b) => a - b).join(', ')
-    : 'Assign tables'
-
-  return { selected, totalSeats, short, toggle, toggleCombo, summary }
-}
-
-function TableGridPicker({ selected, toggle, toggleCombo, totalSeats, short, partySize }: {
-  selected: Set<string>
-  toggle: (num: number) => void
-  toggleCombo: (tables: readonly number[]) => void
-  totalSeats: number
-  short: boolean
-  partySize?: number
-}) {
-  return (
-    <div className="space-y-2">
-      {!!partySize && (
-        <p className={`text-xs font-medium ${short ? 'text-red-400' : 'text-green-400'}`}>
-          {totalSeats} seat{totalSeats === 1 ? '' : 's'} selected — party of {partySize}
-        </p>
-      )}
-      <div>
-        <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Long Tables (Joined)</p>
-        <div className="flex flex-wrap gap-1">
-          {TABLE_COMBOS.map((combo) => {
-            const active = combo.tables.every((n) => selected.has(String(n)))
-            return (
-              <button
-                key={combo.tables.join('+')}
-                type="button"
-                onClick={() => toggleCombo(combo.tables)}
-                className={`text-xs px-2 py-1 rounded-md border font-medium transition-colors ${
-                  active
-                    ? 'bg-[#C8973A] text-white border-[#C8973A]'
-                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                }`}
-              >
-                {combo.tables.join('+')} ({combo.seats})
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      {TABLE_CAPACITIES.map((seats) => (
-        <div key={seats}>
-          <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">{seats}-Top</p>
-          <div className="flex flex-wrap gap-1">
-            {TAPROOM_TABLES.filter((t) => t.seats === seats).map((t) => (
-              <button
-                key={t.number}
-                type="button"
-                onClick={() => toggle(t.number)}
-                className={`text-xs px-2 py-1 rounded-md border font-medium transition-colors ${
-                  selected.has(String(t.number))
-                    ? 'bg-[#C8973A] text-white border-[#C8973A]'
-                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                }`}
-              >
-                {t.number}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Inline disclosure picker — used in the New Reservation form, which isn't inside a scroll-clipped container. */
+/** Inline reveal — used in the New Reservation form, which isn't inside a scroll-clipped container. Same
+ *  useTableSelection contract as before; the picker UI is now ReservationFloorPlan instead of a button grid. */
 function TablePicker({ value, onChange, partySize }: { value: string; onChange: (v: string) => void; partySize?: number }) {
-  const { selected, totalSeats, short, toggle, toggleCombo, summary } = useTableSelection(value, onChange, partySize)
+  const { selectedNumbers, totalSeats, short, toggle, summary } = useTableSelection(value, onChange, partySize)
 
   return (
-    <details className="relative">
+    <details>
       <summary className={`cursor-pointer list-none select-none flex items-center gap-1.5 text-sm ${
-        short ? 'text-red-400' : selected.size > 0 ? 'text-gray-900' : 'text-gray-500 italic'
+        short ? 'text-red-400' : selectedNumbers.length > 0 ? 'text-gray-900' : 'text-gray-500 italic'
       } hover:text-[#C8973A] transition-colors`}>
         {short && <span title={`Only ${totalSeats} seat(s) selected for a party of ${partySize}`}>⚠</span>}
         {summary}
       </summary>
-      <div className="absolute z-20 mt-1.5 p-2.5 rounded-lg bg-white border border-gray-300 shadow-xl w-56">
-        <TableGridPicker selected={selected} toggle={toggle} toggleCombo={toggleCombo} totalSeats={totalSeats} short={short} partySize={partySize} />
+      <div className="mt-2 p-3 rounded-lg bg-white border border-gray-300 shadow-xl">
+        {!!partySize && (
+          <p className={`text-xs font-medium mb-2 ${short ? 'text-red-400' : 'text-green-600'}`}>
+            {totalSeats} seat{totalSeats === 1 ? '' : 's'} selected — party of {partySize}
+          </p>
+        )}
+        <ReservationFloorPlan
+          layout={WEST_DALLAS_RESERVATION_LAYOUT}
+          reservableTableNumbers={RESERVABLE_TABLE_NUMBERS}
+          selectedTableNumbers={selectedNumbers}
+          onToggleTable={toggle}
+        />
       </div>
     </details>
   )
 }
 
-/** Modal picker — used in the reservation list, whose row sits inside a horizontally-scrolling table that would
- *  otherwise clip an absolutely-positioned dropdown. A dialog renders in a portal, so it's never clipped. */
+/** Modal wrapper — used in the reservation list, whose row sits inside a horizontally-scrolling table that would
+ *  otherwise clip an inline reveal. A dialog renders in a portal, so it's never clipped. Same picker component and
+ *  selection hook as TablePicker above — this is presentation chrome only, not a second interaction model. */
 function TableAssignDialog({ value, onChange, partySize, guestName }: { value: string; onChange: (v: string) => void; partySize?: number; guestName?: string }) {
   const [open, setOpen] = useState(false)
-  const { selected, totalSeats, short, toggle, toggleCombo, summary } = useTableSelection(value, onChange, partySize)
+  const { selectedNumbers, totalSeats, short, toggle, summary } = useTableSelection(value, onChange, partySize)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -443,7 +367,7 @@ function TableAssignDialog({ value, onChange, partySize, guestName }: { value: s
             className={`text-xs px-2 py-1 rounded-md border font-medium flex items-center gap-1.5 transition-colors ${
               short
                 ? 'border-red-500/40 text-red-400 hover:bg-red-500/10'
-                : selected.size > 0
+                : selectedNumbers.length > 0
                   ? 'border-gray-300 text-gray-900 hover:bg-gray-100'
                   : 'border-gray-200 text-gray-500 italic hover:bg-gray-50'
             }`}
@@ -453,11 +377,21 @@ function TableAssignDialog({ value, onChange, partySize, guestName }: { value: s
         {short && <span>⚠</span>}
         {summary}
       </DialogTrigger>
-      <DialogContent className="bg-white text-gray-900 ring-gray-200 sm:max-w-xs">
+      <DialogContent className="bg-white text-gray-900 ring-gray-200 sm:max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-[#C8973A]">Assign Tables{guestName ? ` — ${guestName}` : ''}</DialogTitle>
         </DialogHeader>
-        <TableGridPicker selected={selected} toggle={toggle} toggleCombo={toggleCombo} totalSeats={totalSeats} short={short} partySize={partySize} />
+        {!!partySize && (
+          <p className={`text-xs font-medium ${short ? 'text-red-400' : 'text-green-600'}`}>
+            {totalSeats} seat{totalSeats === 1 ? '' : 's'} selected — party of {partySize}
+          </p>
+        )}
+        <ReservationFloorPlan
+          layout={WEST_DALLAS_RESERVATION_LAYOUT}
+          reservableTableNumbers={RESERVABLE_TABLE_NUMBERS}
+          selectedTableNumbers={selectedNumbers}
+          onToggleTable={toggle}
+        />
         <DialogFooter className="bg-transparent border-gray-200">
           <Button onClick={() => setOpen(false)} className="bg-[#C8973A] hover:bg-[#b07d2e] text-white">
             Done

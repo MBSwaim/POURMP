@@ -51,8 +51,10 @@ export const BUSINESS_HOURS: Record<number, { open: string; close: string; minSt
 export const RESERVATION_STATUSES = ['Confirmed', 'Seated', 'Completed', 'Cancelled', 'No-Show'] as const
 
 // Taproom table layout — number and seating capacity of each physical table.
+// Table 200 does not physically exist at West Dallas (confirmed against the venue's
+// floor-plan reference, the dev database, and seed data — no reservation or other
+// record ever referenced it) and was removed as stale data.
 export const TAPROOM_TABLES = [
-  { number: 200, seats: 2 },
   { number: 201, seats: 2 },
   { number: 202, seats: 2 },
   { number: 203, seats: 2 },
