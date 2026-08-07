@@ -95,6 +95,11 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
           Today
         </Link>
 
+        <Link href="/taproom" onClick={onClose} className={navClass('/taproom')}>
+          <span className="text-sm leading-none">🍺</span>
+          Taproom
+        </Link>
+
         <div className="px-1 pb-2">
           <label className="block text-[9px] tracking-widest uppercase text-gray-600 mb-1 px-2 pt-1">
             Jump to Date

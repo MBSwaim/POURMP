@@ -1126,6 +1126,122 @@ export function getOperationalDashboard(): OperationalDashboard {
   }
 }
 
+// ─── Taproom Dashboard ──────────────────────────────────────────────────────────
+// Daily FOH operating brief: what the team needs to know to execute today's shift —
+// today's private events scored for main bar impact, and today's table reservations
+// as operational information (who, when, how many, which tables, notes). This is
+// deliberately NOT an occupancy/floor-management view — no seat counts, no per-table
+// status, no server/section concepts. Read-only aggregation — writes (setup-complete,
+// dismiss alert) go through the existing reservations/notifications APIs, not here.
+
+export interface TaproomEventSummary {
+  id: number
+  event_name: string
+  client_name: string
+  space: string
+  event_time: string
+  teardown_time: string
+  guest_count: number
+  bar_tab_type: string
+  drink_tickets: number
+  bar_tab_limit: number
+  barImpactLevel: string
+  congestionNotes: string[]
+}
+
+export interface TaproomDashboard {
+  date: string
+  events: TaproomEventSummary[]
+  reservations: Array<Reservation & { leadName: string | null }>
+  stats: {
+    reservationsToday: number
+    privateEventGuests: number
+    privateEventCount: number
+  }
+}
+
+export function getTaproomDashboard(dateStr?: string): TaproomDashboard {
+  const date = dateStr ?? format(new Date(), 'yyyy-MM-dd')
+  const db = getDb()
+
+  const rows = db.prepare(`
+    SELECT e.id, e.event_name, e.event_time, e.teardown_time, e.space, e.status,
+           c.first_name, c.last_name, c.company,
+           ed.guest_count, ed.bar_tab_type, ed.drink_tickets, ed.bar_tab_limit
+    FROM events e
+    LEFT JOIN clients c ON c.id = e.client_id
+    LEFT JOIN event_details ed ON ed.event_id = e.id
+    WHERE e.event_date = ? AND e.status != 'Closed'
+    ORDER BY e.event_time ASC
+  `).all(date) as Array<{
+    id: number; event_name: string; event_time: string | null; teardown_time: string | null
+    space: string | null; status: string; first_name: string | null; last_name: string | null; company: string | null
+    guest_count: number | null; bar_tab_type: string | null; drink_tickets: number | null; bar_tab_limit: number | null
+  }>
+
+  const events: TaproomEventSummary[] = rows.map(row => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalGuestCount = getTotalGuestCount(getEventPackages(row.id) as any, row.guest_count ?? 0)
+    const evForCalc: EventForNotes = {
+      id: row.id,
+      event_name: row.event_name,
+      event_date: date,
+      event_time: row.event_time ?? '',
+      setup_time: '',
+      decorate_time: '',
+      teardown_time: row.teardown_time ?? '',
+      production_close_time: '',
+      event_duration_mins: 180,
+      space: row.space ?? '',
+      status: row.status,
+      first_name: row.first_name ?? '',
+      last_name: row.last_name ?? '',
+      email: '',
+      company: row.company ?? '',
+      guest_count: totalGuestCount,
+      bar_tab_type: row.bar_tab_type ?? '',
+      drink_tickets: row.drink_tickets ?? 0,
+    }
+    const impact = calcBarImpact(evForCalc)
+    return {
+      id: row.id,
+      event_name: row.event_name || '(Unnamed Event)',
+      client_name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.company || '—',
+      space: row.space ?? '',
+      event_time: row.event_time ?? '',
+      teardown_time: row.teardown_time ?? '',
+      guest_count: totalGuestCount,
+      bar_tab_type: row.bar_tab_type ?? '',
+      drink_tickets: row.drink_tickets ?? 0,
+      bar_tab_limit: row.bar_tab_limit ?? 0,
+      barImpactLevel: impact.level,
+      congestionNotes: impact.congestionNotes,
+    }
+  })
+
+  const reservations = getReservations(date)
+  const staff = getStaffMembers(false)
+  const reservationsWithLead = reservations.map(r => ({
+    ...r,
+    leadName: r.assigned_staff_id ? (staff.find(s => s.id === r.assigned_staff_id)?.name ?? null) : null,
+  }))
+
+  // "Today's reservations" for the brief excludes Cancelled/No-Show — the brief only
+  // shows what staff should actually expect to execute against today.
+  const activeReservationCount = reservations.filter(r => r.status !== 'Cancelled' && r.status !== 'No-Show').length
+
+  return {
+    date,
+    events,
+    reservations: reservationsWithLead,
+    stats: {
+      reservationsToday: activeReservationCount,
+      privateEventGuests: events.reduce((sum, e) => sum + (e.guest_count || 0), 0),
+      privateEventCount: events.length,
+    },
+  }
+}
+
 // ─── Event Risk Assessment ──────────────────────────────────────────────────────
 // A separate, read-only intelligence layer (see lib/riskScanner.ts for the rules).
 // It does not write anything and does not feed back into Toast, the Task system,
