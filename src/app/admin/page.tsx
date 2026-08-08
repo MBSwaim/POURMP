@@ -80,8 +80,8 @@ export default function AdminPage() {
           <div className="mt-6 sm:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <DestinationCard
               icon={Rocket}
-              title={<>Launch Pad<br />Training Academy</>}
-              tagline="Learn. Grow. Launch."
+              title="Launch Pad"
+              tagline="Employee Development"
               href="/academy"
               flagship
             />

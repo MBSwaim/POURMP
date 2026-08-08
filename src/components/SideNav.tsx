@@ -135,7 +135,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </Link>
         <Link href="/academy" onClick={onClose} className={navClass('/academy')}>
           <Rocket className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-          Academies
+          Launch Pad
         </Link>
 
         {/* Reports & Insights has no route yet (see the matching Coming Soon
