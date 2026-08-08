@@ -1,6 +1,6 @@
 'use client'
 
-import { DEMO_IDENTITY } from '@/lib/demoIdentity'
+import { DEMO_ADMIN } from '@/app/admin/adminDemoData'
 import {
   Menu,
   MenuTrigger,
@@ -13,17 +13,11 @@ import {
 } from '@/components/ui/menu'
 
 // Desktop-only shell utility row. Identity is isolated prototype data (see
-// demoIdentity.ts) — there is no real session, auth, or Sign Out yet. Every
-// action inside the profile menu besides identity display is intentionally
-// inert ("Coming Soon") for this sprint — see profile menu items below.
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-}
+// adminDemoData.ts) — deliberately NOT demoIdentity.ts, which the public
+// front door also reads; this keeps the named identity off that surface.
+// There is no real session, auth, or Sign Out yet. Every action inside the
+// profile menu besides identity display is intentionally inert ("Coming
+// Soon") for this sprint — see profile menu items below.
 
 function ComingSoonBadge() {
   return (
@@ -51,17 +45,22 @@ export function AppHeader() {
 
       <Menu>
         <MenuTrigger
-          className="flex items-center justify-center h-8 w-8 rounded-full bg-[#C8973A] text-[#0b0c0e] text-xs font-bold tracking-wide outline-none transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#C8973A]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e]"
+          className="flex items-center justify-center h-8 w-8 rounded-full outline-none ring-1 ring-[#C8973A]/40 overflow-hidden transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#C8973A]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e]"
         >
-          {initials(DEMO_IDENTITY.name)}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/brad-swaim.jpg"
+            alt={DEMO_ADMIN.name}
+            className="h-full w-full object-cover"
+          />
         </MenuTrigger>
         <MenuPortal>
           <MenuPositioner align="end" sideOffset={10}>
             <MenuContent>
               <div className="px-2.5 py-2">
-                <p className="text-sm font-medium text-white">{DEMO_IDENTITY.name}</p>
+                <p className="text-sm font-medium text-white">{DEMO_ADMIN.name}</p>
                 <p className="text-[11px] text-white/40 mt-0.5">
-                  {DEMO_IDENTITY.role} · {DEMO_IDENTITY.location}
+                  {DEMO_ADMIN.role} · {DEMO_ADMIN.location}
                 </p>
               </div>
 

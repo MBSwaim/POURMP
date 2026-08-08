@@ -18,11 +18,21 @@ type DestinationCardProps = {
 }
 
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e]'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e0b355]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e]'
 
 const ACCENT_COLOR = {
   copper: '#A85C3F',
   green: '#5B7A5E',
+} as const
+
+// Deep, near-black undertone per accent — oxidized-copper/burgundy-black for
+// Event Workspace, industrial-green/military-equipment-black for Daily
+// Operations. Layered under the base accent tint via gradient so each
+// Coming Soon card reads as a distinct material, not a lighter/darker copy
+// of the same swatch.
+const ACCENT_SHADE = {
+  copper: '#241410',
+  green: '#111a14',
 } as const
 
 export function DestinationCard({
@@ -35,14 +45,28 @@ export function DestinationCard({
   accent,
 }: DestinationCardProps) {
   const accentColor = accent ? ACCENT_COLOR[accent] : null
+  const accentShade = accent ? ACCENT_SHADE[accent] : null
 
   const iconColorClass = comingSoon
     ? accent === 'green'
-      ? 'text-[#5B7A5E]/60'
-      : 'text-[#C8973A]/30'
+      ? 'text-[#5B7A5E]/70'
+      : 'text-[#C8973A]/40'
     : flagship
       ? 'text-[#e0b355]'
       : 'text-[#C8973A]'
+
+  // Mission-insignia badge ring behind each icon — the same restrained
+  // circular-emblem treatment across all four destinations so they read as
+  // a matched set of insignias, distinguished only by their accent color.
+  const badgeClass = comingSoon
+    ? accentColor
+      ? ''
+      : 'border-white/10 bg-white/[0.02]'
+    : flagship
+      ? 'border-[#e0b355]/35 bg-[#e0b355]/[0.06]'
+      : accent === 'copper'
+        ? 'border-[#A85C3F]/40 bg-[#A85C3F]/[0.08]'
+        : 'border-[#C8973A]/25 bg-[#C8973A]/[0.05]'
 
   const inner = (
     <>
@@ -54,7 +78,23 @@ export function DestinationCard({
             style={{ background: 'radial-gradient(circle, #e0b355 0%, transparent 70%)' }}
           />
         )}
-        <Icon className={`relative h-5 w-5 sm:h-7 sm:w-7 ${iconColorClass}`} strokeWidth={1.75} />
+        {!flagship && accent === 'copper' && !comingSoon && (
+          <div
+            aria-hidden="true"
+            className="absolute -inset-2 rounded-full opacity-10 blur-md"
+            style={{ background: 'radial-gradient(circle, #A85C3F 0%, transparent 70%)' }}
+          />
+        )}
+        <div
+          className={`relative flex items-center justify-center h-9 w-9 sm:h-11 sm:w-11 rounded-full border ${badgeClass}`}
+          style={
+            comingSoon && accentColor
+              ? { borderColor: `${accentColor}30`, backgroundColor: `${accentColor}0d` }
+              : undefined
+          }
+        >
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColorClass}`} strokeWidth={1.75} />
+        </div>
       </div>
       <h3 className="mt-3 sm:mt-4 text-xs sm:text-sm font-bold uppercase tracking-wide text-white leading-snug">
         {title}
@@ -89,7 +129,10 @@ export function DestinationCard({
         className="flex flex-col rounded-xl border px-3 py-4 sm:px-5 sm:py-5 opacity-80 cursor-default"
         style={{
           borderColor: accentColor ? `${accentColor}26` : 'rgba(255,255,255,0.1)',
-          backgroundColor: accentColor ? `${accentColor}0a` : 'rgba(255,255,255,0.02)',
+          backgroundImage: accentColor && accentShade
+            ? `linear-gradient(160deg, ${accentColor}14 0%, ${accentShade} 100%)`
+            : undefined,
+          backgroundColor: accentColor ? undefined : 'rgba(255,255,255,0.02)',
         }}
       >
         {inner}

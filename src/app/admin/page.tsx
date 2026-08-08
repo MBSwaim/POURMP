@@ -6,6 +6,7 @@ import { generateAlerts, getNotificationFeed } from '@/lib/alerts'
 import { DEMO_ADMIN } from './adminDemoData'
 import { DestinationCard } from './DestinationCard'
 import { OrbitalBackdrop } from '../OrbitalBackdrop'
+import { IndustrialBackdrop } from './IndustrialBackdrop'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +43,24 @@ export default function AdminPage() {
           dark canvas (layered charcoal panels), not a light/beige break. */}
       <div className="relative bg-gradient-to-b from-[#0d0e10] to-[#08090a] px-4 py-8 sm:py-12 overflow-hidden">
         <OrbitalBackdrop />
+        <IndustrialBackdrop />
+
+        {/* Restrained POURMP seal — secondary to the headline, reuses the
+            already-approved circular logo asset at reduced scale. Hidden
+            below lg so it never competes with the centered hero column on
+            tablet/mobile widths where there's no side gutter to sit in. */}
+        <div
+          aria-hidden="true"
+          className="hidden lg:block absolute top-6 right-6 xl:top-8 xl:right-10 pointer-events-none z-10"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/pourmp-logo.png"
+            alt=""
+            className="w-16 h-16 xl:w-24 xl:h-24 rounded-full opacity-[0.35]"
+          />
+        </div>
+
         <div className="relative z-10 max-w-3xl mx-auto">
           <p className="text-[10px] text-white/30 tracking-[0.2em] uppercase mb-3">{dateLabel}</p>
           <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#C8973A] mb-2">

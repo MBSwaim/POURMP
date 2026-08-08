@@ -9,7 +9,8 @@
 // replace it only if the real admin address is explicitly provided. When real
 // authentication lands, this identity is replaced, not extended.
 export const DEMO_ADMIN = {
-  name: 'Admin User',
-  role: 'Admin',
+  name: 'Brad Swaim',
+  role: 'Event Coordinator',
   email: 'admin@manhattanproject.beer',
+  location: 'West Dallas',
 }

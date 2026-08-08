@@ -16,7 +16,7 @@ import { Trophy, UserCheck, Gem, Handshake, ShieldCheck, Sparkles } from 'lucide
 // icons elsewhere. lucide-react is already a dependency; no new icon library
 // was added.
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e] rounded'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e0b355]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e] rounded'
 
 const FRAMEWORK = [
   {
