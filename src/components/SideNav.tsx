@@ -49,7 +49,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
     const active = pathname === href
     return active
       ? 'flex items-center gap-2 pl-[10px] pr-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium border-l-2 border-[#C8973A] bg-[#C8973A]/10 text-[#C8973A] transition-colors'
-      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors'
+      : 'flex items-center gap-2 px-3 py-2 rounded-lg text-xs tracking-widest uppercase font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors'
   }
 
   function todayClass() {
@@ -60,9 +60,9 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <nav className="w-56 shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col print:hidden">
-      {/* Logo */}
-      <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
+    <nav className="w-56 shrink-0 bg-[#0b0c0e] border-r border-white/10 flex flex-col print:hidden">
+      {/* Logo — compact identity relating to the approved front door */}
+      <div className="px-4 py-4 border-b border-white/10 flex items-center gap-3">
         <Logo className="w-9 h-9 shrink-0" color="gold" />
         <div>
           <div
@@ -72,10 +72,10 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
             POURMP
           </div>
           <div
-            className="text-[9px] text-gray-500 tracking-widest uppercase mt-0.5"
+            className="text-[9px] text-white/40 tracking-widest uppercase mt-0.5"
             title="Manhattan Project's Internal Events & Reservations Operations System"
           >
-            Manhattan Project · Ops Platform
+            FOH Operating System
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
       <div className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {/* Global event search */}
         <div className="px-1 pb-2">
-          <label className="block text-[9px] tracking-widest uppercase text-gray-600 mb-1 px-2 pt-1">
+          <label className="block text-[9px] tracking-widest uppercase text-white/40 mb-1 px-2 pt-1">
             Search Events
           </label>
           <GlobalEventSearch onNavigate={onClose} />
@@ -106,7 +106,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </Link>
 
         <div className="px-1 pb-2">
-          <label className="block text-[9px] tracking-widest uppercase text-gray-600 mb-1 px-2 pt-1">
+          <label className="block text-[9px] tracking-widest uppercase text-white/40 mb-1 px-2 pt-1">
             Jump to Date
           </label>
           <input
@@ -119,12 +119,12 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </div>
 
         {/* Divider before Academy */}
-        <div className="border-t border-gray-200 my-1" />
+        <div className="border-t border-white/10 my-1" />
 
         <Link href="/academy" onClick={onClose} className={navClass('/academy')}>Academy</Link>
 
         {/* Divider */}
-        <div className="border-t border-gray-200 my-1" />
+        <div className="border-t border-white/10 my-1" />
 
         <Link href="/dashboard" onClick={onClose} className={navClass('/dashboard')}>Dashboard</Link>
         <Link href="/operations" onClick={onClose} className={navClass('/operations')}>Operations</Link>
@@ -145,19 +145,19 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         </Link>
 
         {/* Divider before prep tools */}
-        <div className="border-t border-gray-200 my-1" />
+        <div className="border-t border-white/10 my-1" />
 
         <Link href="/prep-docs" onClick={onClose} className={navClass('/prep-docs')}>Prep Docs</Link>
 
         {/* Divider before settings */}
-        <div className="border-t border-gray-200 my-1" />
+        <div className="border-t border-white/10 my-1" />
 
         <Link href="/settings" onClick={onClose} className={navClass('/settings')}>Settings</Link>
       </div>
 
       {/* Sidebar footer */}
-      <div className="px-4 py-3 border-t border-gray-200">
-        <p className="text-[9px] text-gray-600 tracking-widest uppercase">Internal Use Only</p>
+      <div className="px-4 py-3 border-t border-white/10">
+        <p className="text-[9px] text-white/30 tracking-widest uppercase">Internal Use Only</p>
       </div>
     </nav>
   )

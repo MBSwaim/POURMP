@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:block print:hidden">
-        <Suspense fallback={<nav className="w-56 shrink-0 bg-gray-50 border-r border-gray-200" />}>
+        <Suspense fallback={<nav className="w-56 shrink-0 bg-[#0b0c0e] border-r border-white/10" />}>
           <SideNav />
         </Suspense>
       </div>
@@ -69,13 +69,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setDrawerOpen(false)}
           />
           {/* Drawer panel */}
-          <div className="relative flex flex-col w-64 max-w-[85vw] h-full bg-gray-50 shadow-2xl animate-slide-in-left overflow-y-auto">
+          <div className="relative flex flex-col w-64 max-w-[85vw] h-full bg-[#0b0c0e] shadow-2xl animate-slide-in-left overflow-y-auto">
             {/* Close button */}
-            <div className="flex items-center justify-end p-3 border-b border-gray-200">
+            <div className="flex items-center justify-end p-3 border-b border-white/10">
               <button
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close navigation"
-                className="text-gray-500 hover:text-gray-900 text-lg p-1"
+                className="text-white/50 hover:text-white text-lg p-1"
               >
                 ✕
               </button>
