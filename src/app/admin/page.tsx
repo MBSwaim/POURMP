@@ -1,17 +1,23 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { Rocket, CalendarCheck, ListChecks, BarChart3 } from 'lucide-react'
 import { getTaproomDashboard } from '@/lib/db'
 import { generateAlerts, getNotificationFeed } from '@/lib/alerts'
 import { DEMO_ADMIN } from './adminDemoData'
+import { DestinationCard } from './DestinationCard'
 
 export const dynamic = 'force-dynamic'
 
-// Admin — Friday demo prototype. A cross-feature launch and action surface, not a
-// second financial/readiness dashboard (that's / and /operations, both untouched
-// here). Every number below is read from the same getTaproomDashboard()/alerts
-// functions /taproom and /home already use — never re-derived. The one prototype-
-// only piece is the Admin identity in adminDemoData.ts, standing in for real
-// company-email auth that doesn't exist yet.
+// Admin — the signed-in POURMP coordinator/admin Home. A dark, branded hero
+// of four destination-level entry points sits above the existing operational
+// surface (Today at a Glance + secondary utilities), which is unchanged in
+// data/behavior — every number below is still read from the same
+// getTaproomDashboard()/alerts functions /taproom and /home already use, never
+// re-derived. Identity is the isolated Admin prototype identity in
+// adminDemoData.ts — intentionally distinct from /home's employee identity,
+// not a real session. Icon language here (lucide-react) is a deliberate,
+// scoped exception to the emoji-only nav convention, same as
+// PourmpFramework.tsx on the front door — not extended to SideNav.
 export default function AdminPage() {
   const dateLabel = format(new Date(), 'EEEE, MMMM d')
 
@@ -29,61 +35,92 @@ export default function AdminPage() {
   ).length
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-3xl mx-auto">
+    <div>
+      {/* Signed-in destination hero — dark/branded, visually related to the
+          front door. Everything below this hero stays a light, readable
+          operational surface (hybrid page, not a full black page). */}
+      <div className="bg-[#0b0c0e] px-4 py-8 sm:py-12">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-[10px] text-white/30 tracking-[0.2em] uppercase mb-3">{dateLabel}</p>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#C8973A] mb-2">
+            Welcome Back, {DEMO_ADMIN.name}
+          </p>
+          <h1 className="text-2xl sm:text-4xl font-bold uppercase tracking-tight text-white leading-tight">
+            Ready To Make
+            <br />
+            <span className="text-[#C8973A]">It Happen?</span>
+          </h1>
+          <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-white/50 max-w-md leading-relaxed">
+            Access your tools, training and resources.
+            <br />
+            Live the MP standard.
+          </p>
 
-      {/* Admin identity + framing */}
-      <div>
-        <p className="text-[10px] text-gray-500 tracking-[0.2em] uppercase mb-1">{dateLabel}</p>
-        <h1 className="text-xl font-bold tracking-widest uppercase text-gray-900 leading-none">
-          Welcome, {DEMO_ADMIN.name}
-        </h1>
-        <p className="mt-1.5 text-sm text-gray-500">{DEMO_ADMIN.role} · {DEMO_ADMIN.email}</p>
-        <p className="mt-2.5 text-sm text-gray-500 max-w-md">
-          What do I need to manage or act on today?
-        </p>
+          <div className="mt-6 sm:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <DestinationCard
+              icon={Rocket}
+              title={<>Launch Pad<br />Training Academy</>}
+              tagline="Learn. Grow. Launch."
+              href="/academy"
+            />
+            <DestinationCard
+              icon={CalendarCheck}
+              title={<>Event<br />Workspace</>}
+              tagline="Plan. Execute. Wow."
+              href="/events"
+            />
+            <DestinationCard
+              icon={ListChecks}
+              title={<>Daily<br />Operations</>}
+              tagline="Execute with Excellence."
+              comingSoon
+            />
+            <DestinationCard
+              icon={BarChart3}
+              title={<>Reports &amp;<br />Insights</>}
+              tagline="Data that Drives Us."
+              comingSoon
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Today at a Glance */}
-      <section className="rounded-xl border border-gray-200 bg-white px-5 py-4">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-900 mb-3">Today at a Glance</p>
-        <div className="grid grid-cols-3 gap-3">
-          <GlanceStat label="Reservations Today" value={taproom.stats.reservationsToday} />
-          <GlanceStat label="Private Events Tonight" value={taproom.stats.privateEventCount} />
-          <GlanceStat label="Pending Bar Alerts" value={pendingBarAlerts} />
-        </div>
-      </section>
+      {/* Operational working surface — unchanged data/behavior, light for readability */}
+      <div className="px-4 py-6 space-y-6 max-w-3xl mx-auto">
 
-      {/* Launch grid */}
-      <section className="space-y-2">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-900">Manage &amp; Explore</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <LaunchCard
-            title="Create Table Reservation"
-            description="Create or edit table reservations using the West Dallas Reservation Floor Plan."
-            href="/reservations"
-          />
-          <LaunchCard
-            title="Today's Taproom Brief"
-            description="Review the Daily FOH Operating Brief."
-            href="/taproom"
-          />
-          <LaunchCard
-            title="Employee Home"
-            description="Preview the Team Member experience."
-            href="/home"
-          />
-          <LaunchCard
-            title="Academy / Learning"
-            description="Review the employee learning journey."
-            href="/academy"
-          />
-          <LaunchCard
-            title="Events"
-            description="Access existing Events functionality."
-            href="/events"
-          />
-        </div>
-      </section>
+        {/* Today at a Glance */}
+        <section className="rounded-xl border border-gray-200 bg-white px-5 py-4">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-900 mb-3">Today at a Glance</p>
+          <div className="grid grid-cols-3 gap-3">
+            <GlanceStat label="Reservations Today" value={taproom.stats.reservationsToday} />
+            <GlanceStat label="Private Events Tonight" value={taproom.stats.privateEventCount} />
+            <GlanceStat label="Pending Bar Alerts" value={pendingBarAlerts} />
+          </div>
+        </section>
+
+        {/* Secondary utility layer — existing tools, preserved, de-emphasized
+            relative to the four POURMP destinations above */}
+        <section className="space-y-2">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">More Tools</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <LaunchCard
+              title="Create Table Reservation"
+              description="Create or edit table reservations using the West Dallas Reservation Floor Plan."
+              href="/reservations"
+            />
+            <LaunchCard
+              title="Today's Taproom Brief"
+              description="Review the Daily FOH Operating Brief."
+              href="/taproom"
+            />
+            <LaunchCard
+              title="Employee Home"
+              description="Preview the Team Member experience."
+              href="/home"
+            />
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
