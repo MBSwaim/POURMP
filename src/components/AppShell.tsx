@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import { SideNav } from './SideNav'
+import { AppHeader } from './AppHeader'
 import { Logo } from './Logo'
 
 const PUBLIC_ROUTES = ['/book']
@@ -10,6 +11,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r))
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Root is its own full-bleed arrival experience — no SideNav, no shell chrome
+  // at all. Uses an exact match (not startsWith, like PUBLIC_ROUTES below) so
+  // this never matches any other route.
+  if (pathname === '/') {
+    return <>{children}</>
+  }
 
   if (isPublic) {
     return <div className="min-h-screen bg-[#f9f8f6] text-gray-800">{children}</div>
@@ -79,8 +87,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Main content — add top padding on mobile for the sticky header */}
-      <main className="flex-1 overflow-auto overflow-x-hidden pt-12 md:pt-0">{children}</main>
+      {/* Desktop utility header + main content column. AppHeader is hidden on
+          mobile (md:flex), so mobile layout/padding below is unaffected. */}
+      <div className="flex flex-col flex-1 min-w-0">
+        <AppHeader />
+        <main className="flex-1 overflow-auto overflow-x-hidden pt-12 md:pt-0">{children}</main>
+      </div>
     </div>
   )
 }

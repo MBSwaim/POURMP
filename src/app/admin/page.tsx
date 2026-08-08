@@ -82,20 +82,6 @@ export default function AdminPage() {
             description="Access existing Events functionality."
             href="/events"
           />
-
-          {/* Feedback / Product Ideas — intentionally non-interactive. No href, no
-              form, no storage. Communicates future product direction only. */}
-          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-5 py-4 opacity-80">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-gray-600">Feedback / Product Ideas</h3>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 border border-gray-300 rounded-full px-2 py-0.5 whitespace-nowrap">
-                Coming Soon
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-              Report bugs, suggest improvements, and request new POURMP capabilities.
-            </p>
-          </div>
         </div>
       </section>
     </div>
