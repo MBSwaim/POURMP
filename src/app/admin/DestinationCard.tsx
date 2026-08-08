@@ -2,23 +2,40 @@ import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 
 // Page-local to /admin — not promoted to a shared ui/ primitive until a
-// second real use case appears. Two states: an active destination (routes
-// somewhere real) or an inert "Coming Soon" card (no href, no fake route).
+// second real use case appears. Three states: the flagship destination
+// (Launch Pad — slightly richer treatment), a standard active destination,
+// or an inert "Coming Soon" card (no href, no fake route). All three stay in
+// the same black/charcoal/gold family — no new colors introduced.
 type DestinationCardProps = {
   icon: LucideIcon
   title: React.ReactNode
   tagline: string
   href?: string
   comingSoon?: boolean
+  flagship?: boolean
 }
 
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e]'
 
-export function DestinationCard({ icon: Icon, title, tagline, href, comingSoon }: DestinationCardProps) {
+export function DestinationCard({ icon: Icon, title, tagline, href, comingSoon, flagship }: DestinationCardProps) {
   const inner = (
     <>
-      <Icon className="h-5 w-5 sm:h-7 sm:w-7 text-[#C8973A]" strokeWidth={1.75} />
+      <div className="relative">
+        {flagship && !comingSoon && (
+          <div
+            aria-hidden="true"
+            className="absolute -inset-3 rounded-full opacity-20 blur-lg"
+            style={{ background: 'radial-gradient(circle, #e0b355 0%, transparent 70%)' }}
+          />
+        )}
+        <Icon
+          className={`relative h-5 w-5 sm:h-7 sm:w-7 ${
+            comingSoon ? 'text-white/25' : flagship ? 'text-[#e0b355]' : 'text-[#C8973A]'
+          }`}
+          strokeWidth={1.75}
+        />
+      </div>
       <h3 className="mt-3 sm:mt-4 text-xs sm:text-sm font-bold uppercase tracking-wide text-white leading-snug">
         {title}
       </h3>
@@ -28,7 +45,11 @@ export function DestinationCard({ icon: Icon, title, tagline, href, comingSoon }
           Coming Soon
         </span>
       ) : (
-        <p className="mt-3 sm:mt-4 text-[11px] font-bold uppercase tracking-wide text-[#C8973A] group-hover:text-[#e0b355] transition-colors">
+        <p
+          className={`mt-3 sm:mt-4 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+            flagship ? 'text-[#e0b355] group-hover:text-[#f0c56e]' : 'text-[#C8973A] group-hover:text-[#e0b355]'
+          }`}
+        >
           Open →
         </p>
       )}
@@ -46,7 +67,11 @@ export function DestinationCard({ icon: Icon, title, tagline, href, comingSoon }
   return (
     <Link
       href={href}
-      className={`group flex flex-col rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 sm:px-5 sm:py-5 transition-all hover:-translate-y-0.5 hover:border-[#C8973A]/40 hover:bg-white/[0.05] ${FOCUS_RING}`}
+      className={`group flex flex-col rounded-xl px-3 py-4 sm:px-5 sm:py-5 transition-all hover:-translate-y-0.5 ${FOCUS_RING} ${
+        flagship
+          ? 'border border-[#C8973A]/25 bg-white/[0.04] hover:border-[#e0b355]/50 hover:bg-white/[0.06]'
+          : 'border border-white/10 bg-white/[0.03] hover:border-[#C8973A]/40 hover:bg-white/[0.05]'
+      }`}
     >
       {inner}
     </Link>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { DEMO_IDENTITY } from '@/lib/demoIdentity'
 import { PourmpFramework } from './PourmpFramework'
+import { OrbitalBackdrop } from './OrbitalBackdrop'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,49 +17,62 @@ const FOCUS_RING =
 
 export default function FrontDoorPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b0c0e] px-6 py-16 sm:py-20">
-      <div className="w-full max-w-md text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0d0e10] to-[#08090a] px-6 py-16 sm:py-20">
+      {/* Hero column only — backdrop is scoped here (not the whole page) so it
+          can never visually reach the Behavior Framework/closing sections
+          below, which are separate siblings with their own height. */}
+      <div className="relative w-full max-w-md text-center">
+        <OrbitalBackdrop />
+        <div className="relative z-10">
 
-        {/* Approved circular POURMP mark — visual anchor of the arrival moment */}
-        <div className="mb-6 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/pourmp-logo.png"
-            alt="POURMP — Manhattan Project Beer Company"
-            className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full"
-          />
-        </div>
+          {/* Approved circular POURMP mark — visual anchor of the arrival moment */}
+          <div className="mb-6 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/pourmp-logo.png"
+              alt="POURMP — Manhattan Project Beer Company"
+              className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full"
+            />
+          </div>
 
-        {/* Wordmark */}
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-[0.08em] uppercase text-white leading-none">
-            POURMP
-          </h1>
-          <p className="mt-3 text-xs font-semibold tracking-[0.3em] uppercase text-[#C8973A]">
-            FOH Operating System
+          {/* Wordmark */}
+          <div className="mb-5">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-[0.08em] uppercase text-white leading-none">
+              POURMP
+            </h1>
+            <p className="mt-3 text-xs font-semibold tracking-[0.3em] uppercase text-[#C8973A]">
+              FOH Operating System
+            </p>
+          </div>
+
+          {/* Brand statement — reinforces identity before the CTA */}
+          <p className="mb-8 text-sm text-white/50 italic leading-snug">
+            Anybody can pour beer.
+            <br />
+            <span className="text-[#e0b355] font-semibold not-italic">We pour MP.</span>
           </p>
+
+          <div className="h-px w-12 bg-white/15 mx-auto mb-8" />
+
+          {/* Identity — isolated prototype data, not a real session */}
+          <div className="mb-8">
+            <p className="text-[10px] font-bold tracking-[0.25em] uppercase text-white/40 mb-2">
+              Welcome
+            </p>
+            <p className="text-base text-white font-medium">{DEMO_IDENTITY.name}</p>
+            <p className="text-xs text-white/40 mt-1">
+              {DEMO_IDENTITY.role} · {DEMO_IDENTITY.location}
+            </p>
+          </div>
+
+          {/* Single entry action — the front door has exactly one job */}
+          <Link
+            href="/admin"
+            className={`inline-flex items-center justify-center w-full min-h-11 rounded-lg bg-[#C8973A] text-white text-xs font-bold uppercase tracking-widest px-5 py-3 hover:bg-[#b07d2e] transition-colors ${FOCUS_RING}`}
+          >
+            Enter POURMP →
+          </Link>
         </div>
-
-        <div className="h-px w-12 bg-white/15 mx-auto mb-8" />
-
-        {/* Identity — isolated prototype data, not a real session */}
-        <div className="mb-8">
-          <p className="text-[10px] font-bold tracking-[0.25em] uppercase text-white/40 mb-2">
-            Welcome
-          </p>
-          <p className="text-base text-white font-medium">{DEMO_IDENTITY.name}</p>
-          <p className="text-xs text-white/40 mt-1">
-            {DEMO_IDENTITY.role} · {DEMO_IDENTITY.location}
-          </p>
-        </div>
-
-        {/* Single entry action — the front door has exactly one job */}
-        <Link
-          href="/admin"
-          className={`inline-flex items-center justify-center w-full min-h-11 rounded-lg bg-[#C8973A] text-white text-xs font-bold uppercase tracking-widest px-5 py-3 hover:bg-[#b07d2e] transition-colors ${FOCUS_RING}`}
-        >
-          Enter POURMP →
-        </Link>
       </div>
 
       {/* POURMP behavior framework — deliberately wider than the identity/CTA

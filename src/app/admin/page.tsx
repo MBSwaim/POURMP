@@ -5,6 +5,7 @@ import { getTaproomDashboard } from '@/lib/db'
 import { generateAlerts, getNotificationFeed } from '@/lib/alerts'
 import { DEMO_ADMIN } from './adminDemoData'
 import { DestinationCard } from './DestinationCard'
+import { OrbitalBackdrop } from '../OrbitalBackdrop'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,8 +40,9 @@ export default function AdminPage() {
       {/* Signed-in destination hero — dark/branded, visually related to the
           front door. Everything below this hero stays a light, readable
           operational surface (hybrid page, not a full black page). */}
-      <div className="bg-[#0b0c0e] px-4 py-8 sm:py-12">
-        <div className="max-w-3xl mx-auto">
+      <div className="relative bg-gradient-to-b from-[#0d0e10] to-[#08090a] px-4 py-8 sm:py-12 overflow-hidden">
+        <OrbitalBackdrop />
+        <div className="relative z-10 max-w-3xl mx-auto">
           <p className="text-[10px] text-white/30 tracking-[0.2em] uppercase mb-3">{dateLabel}</p>
           <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#C8973A] mb-2">
             Welcome Back, {DEMO_ADMIN.name}
@@ -48,7 +50,7 @@ export default function AdminPage() {
           <h1 className="text-2xl sm:text-4xl font-bold uppercase tracking-tight text-white leading-tight">
             Ready To Make
             <br />
-            <span className="text-[#C8973A]">It Happen?</span>
+            <span className="text-[#e0b355]">It Happen?</span>
           </h1>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-white/50 max-w-md leading-relaxed">
             Access your tools, training and resources.
@@ -62,6 +64,7 @@ export default function AdminPage() {
               title={<>Launch Pad<br />Training Academy</>}
               tagline="Learn. Grow. Launch."
               href="/academy"
+              flagship
             />
             <DestinationCard
               icon={CalendarCheck}
@@ -89,7 +92,7 @@ export default function AdminPage() {
       <div className="px-4 py-6 space-y-6 max-w-3xl mx-auto">
 
         {/* Today at a Glance */}
-        <section className="rounded-xl border border-gray-200 bg-white px-5 py-4">
+        <section className="rounded-xl border border-gray-200 border-t-2 border-t-[#C8973A] bg-white px-5 py-4">
           <p className="text-[10px] font-bold tracking-widest uppercase text-gray-900 mb-3">Today at a Glance</p>
           <div className="grid grid-cols-3 gap-3">
             <GlanceStat label="Reservations Today" value={taproom.stats.reservationsToday} />
@@ -101,6 +104,7 @@ export default function AdminPage() {
         {/* Secondary utility layer — existing tools, preserved, de-emphasized
             relative to the four POURMP destinations above */}
         <section className="space-y-2">
+          <div className="h-0.5 w-6 rounded-full bg-[#C8973A]" />
           <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">More Tools</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <LaunchCard
