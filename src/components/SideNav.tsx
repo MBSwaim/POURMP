@@ -126,7 +126,7 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
         {/* Divider */}
         <div className="border-t border-gray-200 my-1" />
 
-        <Link href="/" onClick={onClose} className={navClass('/')}>Dashboard</Link>
+        <Link href="/dashboard" onClick={onClose} className={navClass('/dashboard')}>Dashboard</Link>
         <Link href="/operations" onClick={onClose} className={navClass('/operations')}>Operations</Link>
 
         <Link href="/events" onClick={onClose} className={navClass('/events')}>Events</Link>
