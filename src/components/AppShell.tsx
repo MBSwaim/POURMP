@@ -24,10 +24,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:block print:hidden">
-        <Suspense fallback={<nav className="w-56 shrink-0 bg-[#0b0c0e] border-r border-white/10" />}>
+        <Suspense fallback={<nav className="w-56 h-full shrink-0 bg-[#0b0c0e] border-r border-white/10" />}>
           <SideNav />
         </Suspense>
       </div>

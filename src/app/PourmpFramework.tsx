@@ -79,7 +79,7 @@ export function PourmpFramework() {
 
   return (
     <div>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-y-6 md:gap-y-0 md:divide-x md:divide-white/10">
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-y-6 lg:gap-y-0 lg:divide-x lg:divide-white/10">
         {FRAMEWORK.map((item, i) => {
           const isActive = activeIndex === i
           const Icon = item.icon
@@ -93,16 +93,16 @@ export function PourmpFramework() {
               onMouseLeave={() => setHoverIndex(null)}
               onFocus={() => setHoverIndex(i)}
               onBlur={() => setHoverIndex(null)}
-              className={`min-w-0 px-1.5 md:px-8 text-center outline-none transition-colors ${FOCUS_RING}`}
+              className={`min-w-0 px-1.5 sm:px-4 lg:px-8 text-center outline-none transition-colors ${FOCUS_RING}`}
             >
               <Icon
-                className={`mx-auto h-5 w-5 md:h-7 md:w-7 transition-colors ${
+                className={`mx-auto h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 transition-colors ${
                   isActive ? 'text-[#e0b355]' : 'text-[#C8973A]'
                 }`}
                 strokeWidth={1.75}
               />
               <p
-                className={`mt-2 md:mt-3 text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-widest leading-tight transition-colors ${
+                className={`mt-2 lg:mt-3 text-[9px] sm:text-[11px] lg:text-xs font-bold uppercase tracking-widest leading-tight transition-colors ${
                   isActive ? 'text-white' : 'text-white/80'
                 }`}
               >
@@ -115,13 +115,13 @@ export function PourmpFramework() {
                 }`}
               >
                 <div className="min-h-0 overflow-hidden">
-                  <p className="text-[8px] font-bold uppercase tracking-widest text-white/40">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">
                     {item.sourceLabel}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#C8973A] mt-0.5">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-[#C8973A] mt-0.5">
                     {item.source}
                   </p>
-                  <p className="text-[10px] text-white/50 mt-1 leading-snug">{item.meaning}</p>
+                  <p className="text-[11px] text-white/50 mt-1 leading-snug">{item.meaning}</p>
                 </div>
               </div>
             </button>

@@ -36,10 +36,10 @@ export default function AdminPage() {
   ).length
 
   return (
-    <div>
+    <div className="min-h-screen bg-[#0b0c0e]">
       {/* Signed-in destination hero — dark/branded, visually related to the
-          front door. Everything below this hero stays a light, readable
-          operational surface (hybrid page, not a full black page). */}
+          front door. The operational surface below continues on the same
+          dark canvas (layered charcoal panels), not a light/beige break. */}
       <div className="relative bg-gradient-to-b from-[#0d0e10] to-[#08090a] px-4 py-8 sm:py-12 overflow-hidden">
         <OrbitalBackdrop />
         <div className="relative z-10 max-w-3xl mx-auto">
@@ -71,12 +71,14 @@ export default function AdminPage() {
               title={<>Event<br />Workspace</>}
               tagline="Plan. Execute. Wow."
               href="/events"
+              accent="copper"
             />
             <DestinationCard
               icon={ListChecks}
               title={<>Daily<br />Operations</>}
               tagline="Execute with Excellence."
               comingSoon
+              accent="green"
             />
             <DestinationCard
               icon={BarChart3}
@@ -88,12 +90,14 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Operational working surface — unchanged data/behavior, light for readability */}
+      {/* Operational working surface — same dark canvas as the hero, but a
+          calmer, non-branded layer: slightly lighter charcoal panels, white
+          primary text, muted-gray supporting text. Data/behavior unchanged. */}
       <div className="px-4 py-6 space-y-6 max-w-3xl mx-auto">
 
         {/* Today at a Glance */}
-        <section className="rounded-xl border border-gray-200 border-t-2 border-t-[#C8973A] bg-white px-5 py-4">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-900 mb-3">Today at a Glance</p>
+        <section className="rounded-xl border border-white/10 border-t-2 border-t-[#C8973A] bg-white/[0.03] px-5 py-4">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-3">Today at a Glance</p>
           <div className="grid grid-cols-3 gap-3">
             <GlanceStat label="Reservations Today" value={taproom.stats.reservationsToday} />
             <GlanceStat label="Private Events Tonight" value={taproom.stats.privateEventCount} />
@@ -105,7 +109,7 @@ export default function AdminPage() {
             relative to the four POURMP destinations above */}
         <section className="space-y-2">
           <div className="h-0.5 w-6 rounded-full bg-[#C8973A]" />
-          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-500">More Tools</p>
+          <p className="text-[10px] font-bold tracking-widest uppercase text-white/40">More Tools</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <LaunchCard
               title="Create Table Reservation"
@@ -132,8 +136,8 @@ export default function AdminPage() {
 function GlanceStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="text-xl font-bold text-gray-900 tabular-nums leading-none">{value}</p>
-      <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-1 leading-snug">{label}</p>
+      <p className="text-xl font-bold text-white tabular-nums leading-none">{value}</p>
+      <p className="text-[10px] text-white/40 uppercase tracking-wide mt-1 leading-snug">{label}</p>
     </div>
   )
 }
@@ -142,11 +146,11 @@ function LaunchCard({ title, description, href }: { title: string; description: 
   return (
     <Link
       href={href}
-      className="group rounded-xl border border-gray-200 bg-white px-5 py-4 transition-all hover:-translate-y-0.5 hover:border-[#C8973A]/40 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)]"
+      className="group rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition-all hover:-translate-y-0.5 hover:border-[#C8973A]/40 hover:bg-white/[0.05]"
     >
-      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-      <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{description}</p>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-[#C8973A] mt-3 group-hover:text-[#e0a94a] transition-colors">
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      <p className="text-xs text-white/50 mt-1.5 leading-relaxed">{description}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-[#C8973A] mt-3 group-hover:text-[#e0b355] transition-colors">
         Open →
       </p>
     </Link>
