@@ -1,7 +1,7 @@
-import { GraduationCap, Beer, Coffee, Award } from 'lucide-react'
 import { OrbitalBackdrop } from '../OrbitalBackdrop'
 import { TechnicalReticle } from '../TechnicalReticle'
 import { LaunchPadCard } from './_components/LaunchPadCard'
+import { TapHandleGlyph, HopConeGlyph, CoffeeBeanGlyph, ProvingGroundsGlyph } from './_components/LaunchPadGlyphs'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +37,7 @@ export default function LaunchPadPage() {
             the cards horizontally. */}
         <div className="relative z-10 max-w-4xl mx-auto mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           <LaunchPadCard
-            icon={GraduationCap}
+            icon={TapHandleGlyph}
             eyebrow="Core MP Training"
             title={
               <>
@@ -57,7 +57,7 @@ export default function LaunchPadPage() {
             flagship
           />
           <LaunchPadCard
-            icon={Beer}
+            icon={HopConeGlyph}
             eyebrow="Beer Knowledge"
             title="Project Pint"
             description={
@@ -71,7 +71,7 @@ export default function LaunchPadPage() {
             accent="copper"
           />
           <LaunchPadCard
-            icon={Coffee}
+            icon={CoffeeBeanGlyph}
             eyebrow="Coffee Training"
             title={
               <>
@@ -91,7 +91,7 @@ export default function LaunchPadPage() {
             accent="bronze"
           />
           <LaunchPadCard
-            icon={Award}
+            icon={ProvingGroundsGlyph}
             eyebrow="Certification Prep"
             title={
               <>
@@ -109,7 +109,6 @@ export default function LaunchPadPage() {
             }
             comingSoon
             accent="steel"
-            insignia="reticle"
             microcopy="Learn → Practice → Prove → Certify"
           />
         </div>

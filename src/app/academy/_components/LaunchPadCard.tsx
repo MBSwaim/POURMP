@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import type { GlyphComponent } from './LaunchPadGlyphs'
 
 // Launch Pad hub card — a tall destination panel, not a dashboard button.
 // Local to Launch Pad (not a shared import from /admin's DestinationCard):
@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 // description, an optional progression microcopy line, and an atomic-ring
 // insignia treatment that DestinationCard doesn't have reason to carry.
 type LaunchPadCardProps = {
-  icon: LucideIcon
+  icon: GlyphComponent
   eyebrow: string
   title: ReactNode
   description: ReactNode
@@ -17,7 +17,6 @@ type LaunchPadCardProps = {
   flagship?: boolean
   accent?: 'copper' | 'bronze' | 'steel'
   microcopy?: string
-  insignia?: 'orbital' | 'reticle'
 }
 
 const FOCUS_RING =
@@ -36,37 +35,19 @@ const ACCENT = {
 // A restrained temporary insignia treatment, not a finalized brand asset —
 // it echoes the approved POURMP mark's own orbital-ellipse-around-a-central-
 // object motif (see public/logo.svg / OrbitalBackdrop), recolored per
-// destination accent, rather than a bare colorful icon standing alone.
-// "reticle" swaps the orbital rings for a thin crosshair/target ring for The
-// Proving Grounds' more technical, testing-oriented character. Swappable
-// for a real branded mark later without touching the card layout.
-function Insignia({
-  Icon,
-  color,
-  variant = 'orbital',
-}: {
-  Icon: LucideIcon
-  color: string
-  variant?: 'orbital' | 'reticle'
-}) {
+// destination accent, rather than a bare colorful icon standing alone. The
+// same orbital frame is shared by all four Launch Pad destinations — it's
+// part of the insignia-family identity now, not a per-card choice — with
+// each central glyph (see LaunchPadGlyphs.tsx) providing its own
+// distinction. Swappable for a real branded mark later without touching
+// the card layout.
+function Insignia({ Icon, color }: { Icon: GlyphComponent; color: string }) {
   return (
     <div className="relative h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center shrink-0">
-      <svg className="absolute inset-0" viewBox="0 0 64 64" fill="none">
+      <svg className="absolute inset-0" viewBox="0 0 64 64" fill="none" aria-hidden="true">
         <circle cx="32" cy="32" r="29" stroke={color} strokeWidth="1" opacity="0.55" />
-        {variant === 'orbital' ? (
-          <>
-            <ellipse cx="32" cy="32" rx="13" ry="29" stroke={color} strokeWidth="0.75" opacity="0.35" transform="rotate(30 32 32)" />
-            <ellipse cx="32" cy="32" rx="13" ry="29" stroke={color} strokeWidth="0.75" opacity="0.35" transform="rotate(-30 32 32)" />
-          </>
-        ) : (
-          <>
-            <circle cx="32" cy="32" r="19" stroke={color} strokeWidth="0.75" opacity="0.35" strokeDasharray="1.5 4" />
-            <line x1="32" y1="4" x2="32" y2="14" stroke={color} strokeWidth="0.75" opacity="0.4" />
-            <line x1="32" y1="50" x2="32" y2="60" stroke={color} strokeWidth="0.75" opacity="0.4" />
-            <line x1="4" y1="32" x2="14" y2="32" stroke={color} strokeWidth="0.75" opacity="0.4" />
-            <line x1="50" y1="32" x2="60" y2="32" stroke={color} strokeWidth="0.75" opacity="0.4" />
-          </>
-        )}
+        <ellipse cx="32" cy="32" rx="13" ry="29" stroke={color} strokeWidth="0.75" opacity="0.35" transform="rotate(30 32 32)" />
+        <ellipse cx="32" cy="32" rx="13" ry="29" stroke={color} strokeWidth="0.75" opacity="0.35" transform="rotate(-30 32 32)" />
       </svg>
       <Icon className="relative h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} style={{ color }} />
     </div>
@@ -83,7 +64,6 @@ export function LaunchPadCard({
   flagship,
   accent,
   microcopy,
-  insignia = 'orbital',
 }: LaunchPadCardProps) {
   const accentInfo = accent ? ACCENT[accent] : null
   const insigniaColor = flagship ? '#e0b355' : (accentInfo?.color ?? '#C8973A')
@@ -98,7 +78,7 @@ export function LaunchPadCard({
       </p>
 
       <div className="mt-5 sm:mt-6">
-        <Insignia Icon={icon} color={insigniaColor} variant={insignia} />
+        <Insignia Icon={icon} color={insigniaColor} />
       </div>
 
       <h3 className="mt-5 sm:mt-6 text-sm sm:text-base font-bold uppercase tracking-wide text-white leading-snug">
