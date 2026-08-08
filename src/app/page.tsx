@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { DEMO_IDENTITY } from '@/lib/demoIdentity'
 import { PourmpFramework } from './PourmpFramework'
 import { OrbitalBackdrop } from './OrbitalBackdrop'
+import { TechnicalReticle } from './TechnicalReticle'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,23 +10,35 @@ export const dynamic = 'force-dynamic'
 // SideNav, no shell chrome (see AppShell.tsx's exact-match `/` branch).
 // Establishes who we are, what POURMP represents, and who is entering, before
 // the operating system begins at /admin. Identity is isolated prototype data
-// (see src/lib/demoIdentity.ts) — there is no real authentication yet.
+// (see src/lib/demoIdentity.ts) — there is no real authentication yet, so the
+// identity panel below is deliberately a status readout ("Signed In As"),
+// never styled to imply a login form.
 //
-// LOGO ASSET: public/brand/pourmp-logo.png — the approved circular POURMP mark.
+// LOGO ASSET: public/brand/pourmp-logo.png — the approved circular POURMP
+// mark. It remains the sole brand mark on this page — no second logo/
+// wordmark image is introduced; "Manhattan Project Beer Company" appears
+// only as restrained secondary typography beneath the FOH Operating System
+// kicker, never as competing brand art.
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e] rounded'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e0b355]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0e] rounded'
 
 export default function FrontDoorPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0d0e10] to-[#08090a] px-6 py-16 sm:py-20">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0d0e10] to-[#0b0c0e] px-6 py-16 sm:py-20">
       {/* Hero column only — backdrop is scoped here (not the whole page) so it
           can never visually reach the Behavior Framework/closing sections
           below, which are separate siblings with their own height. */}
       <div className="relative w-full max-w-md text-center">
         <OrbitalBackdrop />
+        {/* Same instrument-panel reticle language as /admin (see
+            TechnicalReticle), tuned even quieter here — it should read as
+            something noticed in the background, not a second decorative
+            layer competing with OrbitalBackdrop or the badge. */}
+        <TechnicalReticle opacity={0.035} />
         <div className="relative z-10">
 
-          {/* Approved circular POURMP mark — visual anchor of the arrival moment */}
+          {/* Approved circular POURMP mark — sole brand mark and visual
+              anchor of the arrival moment. */}
           <div className="mb-6 flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -35,7 +48,7 @@ export default function FrontDoorPage() {
             />
           </div>
 
-          {/* Wordmark */}
+          {/* Wordmark + supporting identity */}
           <div className="mb-5">
             <h1 className="text-4xl sm:text-5xl font-bold tracking-[0.08em] uppercase text-white leading-none">
               POURMP
@@ -43,24 +56,35 @@ export default function FrontDoorPage() {
             <p className="mt-3 text-xs font-semibold tracking-[0.3em] uppercase text-[#C8973A]">
               FOH Operating System
             </p>
+            <p className="mt-1.5 text-[9px] font-semibold tracking-[0.25em] uppercase text-white/30">
+              Manhattan Project Beer Company
+            </p>
           </div>
 
           {/* Brand statement — reinforces identity before the CTA */}
-          <p className="mb-8 text-sm text-white/50 italic leading-snug">
+          <p className="mb-6 text-sm text-white/50 italic leading-snug">
             Anybody can pour beer.
             <br />
             <span className="text-[#e0b355] font-semibold not-italic">We pour MP.</span>
           </p>
 
+          {/* Supporting information — a restrained technical eyebrow, not a
+              second headline */}
+          <p className="mb-6 text-[9px] font-bold tracking-[0.35em] uppercase text-white/35">
+            Tools. Training. Execution.
+          </p>
+
           <div className="h-px w-12 bg-white/15 mx-auto mb-8" />
 
-          {/* Identity — isolated prototype data, not a real session */}
-          <div className="mb-8">
-            <p className="text-[10px] font-bold tracking-[0.25em] uppercase text-white/40 mb-2">
-              Welcome
+          {/* Identity — isolated prototype data, not a real session. A
+              status readout, not a login form: no fields, no submit action,
+              just who the shell currently treats as signed in. */}
+          <div className="mb-8 mx-auto max-w-[220px] rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3.5">
+            <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-white/30 mb-1.5">
+              Signed In As
             </p>
-            <p className="text-base text-white font-medium">{DEMO_IDENTITY.name}</p>
-            <p className="text-xs text-white/40 mt-1">
+            <p className="text-sm text-white font-medium">{DEMO_IDENTITY.name}</p>
+            <p className="text-[11px] text-white/40 mt-0.5">
               {DEMO_IDENTITY.role} · {DEMO_IDENTITY.location}
             </p>
           </div>
