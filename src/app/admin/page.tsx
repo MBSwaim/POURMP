@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Rocket, CalendarCheck, ListChecks, BarChart3 } from 'lucide-react'
+import { ListChecks, BarChart3 } from 'lucide-react'
 import { getTaproomDashboard } from '@/lib/db'
 import { generateAlerts, getNotificationFeed } from '@/lib/alerts'
 import { DEMO_ADMIN } from './adminDemoData'
 import { DestinationCard } from './DestinationCard'
+import { RocketOrbitGlyph, CalendarGlyph } from './DestinationGlyphs'
 import { OrbitalBackdrop } from '../OrbitalBackdrop'
 import { IndustrialBackdrop } from './IndustrialBackdrop'
 
@@ -76,36 +77,42 @@ export default function AdminPage() {
             <br />
             Live the MP standard.
           </p>
+        </div>
 
-          <div className="mt-6 sm:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <DestinationCard
-              icon={Rocket}
-              title="Launch Pad"
-              tagline="Employee Development"
-              href="/academy"
-              flagship
-            />
-            <DestinationCard
-              icon={CalendarCheck}
-              title={<>Event<br />Workspace</>}
-              tagline="Plan. Execute. Wow."
-              href="/events"
-              accent="copper"
-            />
-            <DestinationCard
-              icon={ListChecks}
-              title={<>Daily<br />Operations</>}
-              tagline="Execute with Excellence."
-              comingSoon
-              accent="green"
-            />
-            <DestinationCard
-              icon={BarChart3}
-              title={<>Reports &amp;<br />Insights</>}
-              tagline="Data that Drives Us."
-              comingSoon
-            />
-          </div>
+        {/* Destination cards get their own, wider container — independent
+            of the hero text column above — so these tall architectural
+            panels have real room at desktop without touching the hero's
+            own width/copy. */}
+        <div className="relative z-10 max-w-5xl mx-auto mt-8 sm:mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <DestinationCard
+            icon={RocketOrbitGlyph}
+            title="Launch Pad"
+            secondaryTitle="Employee Development"
+            tagline="Learn. Grow. Launch."
+            href="/academy"
+            flagship
+          />
+          <DestinationCard
+            icon={CalendarGlyph}
+            title={<>Event<br />Workspace</>}
+            tagline="Plan. Execute. Wow."
+            href="/events"
+            accent="copper"
+          />
+          <DestinationCard
+            icon={ListChecks}
+            title={<>Daily<br />Operations</>}
+            tagline={<>Execute with<br />Excellence.</>}
+            comingSoon
+            accent="green"
+          />
+          <DestinationCard
+            icon={BarChart3}
+            title={<>Reports &amp;<br />Insights</>}
+            tagline={<>Data that<br />Drives Us.</>}
+            comingSoon
+            accent="steel"
+          />
         </div>
       </div>
 

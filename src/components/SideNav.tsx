@@ -173,8 +173,9 @@ export function SideNav({ onClose }: { onClose?: () => void }) {
               type="date"
               value={pickerDate}
               onChange={handleDateChange}
-              className="w-full bg-white/90 border border-white/20 rounded-md px-2 py-1 text-[11px] text-gray-700
-                focus:outline-none focus:border-[#C8973A]/50 focus:text-gray-900 transition-colors cursor-pointer"
+              style={{ colorScheme: 'dark' }}
+              className="w-full bg-white/[0.06] border border-white/15 rounded-md px-2 py-1 text-[11px] text-white/80
+                focus:outline-none focus:border-[#C8973A]/50 focus:text-white transition-colors cursor-pointer"
             />
           </div>
         </div>
